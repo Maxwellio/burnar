@@ -14,7 +14,8 @@ export async function request(path, options = {}) {
     headers,
     ...rest,
   })
-  if (res.status === 401 && path !== '/login') {
+  // /current-user сам обрабатывает 401 (null в AuthContext); иначе цикл редиректов на /login
+  if (res.status === 401 && path !== '/login' && path !== '/current-user') {
     window.location.replace('/login')
     throw new Error('Session expired')
   }

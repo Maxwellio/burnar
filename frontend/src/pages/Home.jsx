@@ -1,29 +1,22 @@
-import { useEffect, useState } from 'react'
 import Box from '@mui/material/Box'
+import Button from '@mui/material/Button'
 import Typography from '@mui/material/Typography'
-import { requestJson } from '../api/http.js'
+import { useAuth } from '../context/AuthContext.jsx'
 
 /**
- * Стартовая страница: проверяет /api/health через proxy.
- * Если backend не запущен или Postgres недоступен — покажем ошибку здесь.
+ * Заглушка главной после успешного логина.
+ * Позже сюда переедут экраны из Delphi; сейчас — проверка сессии.
  */
 export default function Home() {
-  const [health, setHealth] = useState(null)
-  const [error, setError] = useState(null)
+  const { user, logout } = useAuth()
 
-  useEffect(() => {
-    let cancelled = false
-    requestJson('/health')
-      .then((data) => {
-        if (!cancelled) setHealth(data)
-      })
-      .catch((err) => {
-        if (!cancelled) setError(err.message || String(err))
-      })
-    return () => {
-      cancelled = true
+  const handleLogout = async () => {
+    try {
+      await logout()
+    } finally {
+      window.location.replace('/login')
     }
-  }, [])
+  }
 
   return (
     <Box sx={{ p: 3 }}>
@@ -31,23 +24,17 @@ export default function Home() {
         Burnar
       </Typography>
       <Typography color="text.secondary" paragraph>
-        Каркас React + MUI. Backend: порт 8095, proxy /api.
+        Главная страница (заглушка). Вход выполнен успешно.
       </Typography>
-      {error && (
-        <Typography color="error">
-          Health: {error}
+      {user && (
+        <Typography paragraph>
+          Пользователь: {user.username}
+          {user.userId != null ? ` (id ${user.userId})` : ''}
         </Typography>
       )}
-      {health && (
-        <Typography>
-          Health: {health.status} ({health.service})
-        </Typography>
-      )}
-      {!error && !health && (
-        <Typography color="text.secondary">
-          Проверка /api/health…
-        </Typography>
-      )}
+      <Button variant="outlined" onClick={handleLogout}>
+        Выйти
+      </Button>
     </Box>
   )
 }
