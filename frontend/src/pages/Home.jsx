@@ -1,62 +1,112 @@
 import { useState } from 'react'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
+import TextField from '@mui/material/TextField'
 import Typography from '@mui/material/Typography'
+import InputAdornment from '@mui/material/InputAdornment'
+import AddIcon from '@mui/icons-material/Add'
+import EditOutlinedIcon from '@mui/icons-material/EditOutlined'
+import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline'
+import SearchIcon from '@mui/icons-material/Search'
 import { AxiosProvider, BaseTable } from 'mainComponent'
-import { useAuth } from '../context/AuthContext.jsx'
 import { naryadColumns } from './naryadColumns.js'
 
 /**
- * Главная после логина: список нарядов бурения через BaseTable (mainComponent).
- * Данные: GET /api/naryady (pageable), SQL как в Delphi NarListUnit без ACL/дат.
+ * Список нарядов: заголовок, тулбар (добавить/редактировать/удалить + поиск) и таблица.
+ * Кнопки и поиск пока только визуально; цвета из theme.
  */
 export default function Home() {
-  const { user, logout } = useAuth()
-  // BaseTable держит фильтры снаружи (manualFiltering); пока пустой массив
   const [filters, setFilters] = useState([])
-
-  const handleLogout = async () => {
-    try {
-      await logout()
-    } finally {
-      window.location.replace('/login')
-    }
-  }
+  const [search, setSearch] = useState('')
 
   return (
     <Box
       sx={{
-        p: 2,
-        height: '100vh',
+        p: 2.5,
+        height: '100%',
         display: 'flex',
         flexDirection: 'column',
         boxSizing: 'border-box',
-        gap: 1.5,
+        minHeight: 0,
+        gap: 2,
+        bgcolor: 'background.default',
       }}
     >
+      <Typography
+        variant="h5"
+        sx={{ fontWeight: 700, color: 'text.primary', flexShrink: 0 }}
+      >
+        Наряды
+      </Typography>
+
       <Box
         sx={{
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
+          gap: 2,
+          flexWrap: 'wrap',
           flexShrink: 0,
         }}
       >
-        <Box>
-          <Typography variant="h1" sx={{ fontSize: '1.5rem', mb: 0.5 }}>
-            Burnar
-          </Typography>
-          <Typography color="text.secondary" variant="body2">
-            Список нарядов бурения
-            {user ? ` — ${user.username}` : ''}
-          </Typography>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Button
+            variant="contained"
+            startIcon={<AddIcon />}
+            disableElevation
+            sx={{ textTransform: 'none', fontWeight: 600 }}
+          >
+            Добавить
+          </Button>
+          <Button
+            variant="outlined"
+            startIcon={<EditOutlinedIcon />}
+            sx={{
+              textTransform: 'none',
+              bgcolor: 'background.paper',
+              borderColor: 'divider',
+              color: 'text.secondary',
+            }}
+          >
+            Редактировать
+          </Button>
+          <Button
+            variant="outlined"
+            startIcon={<DeleteOutlineIcon />}
+            sx={{
+              textTransform: 'none',
+              bgcolor: 'background.paper',
+              borderColor: 'divider',
+              color: 'text.secondary',
+            }}
+          >
+            Удалить
+          </Button>
         </Box>
-        <Button variant="outlined" onClick={handleLogout}>
-          Выйти
-        </Button>
+
+        <TextField
+          size="small"
+          placeholder="Поиск по нарядам..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          sx={{
+            width: { xs: '100%', sm: 320 },
+            bgcolor: 'background.paper',
+            '& .MuiOutlinedInput-root': {
+              borderRadius: 2,
+              '& fieldset': { borderColor: 'divider' },
+            },
+          }}
+          InputProps={{
+            startAdornment: (
+              <InputAdornment position="start">
+                <SearchIcon color="action" />
+              </InputAdornment>
+            ),
+          }}
+        />
       </Box>
 
-      {/* h-full у BaseTable требует явной высоты родителя */}
       <Box sx={{ flex: 1, minHeight: 0 }}>
         <AxiosProvider baseapi="/api">
           <BaseTable

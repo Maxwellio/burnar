@@ -1,24 +1,32 @@
 import { createTheme } from '@mui/material/styles'
 
-// Общая тема MUI (токены как в Work_redone) — править цвета/типографику здесь, не в отдельных страницах.
+// Цвета скриншота burnar — единственное место палитры; компоненты берут через theme.palette.*
 export const theme = createTheme({
   palette: {
     primary: {
-      main: '#008eb9',
-      dark: '#006b8f',
+      main: '#186ADE',
+      dark: '#1256b5',
     },
     secondary: {
-      main: '#e5dfd2',
-      light: '#f5f2eb',
+      main: '#E5E7EB',
+      light: '#F8FAFC',
     },
-    divider: '#e5dfd2',
+    divider: '#E5E7EB',
     background: {
-      default: '#f5f2eb',
+      default: '#F8FAFC',
       paper: '#ffffff',
     },
     text: {
-      primary: '#1d1d1f',
-      secondary: '#86868b',
+      primary: '#0F172A',
+      secondary: '#64748B',
+    },
+    // Токены Drawer (не стандарт MUI) — Navigation читает palette.sidebar.*
+    sidebar: {
+      bg: '#0D2344',
+      text: 'rgba(255,255,255,0.78)',
+      textActive: '#ffffff',
+      activeBg: '#186ADE',
+      divider: 'rgba(255,255,255,0.12)',
     },
   },
   shape: {

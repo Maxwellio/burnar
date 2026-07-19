@@ -3,7 +3,7 @@ import { getCurrentUser as apiGetCurrentUser, logout as apiLogout } from '../api
 
 /**
  * Глобальное состояние сессии: кто залогинен после GET /api/current-user.
- * Оборачивает Routes в App.jsx; ProtectedRoute и Login берут user/fetchUser отсюда.
+ * Оборачивает Routes в App.jsx; ProtectedLayout и Login берут user/fetchUser отсюда.
  */
 const AuthContext = createContext(null)
 
