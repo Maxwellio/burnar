@@ -1,6 +1,7 @@
 package burnar.controller;
 
 import burnar.dto.NaryadListDto;
+import burnar.dto.NaryadListFilter;
 import burnar.service.NaryadListService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -11,7 +12,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 /**
  * Pageable-список нарядов бурения для BaseTable (useFetchData ждёт content/totalPages/totalElements).
- * Query-параметры page/size — как у Spring Data; фильтры колонок подключим позже.
+ * Query-параметры page/size — как у Spring Data; остальные — фильтры колонок (см. NaryadListFilter).
  */
 @RestController
 @RequestMapping("/api/naryady")
@@ -26,7 +27,32 @@ public class NaryadListController {
     @GetMapping
     public Page<NaryadListDto> list(
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "100") int size) {
-        return naryadListService.findDrillingOrders(PageRequest.of(page, size));
+            @RequestParam(defaultValue = "100") int size,
+            @RequestParam(required = false) String codNar,
+            @RequestParam(required = false) String nameNar,
+            @RequestParam(required = false) String ownerNar,
+            @RequestParam(required = false) String masterNar,
+            @RequestParam(required = false) String zadClose,
+            @RequestParam(required = false) String vipClose,
+            @RequestParam(required = false) String vipBegDate,
+            @RequestParam(required = false) String skv,
+            @RequestParam(required = false) String kust,
+            @RequestParam(required = false) String mest,
+            @RequestParam(required = false) String dateCreate,
+            @RequestParam(required = false) String autorNar) {
+        NaryadListFilter filter = new NaryadListFilter();
+        filter.setCodNar(codNar);
+        filter.setNameNar(nameNar);
+        filter.setOwnerNar(ownerNar);
+        filter.setMasterNar(masterNar);
+        filter.setZadClose(zadClose);
+        filter.setVipClose(vipClose);
+        filter.setVipBegDate(vipBegDate);
+        filter.setSkv(skv);
+        filter.setKust(kust);
+        filter.setMest(mest);
+        filter.setDateCreate(dateCreate);
+        filter.setAutorNar(autorNar);
+        return naryadListService.findDrillingOrders(PageRequest.of(page, size), filter);
     }
 }
