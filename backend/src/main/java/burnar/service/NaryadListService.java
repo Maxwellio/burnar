@@ -2,6 +2,7 @@ package burnar.service;
 
 import burnar.dto.NaryadListDto;
 import burnar.dto.NaryadListFilter;
+import burnar.dto.YearMonthsDto;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
@@ -11,13 +12,17 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Список нарядов бурения (nartype = 1) — SQL как в Delphi NarListUnit.BitBtn2Click,
  * без ACL по оргструктуре.
  * Параметры скв/куст/мест: znparams parcode 149 / 470 / 5.
- * Фильтры колонок BaseTable — см. appendFilters; составные: zadClose→dfz.begdate, vipClose→getallpervip.
+ * Фильтры колонок BaseTable — см. buildWhere; составные: zadClose→dfz.begdate, vipClose→getallpervip.
+ * Боковая панель месяцев: dateMode + period (см. appendPeriodFilter / findPeriodTree).
  */
 @Service
 public class NaryadListService {
@@ -122,14 +127,44 @@ public class NaryadListService {
     }
 
     /**
-     * Базовый WHERE + динамические условия фильтров колонок.
-     * Тексты — ILIKE %value%; даты с фронта (YYYY-MM-DDTHH:mm:ss) сравниваются по ::date.
+     * Дерево месяцев для DynamicDateList — только YYYY-MM, где есть наряды в выбранном dateMode.
+     * Поля совпадают с appendPeriodFilter (mode 2: dfp.begdate, не begoperdate из Delphi TreeLoad).
+     */
+    public List<YearMonthsDto> findPeriodTree(int dateMode) {
+        String sql = periodTreeSql(dateMode);
+        List<String> ymList = jdbc.query(sql, new MapSqlParameterSource(),
+                (rs, rowNum) -> rs.getString("ym"));
+
+        // Группируем YYYY-MM → { year, month: ["1",…] } с сохранением порядка лет
+        Map<Integer, List<String>> byYear = new LinkedHashMap<>();
+        for (String ym : ymList) {
+            if (ym == null || ym.length() < 7) {
+                continue;
+            }
+            int year = Integer.parseInt(ym.substring(0, 4));
+            // Месяц без ведущего нуля — контракт DynamicDateList
+            String month = String.valueOf(Integer.parseInt(ym.substring(5, 7)));
+            byYear.computeIfAbsent(year, y -> new ArrayList<>()).add(month);
+        }
+
+        List<YearMonthsDto> result = new ArrayList<>(byYear.size());
+        for (Map.Entry<Integer, List<String>> entry : byYear.entrySet()) {
+            result.add(new YearMonthsDto(entry.getKey(), entry.getValue()));
+        }
+        return result;
+    }
+
+    /**
+     * Базовый WHERE + динамические условия фильтров колонок + месяц сайдбара.
+     * Тексты — ILIKE %value%; даты колонок (YYYY-MM-DDTHH:mm:ss) сравниваются по ::date.
      */
     private String buildWhere(NaryadListFilter filter, MapSqlParameterSource params) {
         StringBuilder where = new StringBuilder("WHERE d.nartype = 1 ");
         if (filter == null) {
             return where.toString();
         }
+
+        appendPeriodFilter(where, params, filter);
 
         appendTextFilter(where, params, "codNar", filter.getCodNar(),
                 "CAST(d.key AS varchar) ILIKE CONCAT('%', :codNar, '%')");
@@ -157,6 +192,96 @@ public class NaryadListService {
                 "u.ora_name ILIKE CONCAT('%', :autorNar, '%')");
 
         return where.toString();
+    }
+
+    /**
+     * Отбор по месяцу сайдбара (period = yyyy-MM-dd → ym = YYYY-MM).
+     * Режимы 3/4 — EXISTS по vipolnenie_period, чтобы не менять общий FROM_SQL.
+     */
+    private void appendPeriodFilter(
+            StringBuilder where,
+            MapSqlParameterSource params,
+            NaryadListFilter filter) {
+        if (!StringUtils.hasText(filter.getPeriod())) {
+            return;
+        }
+        String ym = toYearMonth(filter.getPeriod());
+        if (ym == null) {
+            return;
+        }
+        int mode = filter.getDateMode() != null ? filter.getDateMode() : 0;
+        params.addValue("periodYm", ym);
+
+        switch (mode) {
+            case 1 -> where.append("AND to_char(dfz.begdate, 'YYYY-MM') = :periodYm ");
+            case 2 -> where.append("AND to_char(dfp.begdate, 'YYYY-MM') = :periodYm ");
+            case 3 -> where.append(
+                    "AND EXISTS (SELECT 1 FROM burnar.vipolnenie_period vpd "
+                            + "WHERE vpd.narkey = d.key "
+                            + "AND (to_char(vpd.begoperdate, 'YYYY-MM') = :periodYm "
+                            + "OR to_char(vpd.outoperdate, 'YYYY-MM') = :periodYm)) ");
+            case 4 -> where.append(
+                    "AND EXISTS (SELECT 1 FROM burnar.vipolnenie_period vpd "
+                            + "INNER JOIN burnar.defnarvip dv ON dv.narkey = d.key "
+                            + "WHERE vpd.narkey = d.key "
+                            + "AND dv.closed = 1 "
+                            + "AND to_char(vpd.outoperdate, 'YYYY-MM') = :periodYm "
+                            + "AND vpd.outoperdate = (SELECT MAX(vp2.outoperdate) "
+                            + "FROM burnar.vipolnenie_period vp2 WHERE vp2.narkey = d.key)) ");
+            default -> where.append("AND to_char(d.createdate, 'YYYY-MM') = :periodYm ");
+        }
+    }
+
+    /**
+     * SQL distinct YYYY-MM для дерева — та же семантика, что appendPeriodFilter.
+     * Mode 3: UNION beg+out по всем строкам периода; mode 4: max outoperdate при closed=1.
+     */
+    private String periodTreeSql(int dateMode) {
+        return switch (dateMode) {
+            case 1 -> "SELECT DISTINCT to_char(dfz.begdate, 'YYYY-MM') AS ym "
+                    + "FROM burnar.defnar d "
+                    + "INNER JOIN burnar.defnarzad dfz ON d.key = dfz.narkey "
+                    + "WHERE d.nartype = 1 AND dfz.begdate IS NOT NULL "
+                    + "ORDER BY ym";
+            case 2 -> "SELECT DISTINCT to_char(dfp.begdate, 'YYYY-MM') AS ym "
+                    + "FROM burnar.defnar d "
+                    + "INNER JOIN burnar.defnarvip dfp ON d.key = dfp.narkey "
+                    + "WHERE d.nartype = 1 AND dfp.begdate IS NOT NULL "
+                    + "ORDER BY ym";
+            case 3 -> "SELECT DISTINCT sub.ym AS ym FROM ("
+                    + "  SELECT to_char(vpd.begoperdate, 'YYYY-MM') AS ym "
+                    + "  FROM burnar.defnar d "
+                    + "  INNER JOIN burnar.vipolnenie_period vpd ON vpd.narkey = d.key "
+                    + "  WHERE d.nartype = 1 "
+                    + "  UNION "
+                    + "  SELECT to_char(vpd.outoperdate, 'YYYY-MM') AS ym "
+                    + "  FROM burnar.defnar d "
+                    + "  INNER JOIN burnar.vipolnenie_period vpd ON vpd.narkey = d.key "
+                    + "  WHERE d.nartype = 1"
+                    + ") sub WHERE sub.ym IS NOT NULL ORDER BY ym";
+            case 4 -> "SELECT DISTINCT to_char(vpd.outoperdate, 'YYYY-MM') AS ym "
+                    + "FROM burnar.defnar d "
+                    + "INNER JOIN burnar.defnarvip dv ON dv.narkey = d.key "
+                    + "INNER JOIN burnar.vipolnenie_period vpd ON vpd.narkey = d.key "
+                    + "WHERE d.nartype = 1 AND dv.closed = 1 "
+                    + "AND vpd.outoperdate = (SELECT MAX(vp2.outoperdate) "
+                    + "FROM burnar.vipolnenie_period vp2 WHERE vp2.narkey = d.key) "
+                    + "AND vpd.outoperdate IS NOT NULL "
+                    + "ORDER BY ym";
+            default -> "SELECT DISTINCT to_char(d.createdate, 'YYYY-MM') AS ym "
+                    + "FROM burnar.defnar d "
+                    + "WHERE d.nartype = 1 AND d.createdate IS NOT NULL "
+                    + "ORDER BY ym";
+        };
+    }
+
+    /** period yyyy-MM-dd или yyyy-MM → YYYY-MM; иначе null. */
+    private static String toYearMonth(String period) {
+        String trimmed = period.trim();
+        if (trimmed.length() >= 7 && trimmed.charAt(4) == '-') {
+            return trimmed.substring(0, 7);
+        }
+        return null;
     }
 
     private void appendTextFilter(

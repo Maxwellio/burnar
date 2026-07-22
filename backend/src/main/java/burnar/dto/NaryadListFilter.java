@@ -4,6 +4,7 @@ package burnar.dto;
  * Query-параметры фильтров колонок BaseTable для GET /api/naryady.
  * Имена совпадают с id/accessorKey колонок на фронте (naryadColumns.js).
  * Даты приходят как YYYY-MM-DDTHH:mm:ss из DynamicDatePicker.
+ * dateMode + period — боковая панель месяцев (Delphi rgDate / TreeView).
  * Пустые значения на бэке игнорируются.
  */
 public class NaryadListFilter {
@@ -22,6 +23,13 @@ public class NaryadListFilter {
     private String mest;
     private String dateCreate;
     private String autorNar;
+    /**
+     * Режим отбора по датам (0..4), как rgDate в NarListUnit.
+     * 0 createdate, 1 dfz.begdate, 2 dfp.begdate, 3 vipolnenie_period, 4 закрытие.
+     */
+    private Integer dateMode;
+    /** Первое число месяца yyyy-MM-dd из DynamicDateList; сравнение по YYYY-MM. */
+    private String period;
 
     public String getCodNar() {
         return codNar;
@@ -117,5 +125,21 @@ public class NaryadListFilter {
 
     public void setAutorNar(String autorNar) {
         this.autorNar = autorNar;
+    }
+
+    public Integer getDateMode() {
+        return dateMode;
+    }
+
+    public void setDateMode(Integer dateMode) {
+        this.dateMode = dateMode;
+    }
+
+    public String getPeriod() {
+        return period;
+    }
+
+    public void setPeriod(String period) {
+        this.period = period;
     }
 }
