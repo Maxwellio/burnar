@@ -248,7 +248,6 @@ export default function Home() {
             <AxiosProvider baseapi="/api">
               <BaseTable
                 url="/naryady"
-                baseUrl="/api"
                 columns={naryadColumns}
                 filters={filters}
                 setFilters={setFilters}
