@@ -52,7 +52,8 @@ export default defineConfig({
       // Разрешаем читать исходники пакета по file:-пути вне frontend/.
       allow: [
         __dirname,
-        path.resolve(__dirname, '../../table_comp/frontend/src'),
+        // file:-пакет mainComponent лежит вне frontend/ — Vite должен читать его исходники
+        path.resolve(__dirname, '../../table_comp/mainComponent'),
       ],
     },
     proxy: {
