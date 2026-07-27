@@ -21,11 +21,11 @@ import java.util.Map;
 
 /**
  * Список нарядов бурения (nartype = 1) — SQL как в Delphi NarListUnit.BitBtn2Click,
- * с ACL по оргструктуре автора (OrgAccessService / sysboss).
+ * с ACL автора через OrgAccessService (EXISTS, без JOIN karjera в FROM).
  * Параметры скв/куст/мест: znparams parcode 149 / 470 / 5.
  * Фильтры колонок BaseTable — см. buildWhere; составные: zadClose→dfz.begdate, vipClose→getallpervip.
  * Боковая панель месяцев: dateMode + period (см. appendPeriodFilter / findPeriodTree).
- * orgUnitId — обрезка для админа (точное совпадение орг. автора).
+ * orgUnitId — только админ: точное совпадение орг. автора; без cut админ видит всё.
  */
 @Service
 public class NaryadListService {
@@ -51,15 +51,18 @@ public class NaryadListService {
 
     /**
      * Общий FROM/JOIN для COUNT и LIST — иначе фильтры по датам/бригаде/автору не совпадут с выборкой.
-     * userstru — орг. автора для ACL (как Delphi).
+     * ACL автора — EXISTS в WHERE (OrgAccessService), не JOIN karjera.
      */
     private static final String FROM_SQL =
             "FROM burnar.defnar d "
                     + "LEFT JOIN burnar.defnarvip dfp ON d.key = dfp.narkey "
                     + "LEFT JOIN burnar.defnarzad dfz ON d.key = dfz.narkey "
                     + "INNER JOIN burnar.spr_workers s ON d.ownernar = s.key "
-                    + "INNER JOIN burnar.users u ON d.narauthor = u.users_id "
-                    + OrgAccessService.AUTHOR_ORG_JOIN_SQL;
+                    + "INNER JOIN burnar.users u ON d.narauthor = u.users_id ";
+
+    /** Автор наряда для period-tree SQL (ACL ссылается на u.people_id). */
+    private static final String AUTHOR_USER_JOIN =
+            "INNER JOIN burnar.users u ON d.narauthor = u.users_id ";
 
     private static final String SELECT_SQL =
             "SELECT "
@@ -264,21 +267,18 @@ public class NaryadListService {
         appendAcl(aclWhere, params, orgUnitId);
         String acl = aclWhere.toString();
 
-        String authorJoins = "INNER JOIN burnar.users u ON d.narauthor = u.users_id "
-                + OrgAccessService.AUTHOR_ORG_JOIN_SQL;
-
         return switch (dateMode) {
             case 1 -> "SELECT DISTINCT to_char(dfz.begdate, 'YYYY-MM') AS ym "
                     + "FROM burnar.defnar d "
                     + "INNER JOIN burnar.defnarzad dfz ON d.key = dfz.narkey "
-                    + authorJoins
+                    + AUTHOR_USER_JOIN
                     + "WHERE d.nartype = 1 AND dfz.begdate IS NOT NULL "
                     + acl
                     + "ORDER BY ym";
             case 2 -> "SELECT DISTINCT to_char(dfp.begdate, 'YYYY-MM') AS ym "
                     + "FROM burnar.defnar d "
                     + "INNER JOIN burnar.defnarvip dfp ON d.key = dfp.narkey "
-                    + authorJoins
+                    + AUTHOR_USER_JOIN
                     + "WHERE d.nartype = 1 AND dfp.begdate IS NOT NULL "
                     + acl
                     + "ORDER BY ym";
@@ -286,14 +286,14 @@ public class NaryadListService {
                     + "  SELECT to_char(vpd.begoperdate, 'YYYY-MM') AS ym "
                     + "  FROM burnar.defnar d "
                     + "  INNER JOIN burnar.vipolnenie_period vpd ON vpd.narkey = d.key "
-                    + "  " + authorJoins
+                    + "  " + AUTHOR_USER_JOIN
                     + "  WHERE d.nartype = 1 "
                     + acl
                     + "  UNION "
                     + "  SELECT to_char(vpd.outoperdate, 'YYYY-MM') AS ym "
                     + "  FROM burnar.defnar d "
                     + "  INNER JOIN burnar.vipolnenie_period vpd ON vpd.narkey = d.key "
-                    + "  " + authorJoins
+                    + "  " + AUTHOR_USER_JOIN
                     + "  WHERE d.nartype = 1 "
                     + acl
                     + ") sub WHERE sub.ym IS NOT NULL ORDER BY ym";
@@ -301,7 +301,7 @@ public class NaryadListService {
                     + "FROM burnar.defnar d "
                     + "INNER JOIN burnar.defnarvip dv ON dv.narkey = d.key "
                     + "INNER JOIN burnar.vipolnenie_period vpd ON vpd.narkey = d.key "
-                    + authorJoins
+                    + AUTHOR_USER_JOIN
                     + "WHERE d.nartype = 1 AND dv.closed = 1 "
                     + "AND vpd.outoperdate = (SELECT MAX(vp2.outoperdate) "
                     + "FROM burnar.vipolnenie_period vp2 WHERE vp2.narkey = d.key) "
@@ -310,7 +310,7 @@ public class NaryadListService {
                     + "ORDER BY ym";
             default -> "SELECT DISTINCT to_char(d.createdate, 'YYYY-MM') AS ym "
                     + "FROM burnar.defnar d "
-                    + authorJoins
+                    + AUTHOR_USER_JOIN
                     + "WHERE d.nartype = 1 AND d.createdate IS NOT NULL "
                     + acl
                     + "ORDER BY ym";

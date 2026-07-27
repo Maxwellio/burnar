@@ -15,22 +15,23 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
- * Переиспользуемый доступ по оргструктуре (burnar.org_stru.sysboss).
- * ACL автора наряда — как Delphi NarListUnit.BitBtn2Click.
+ * ACL по оргструктуре автора наряда (burnar.org_stru.sysboss).
+ * Вызывается из NaryadListService (список и дерево месяцев); без JOIN в FROM —
+ * проверка через EXISTS, чтобы несколько строк karjera не размножали наряды.
  */
 @Service
 public class OrgAccessService {
 
     /**
-     * Join орг. автора: users u уже в FROM; алиас userstru.org — для ACL.
-     * Как в Delphi: karjera.dtenter &lt;= now, без фильтра dtout.
+     * Активная должность: dtenter/dtout как в Delphi NarListUnit.dfm (dtout NOT NULL в DDL).
+     * Фрагмент внутри EXISTS; снаружи уже есть users u (автор наряда).
      */
-    public static final String AUTHOR_ORG_JOIN_SQL =
-            "LEFT JOIN ("
-                    + "  SELECT ds.org, k.idpeople "
-                    + "  FROM burnar.karjera k, burnar.doljtostruct ds "
-                    + "  WHERE k.dtenter <= CURRENT_DATE AND ds.key = k.doljinstru"
-                    + ") userstru ON u.people_id = userstru.idpeople ";
+    private static final String ACTIVE_CAREER_FROM =
+            "FROM burnar.karjera k "
+                    + "JOIN burnar.doljtostruct ds ON ds.key = k.doljinstru "
+                    + "WHERE k.idpeople = u.people_id "
+                    + "AND k.dtenter <= CURRENT_DATE "
+                    + "AND k.dtout >= CURRENT_DATE ";
 
     private final NamedParameterJdbcTemplate jdbc;
     private final BurnarProperties properties;
@@ -53,20 +54,22 @@ public class OrgAccessService {
     }
 
     /**
-     * Орг. единица пользователя через карьеру. При нескольких distinct — первая.
+     * Орг. единица текущего пользователя (корень sysboss-дерева для не-админа).
+     * При нескольких активных должностях — самая свежая по dtenter.
      */
     public Optional<Integer> resolveUserOrgId(String username) {
         if (!StringUtils.hasText(username)) {
             return Optional.empty();
         }
         List<Integer> orgs = jdbc.query(
-                "SELECT DISTINCT ds.org AS org "
+                "SELECT ds.org AS org "
                         + "FROM burnar.users u "
                         + "JOIN burnar.karjera k ON k.idpeople = u.people_id "
                         + "JOIN burnar.doljtostruct ds ON ds.key = k.doljinstru "
                         + "WHERE UPPER(u.ora_name) = UPPER(:username) "
                         + "AND k.dtenter <= CURRENT_DATE "
-                        + "ORDER BY ds.org "
+                        + "AND k.dtout >= CURRENT_DATE "
+                        + "ORDER BY k.dtenter DESC, ds.org "
                         + "LIMIT 1",
                 new MapSqlParameterSource("username", username.trim()),
                 (rs, rowNum) -> rs.getInt("org"));
@@ -74,15 +77,27 @@ public class OrgAccessService {
     }
 
     /**
-     * Добавляет AND userstru.org IN (sysboss-дерево пользователя [с обрезкой orgUnitId]).
-     * orgUnitId учитывается только для админа; иначе игнорируется.
-     * Нет орг. у пользователя → AND 1=0 (пустая выдача, без 500).
+     * Дописывает ACL в WHERE списка/дерева (users u уже в FROM как автор наряда).
+     * Админ без orgUnitId («Все») — без ограничения. Админ с cut — точное совпадение орг. автора.
+     * Не-админ — sysboss-поддерево своей орг.; нет карьеры → AND 1=0.
      */
     public void appendAuthorOrgAcl(
             StringBuilder where,
             MapSqlParameterSource params,
             String username,
             Integer orgUnitId) {
+        // Админ: «Все» = весь список; cut = только выбранная орг. автора (не поддерево).
+        if (isAdmin(username)) {
+            if (orgUnitId == null) {
+                return;
+            }
+            params.addValue("aclOrgUnitId", orgUnitId);
+            where.append("AND EXISTS (SELECT 1 ")
+                    .append(ACTIVE_CAREER_FROM)
+                    .append("AND ds.org = :aclOrgUnitId) ");
+            return;
+        }
+
         Optional<Integer> userOrg = resolveUserOrgId(username);
         if (userOrg.isEmpty()) {
             where.append("AND 1=0 ");
@@ -90,22 +105,16 @@ public class OrgAccessService {
         }
         params.addValue("aclUserOrgId", userOrg.get());
 
-        Integer cutId = (orgUnitId != null && isAdmin(username)) ? orgUnitId : null;
-        if (cutId != null) {
-            params.addValue("aclOrgUnitId", cutId);
-        }
-
-        where.append("AND userstru.org IN (")
+        where.append("AND EXISTS (SELECT 1 ")
+                .append(ACTIVE_CAREER_FROM)
+                .append("AND ds.org IN (")
                 .append("WITH RECURSIVE tr AS (")
                 .append("  SELECT c.id FROM burnar.org_stru c WHERE c.id = :aclUserOrgId ")
                 .append("  UNION ALL ")
                 .append("  SELECT c.id FROM burnar.org_stru c ")
                 .append("  INNER JOIN tr ON c.sysboss = tr.id")
-                .append(") SELECT tr.id FROM tr");
-        if (cutId != null) {
-            where.append(" WHERE tr.id = :aclOrgUnitId");
-        }
-        where.append(") ");
+                .append(") SELECT tr.id FROM tr")
+                .append(")) ");
     }
 
     /** Справочник для админского Select: id IN org-filter-ids, ORDER BY nm. */

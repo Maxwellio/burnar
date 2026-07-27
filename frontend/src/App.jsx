@@ -3,6 +3,7 @@ import { ThemeProvider, CssBaseline, GlobalStyles } from '@mui/material'
 import { theme, globalLegacyAnchorStyles } from './theme.js'
 import { AuthProvider } from './context/AuthContext.jsx'
 import ProtectedLayout from './components/ProtectedLayout.jsx'
+import AdminOnly from './components/AdminOnly.jsx'
 import Home from './pages/Home.jsx'
 import Login from './pages/Login.jsx'
 import Catalog from './pages/Catalog.jsx'
@@ -26,7 +27,9 @@ export default function App() {
             <Route path="/catalog" element={<Catalog />} />
             <Route path="/reports" element={<Reports />} />
             <Route path="/settings" element={<Settings />} />
-            <Route path="/admin" element={<Admin />} />
+            <Route element={<AdminOnly />}>
+              <Route path="/admin" element={<Admin />} />
+            </Route>
             <Route path="*" element={<Navigate to="/" replace />} />
           </Route>
         </Routes>

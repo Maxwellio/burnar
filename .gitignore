@@ -17,4 +17,5 @@ buildNumber.properties
 .classpath
 
 node_modules
+frontend/dist/
 

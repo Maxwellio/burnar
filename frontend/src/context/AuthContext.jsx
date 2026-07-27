@@ -22,9 +22,13 @@ export function AuthProvider({ children }) {
     }
   }, [])
 
+  // Сбрасываем user даже если POST /logout упал — иначе Login с живым user уведёт обратно на /.
   const logout = useCallback(async () => {
-    await apiLogout()
-    setUser(null)
+    try {
+      await apiLogout()
+    } finally {
+      setUser(null)
+    }
   }, [])
 
   const value = { user, setUser, loading, fetchUser, logout }
