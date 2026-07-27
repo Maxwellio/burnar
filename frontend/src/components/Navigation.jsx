@@ -44,7 +44,9 @@ export default function Navigation() {
     try {
       await logout()
     } finally {
-      window.location.replace('/login')
+      // Client-side navigate: без full reload. SpaForwardController всё равно
+      // нужен для hard-redirect (401 в http.js) и прямого открытия /login.
+      navigate('/login', { replace: true })
     }
   }
 

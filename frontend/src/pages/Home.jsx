@@ -3,13 +3,11 @@ import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
 import FormControl from '@mui/material/FormControl'
 import FormControlLabel from '@mui/material/FormControlLabel'
-import FormLabel from '@mui/material/FormLabel'
 import InputLabel from '@mui/material/InputLabel'
 import MenuItem from '@mui/material/MenuItem'
 import Radio from '@mui/material/Radio'
 import RadioGroup from '@mui/material/RadioGroup'
 import Select from '@mui/material/Select'
-import Typography from '@mui/material/Typography'
 import AddIcon from '@mui/icons-material/Add'
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined'
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline'
@@ -34,6 +32,19 @@ const DATE_MODE_OPTIONS = [
 const ORG_ALL = 'all'
 
 const SIDEBAR_FILTER_IDS = new Set(['dateMode', 'period', 'orgUnitId'])
+
+/** Скрытый ползунок при сохранении прокрутки (Firefox / IE / WebKit). */
+const HIDDEN_SCROLLBAR_SX = {
+  scrollbarWidth: 'none',
+  msOverflowStyle: 'none',
+  '&::-webkit-scrollbar': { display: 'none' },
+  // На случай внутренних скролл-контейнеров DynamicDateList
+  '& *': {
+    scrollbarWidth: 'none',
+    msOverflowStyle: 'none',
+  },
+  '& *::-webkit-scrollbar': { display: 'none' },
+}
 
 const currentMonthStart = () => format(startOfMonth(new Date()), 'yyyy-MM-dd')
 
@@ -61,6 +72,7 @@ const pickPeriod = (dates, preferred) => {
  * Список нарядов: слева отбор по месяцу (DynamicDateList), справа тулбар + BaseTable.
  * dateMode/period/orgUnitId уходят в query через filters; колоночные фильтры — из таблицы.
  * Select «структура» — только ROLE_ADMIN.
+ * Layout: боковая панель вплотную слева на всю высоту main (без заголовка «Наряды»).
  */
 export default function Home() {
   const { user } = useAuth()
@@ -163,173 +175,156 @@ export default function Home() {
   return (
     <Box
       sx={{
-        p: 2.5,
         height: '100%',
         display: 'flex',
-        flexDirection: 'column',
         boxSizing: 'border-box',
         minHeight: 0,
-        gap: 2,
+        overflow: 'hidden',
         bgcolor: 'background.default',
       }}
     >
-      <Typography
-        variant="h5"
-        sx={{ fontWeight: 700, color: 'text.primary', flexShrink: 0 }}
-      >
-        Наряды
-      </Typography>
-
+      {/* Боковая панель: вплотную слева под шапкой на всю высоту main */}
       <Box
         sx={{
-          flex: 1,
-          minHeight: 0,
+          width: 200,
+          flexShrink: 0,
+          alignSelf: 'stretch',
           display: 'flex',
-          gap: 2,
-          alignItems: 'stretch',
+          flexDirection: 'column',
+          minHeight: 0,
+          bgcolor: 'background.paper',
+          borderRight: 1,
+          borderColor: 'divider',
+          overflow: 'hidden',
         }}
       >
-        {/* Боковая панель: режим отбора + дерево месяцев (mainComponent DynamicDateList) */}
-        <Box
-          sx={{
-            width: 200,
-            flexShrink: 0,
-            display: 'flex',
-            flexDirection: 'column',
-            minHeight: 0,
-            gap: 1,
-            bgcolor: 'background.paper',
-            border: 1,
-            borderColor: 'divider',
-            borderRadius: 1,
-            overflow: 'hidden',
-          }}
+        <FormControl
+          component="fieldset"
+          sx={{ px: 1.5, pt: 1.5, pb: 0.5, flexShrink: 0 }}
         >
-          <FormControl
-            component="fieldset"
-            sx={{ px: 1.5, pt: 1.5, pb: 0.5, flexShrink: 0 }}
+          <RadioGroup
+            value={String(dateMode)}
+            onChange={(e) => setDateMode(Number(e.target.value))}
           >
-            <FormLabel
-              component="legend"
-              sx={{ fontSize: 13, fontWeight: 600, mb: 0.5 }}
-            >
-              Отбор по датам
-            </FormLabel>
-            <RadioGroup
-              value={String(dateMode)}
-              onChange={(e) => setDateMode(Number(e.target.value))}
-            >
-              {DATE_MODE_OPTIONS.map((opt) => (
-                <FormControlLabel
-                  key={opt.value}
-                  value={String(opt.value)}
-                  control={<Radio size="small" />}
-                  label={opt.label}
-                  sx={{
-                    m: 0,
-                    '& .MuiFormControlLabel-label': { fontSize: 13 },
-                  }}
-                />
-              ))}
-            </RadioGroup>
-          </FormControl>
-
-          <Box sx={{ flex: 1, minHeight: 0, overflow: 'auto', px: 0.5 }}>
-            <DynamicDateList
-              dates={dates}
-              selectedDate={selectedDate}
-              setSelectedDate={setSelectedDate}
-            />
-          </Box>
-        </Box>
+            {DATE_MODE_OPTIONS.map((opt) => (
+              <FormControlLabel
+                key={opt.value}
+                value={String(opt.value)}
+                control={<Radio size="small" />}
+                label={opt.label}
+                TypographyProps={{ variant: 'body2' }}
+                sx={{ m: 0 }}
+              />
+            ))}
+          </RadioGroup>
+        </FormControl>
 
         <Box
           sx={{
             flex: 1,
-            minWidth: 0,
             minHeight: 0,
-            display: 'flex',
-            flexDirection: 'column',
-            gap: 2,
+            overflow: 'auto',
+            px: 0.5,
+            ...HIDDEN_SCROLLBAR_SX,
           }}
         >
-          <Box
+          <DynamicDateList
+            dates={dates}
+            selectedDate={selectedDate}
+            setSelectedDate={setSelectedDate}
+          />
+        </Box>
+      </Box>
+
+      <Box
+        sx={{
+          flex: 1,
+          minWidth: 0,
+          minHeight: 0,
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 2,
+          p: 2.5,
+          overflow: 'hidden',
+        }}
+      >
+        <Box
+          sx={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 1,
+            flexWrap: 'wrap',
+            flexShrink: 0,
+          }}
+        >
+          <Button
+            variant="contained"
+            startIcon={<AddIcon />}
+            disableElevation
+            sx={{ textTransform: 'none', fontWeight: 600 }}
+          >
+            Добавить
+          </Button>
+          <Button
+            variant="outlined"
+            startIcon={<EditOutlinedIcon />}
             sx={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 1,
-              flexWrap: 'wrap',
-              flexShrink: 0,
+              textTransform: 'none',
+              bgcolor: 'background.paper',
+              borderColor: 'divider',
+              color: 'text.secondary',
             }}
           >
-            <Button
-              variant="contained"
-              startIcon={<AddIcon />}
-              disableElevation
-              sx={{ textTransform: 'none', fontWeight: 600 }}
-            >
-              Добавить
-            </Button>
-            <Button
-              variant="outlined"
-              startIcon={<EditOutlinedIcon />}
-              sx={{
-                textTransform: 'none',
-                bgcolor: 'background.paper',
-                borderColor: 'divider',
-                color: 'text.secondary',
-              }}
-            >
-              Редактировать
-            </Button>
-            <Button
-              variant="outlined"
-              startIcon={<DeleteOutlineIcon />}
-              sx={{
-                textTransform: 'none',
-                bgcolor: 'background.paper',
-                borderColor: 'divider',
-                color: 'text.secondary',
-              }}
-            >
-              Удалить
-            </Button>
+            Редактировать
+          </Button>
+          <Button
+            variant="outlined"
+            startIcon={<DeleteOutlineIcon />}
+            sx={{
+              textTransform: 'none',
+              bgcolor: 'background.paper',
+              borderColor: 'divider',
+              color: 'text.secondary',
+            }}
+          >
+            Удалить
+          </Button>
 
-            {orgSelectVisible && (
-              <FormControl
-                size="small"
-                sx={{ ml: 'auto', minWidth: 180, bgcolor: 'background.paper' }}
+          {orgSelectVisible && (
+            <FormControl
+              size="small"
+              sx={{ ml: 'auto', minWidth: 180, bgcolor: 'background.paper' }}
+            >
+              <InputLabel id="org-structure-label">структура</InputLabel>
+              <Select
+                labelId="org-structure-label"
+                id="org-structure-select"
+                label="структура"
+                value={orgUnitId}
+                onChange={(e) => setOrgUnitId(e.target.value)}
               >
-                <InputLabel id="org-structure-label">структура</InputLabel>
-                <Select
-                  labelId="org-structure-label"
-                  id="org-structure-select"
-                  label="структура"
-                  value={orgUnitId}
-                  onChange={(e) => setOrgUnitId(e.target.value)}
-                >
-                  <MenuItem value={ORG_ALL}>Все</MenuItem>
-                  {orgUnits.map((u) => (
-                    <MenuItem key={u.id} value={String(u.id)}>
-                      {u.name}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            )}
-          </Box>
+                <MenuItem value={ORG_ALL}>Все</MenuItem>
+                {orgUnits.map((u) => (
+                  <MenuItem key={u.id} value={String(u.id)}>
+                    {u.name}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          )}
+        </Box>
 
-          <Box sx={{ flex: 1, minHeight: 0 }}>
-            <AxiosProvider baseapi="/api">
-              <BaseTable
-                url="/naryady"
-                columns={naryadColumns}
-                filters={filters}
-                setFilters={setFilters}
-                pageable
-              />
-            </AxiosProvider>
-          </Box>
+        <Box sx={{ flex: 1, minHeight: 0 }}>
+          <AxiosProvider baseapi="/api">
+            <BaseTable
+              url="/naryady"
+              baseUrl="/api"
+              columns={naryadColumns}
+              filters={filters}
+              setFilters={setFilters}
+              pageable
+            />
+          </AxiosProvider>
         </Box>
       </Box>
     </Box>
