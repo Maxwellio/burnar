@@ -4,8 +4,11 @@ import Button from '@mui/material/Button'
 import FormControl from '@mui/material/FormControl'
 import FormControlLabel from '@mui/material/FormControlLabel'
 import FormLabel from '@mui/material/FormLabel'
+import InputLabel from '@mui/material/InputLabel'
+import MenuItem from '@mui/material/MenuItem'
 import Radio from '@mui/material/Radio'
 import RadioGroup from '@mui/material/RadioGroup'
+import Select from '@mui/material/Select'
 import Typography from '@mui/material/Typography'
 import AddIcon from '@mui/icons-material/Add'
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined'
@@ -13,6 +16,9 @@ import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline'
 import { format, startOfMonth } from 'date-fns'
 import { AxiosProvider, BaseTable, DynamicDateList } from 'mainComponent'
 import { fetchNaryadyPeriods } from '../api/naryadyApi.js'
+import { fetchOrgUnits } from '../api/orgUnitsApi.js'
+import { useAuth } from '../context/AuthContext.jsx'
+import { isAdmin } from '../utils/roles.js'
 import { naryadColumns } from './naryadColumns.js'
 
 /** Режимы отбора по датам — как rgDate в Delphi NarListUnit. */
@@ -24,7 +30,10 @@ const DATE_MODE_OPTIONS = [
   { value: 4, label: 'Закрытие наряда' },
 ]
 
-const SIDEBAR_FILTER_IDS = new Set(['dateMode', 'period'])
+/** Sentinel «Все» — не уходит в query как orgUnitId. */
+const ORG_ALL = 'all'
+
+const SIDEBAR_FILTER_IDS = new Set(['dateMode', 'period', 'orgUnitId'])
 
 const currentMonthStart = () => format(startOfMonth(new Date()), 'yyyy-MM-dd')
 
@@ -50,29 +59,45 @@ const pickPeriod = (dates, preferred) => {
 
 /**
  * Список нарядов: слева отбор по месяцу (DynamicDateList), справа тулбар + BaseTable.
- * dateMode/period уходят в query через filters; колоночные фильтры — из таблицы.
+ * dateMode/period/orgUnitId уходят в query через filters; колоночные фильтры — из таблицы.
+ * Select «структура» — только ROLE_ADMIN.
  */
 export default function Home() {
+  const { user } = useAuth()
+  const admin = isAdmin(user)
+
   const [dateMode, setDateMode] = useState(0)
   const [selectedDate, setSelectedDate] = useState(currentMonthStart)
   const [dates, setDates] = useState([])
+  const [orgUnitId, setOrgUnitId] = useState(ORG_ALL)
+  const [orgUnits, setOrgUnits] = useState([])
+  const [orgSelectVisible, setOrgSelectVisible] = useState(false)
   const [filters, setFiltersState] = useState(() => [
     { id: 'dateMode', value: 0 },
     { id: 'period', value: currentMonthStart() },
   ])
 
-  // Актуальные dateMode/period для inject при setFilters из BaseTable (иначе stale closure)
-  const sidebarRef = useRef({ dateMode, selectedDate })
-  sidebarRef.current = { dateMode, selectedDate }
+  // Актуальные сайдбар/орг фильтры для inject при setFilters из BaseTable
+  const sidebarRef = useRef({ dateMode, selectedDate, orgUnitId, admin })
+  sidebarRef.current = { dateMode, selectedDate, orgUnitId, admin }
 
   const injectSidebarFilters = useCallback((list) => {
-    const { dateMode: mode, selectedDate: period } = sidebarRef.current
+    const {
+      dateMode: mode,
+      selectedDate: period,
+      orgUnitId: orgId,
+      admin: isAdm,
+    } = sidebarRef.current
     const columnOnly = (list || []).filter((f) => !SIDEBAR_FILTER_IDS.has(f.id))
-    return [
+    const next = [
       ...columnOnly,
       { id: 'dateMode', value: mode },
       { id: 'period', value: period },
     ]
+    if (isAdm && orgId !== ORG_ALL) {
+      next.push({ id: 'orgUnitId', value: Number(orgId) })
+    }
+    return next
   }, [])
 
   const setFilters = useCallback(
@@ -85,15 +110,42 @@ export default function Home() {
     [injectSidebarFilters],
   )
 
-  // При смене месяца/режима подмешиваем period в filters без сброса колоночных
+  // При смене месяца/режима/орг подмешиваем filters без сброса колоночных
   useEffect(() => {
     setFiltersState((prev) => injectSidebarFilters(prev))
-  }, [dateMode, selectedDate, injectSidebarFilters])
+  }, [dateMode, selectedDate, orgUnitId, admin, injectSidebarFilters])
 
-  // Дерево месяцев с бэка при смене режима; выбор текущего месяца или fallback
+  // Справочник оргединиц — только админам
+  useEffect(() => {
+    if (!admin) {
+      setOrgUnits([])
+      setOrgSelectVisible(false)
+      setOrgUnitId(ORG_ALL)
+      return undefined
+    }
+    let cancelled = false
+    fetchOrgUnits()
+      .then((list) => {
+        if (cancelled) return
+        setOrgUnits(Array.isArray(list) ? list : [])
+        setOrgSelectVisible(true)
+      })
+      .catch(() => {
+        if (cancelled) return
+        setOrgUnits([])
+        setOrgSelectVisible(false)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [admin])
+
+  // Дерево месяцев с бэка при смене режима/орг; выбор текущего месяца или fallback
   useEffect(() => {
     let cancelled = false
-    fetchNaryadyPeriods(dateMode)
+    const orgParam =
+      admin && orgUnitId !== ORG_ALL ? Number(orgUnitId) : undefined
+    fetchNaryadyPeriods(dateMode, orgParam)
       .then((tree) => {
         if (cancelled) return
         setDates(Array.isArray(tree) ? tree : [])
@@ -106,7 +158,7 @@ export default function Home() {
     return () => {
       cancelled = true
     }
-  }, [dateMode])
+  }, [dateMode, orgUnitId, admin])
 
   return (
     <Box
@@ -242,6 +294,29 @@ export default function Home() {
             >
               Удалить
             </Button>
+
+            {orgSelectVisible && (
+              <FormControl
+                size="small"
+                sx={{ ml: 'auto', minWidth: 180, bgcolor: 'background.paper' }}
+              >
+                <InputLabel id="org-structure-label">структура</InputLabel>
+                <Select
+                  labelId="org-structure-label"
+                  id="org-structure-select"
+                  label="структура"
+                  value={orgUnitId}
+                  onChange={(e) => setOrgUnitId(e.target.value)}
+                >
+                  <MenuItem value={ORG_ALL}>Все</MenuItem>
+                  {orgUnits.map((u) => (
+                    <MenuItem key={u.id} value={String(u.id)}>
+                      {u.name}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            )}
           </Box>
 
           <Box sx={{ flex: 1, minHeight: 0 }}>

@@ -14,3 +14,17 @@ spring:
     properties:
       hibernate:
         default_schema: burnar
+
+# Админы как Delphi NarListUnit (burnar_role, ievc) + burnar_web → ROLE_ADMIN.
+# org-filter-ids — пункты Select «структура» (Delphi LoadCBX).
+burnar:
+  admin-users:
+    - burnar_role
+    - ievc
+    - burnar_web
+  org-filter-ids:
+    - 4
+    - 5
+    - 6
+    - 7
+    - 8

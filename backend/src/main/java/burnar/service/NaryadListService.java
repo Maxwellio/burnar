@@ -9,6 +9,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
@@ -19,10 +21,11 @@ import java.util.Map;
 
 /**
  * Список нарядов бурения (nartype = 1) — SQL как в Delphi NarListUnit.BitBtn2Click,
- * без ACL по оргструктуре.
+ * с ACL по оргструктуре автора (OrgAccessService / sysboss).
  * Параметры скв/куст/мест: znparams parcode 149 / 470 / 5.
  * Фильтры колонок BaseTable — см. buildWhere; составные: zadClose→dfz.begdate, vipClose→getallpervip.
  * Боковая панель месяцев: dateMode + period (см. appendPeriodFilter / findPeriodTree).
+ * orgUnitId — обрезка для админа (точное совпадение орг. автора).
  */
 @Service
 public class NaryadListService {
@@ -48,13 +51,15 @@ public class NaryadListService {
 
     /**
      * Общий FROM/JOIN для COUNT и LIST — иначе фильтры по датам/бригаде/автору не совпадут с выборкой.
+     * userstru — орг. автора для ACL (как Delphi).
      */
     private static final String FROM_SQL =
             "FROM burnar.defnar d "
                     + "LEFT JOIN burnar.defnarvip dfp ON d.key = dfp.narkey "
                     + "LEFT JOIN burnar.defnarzad dfz ON d.key = dfz.narkey "
                     + "INNER JOIN burnar.spr_workers s ON d.ownernar = s.key "
-                    + "INNER JOIN burnar.users u ON d.narauthor = u.users_id ";
+                    + "INNER JOIN burnar.users u ON d.narauthor = u.users_id "
+                    + OrgAccessService.AUTHOR_ORG_JOIN_SQL;
 
     private static final String SELECT_SQL =
             "SELECT "
@@ -101,9 +106,11 @@ public class NaryadListService {
     };
 
     private final NamedParameterJdbcTemplate jdbc;
+    private final OrgAccessService orgAccessService;
 
-    public NaryadListService(NamedParameterJdbcTemplate jdbc) {
+    public NaryadListService(NamedParameterJdbcTemplate jdbc, OrgAccessService orgAccessService) {
         this.jdbc = jdbc;
+        this.orgAccessService = orgAccessService;
     }
 
     public Page<NaryadListDto> findDrillingOrders(Pageable pageable, NaryadListFilter filter) {
@@ -127,22 +134,20 @@ public class NaryadListService {
     }
 
     /**
-     * Дерево месяцев для DynamicDateList — только YYYY-MM, где есть наряды в выбранном dateMode.
-     * Поля совпадают с appendPeriodFilter (mode 2: dfp.begdate, не begoperdate из Delphi TreeLoad).
+     * Дерево месяцев для DynamicDateList — только YYYY-MM, где есть наряды в выбранном dateMode,
+     * с тем же ACL по орг. автора (и опциональной обрезкой orgUnitId для админа).
      */
-    public List<YearMonthsDto> findPeriodTree(int dateMode) {
-        String sql = periodTreeSql(dateMode);
-        List<String> ymList = jdbc.query(sql, new MapSqlParameterSource(),
-                (rs, rowNum) -> rs.getString("ym"));
+    public List<YearMonthsDto> findPeriodTree(int dateMode, Integer orgUnitId) {
+        MapSqlParameterSource params = new MapSqlParameterSource();
+        String sql = periodTreeSql(dateMode, params, orgUnitId);
+        List<String> ymList = jdbc.query(sql, params, (rs, rowNum) -> rs.getString("ym"));
 
-        // Группируем YYYY-MM → { year, month: ["1",…] } с сохранением порядка лет
         Map<Integer, List<String>> byYear = new LinkedHashMap<>();
         for (String ym : ymList) {
             if (ym == null || ym.length() < 7) {
                 continue;
             }
             int year = Integer.parseInt(ym.substring(0, 4));
-            // Месяц без ведущего нуля — контракт DynamicDateList
             String month = String.valueOf(Integer.parseInt(ym.substring(5, 7)));
             byYear.computeIfAbsent(year, y -> new ArrayList<>()).add(month);
         }
@@ -155,11 +160,13 @@ public class NaryadListService {
     }
 
     /**
-     * Базовый WHERE + динамические условия фильтров колонок + месяц сайдбара.
+     * Базовый WHERE + ACL + фильтры колонок + месяц сайдбара.
      * Тексты — ILIKE %value%; даты колонок (YYYY-MM-DDTHH:mm:ss) сравниваются по ::date.
      */
     private String buildWhere(NaryadListFilter filter, MapSqlParameterSource params) {
         StringBuilder where = new StringBuilder("WHERE d.nartype = 1 ");
+        appendAcl(where, params, filter != null ? filter.getOrgUnitId() : null);
+
         if (filter == null) {
             return where.toString();
         }
@@ -192,6 +199,23 @@ public class NaryadListService {
                 "u.ora_name ILIKE CONCAT('%', :autorNar, '%')");
 
         return where.toString();
+    }
+
+    private void appendAcl(StringBuilder where, MapSqlParameterSource params, Integer orgUnitId) {
+        String username = currentUsername();
+        if (!StringUtils.hasText(username)) {
+            where.append("AND 1=0 ");
+            return;
+        }
+        orgAccessService.appendAuthorOrgAcl(where, params, username, orgUnitId);
+    }
+
+    private static String currentUsername() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || !auth.isAuthenticated() || "anonymousUser".equals(auth.getPrincipal())) {
+            return null;
+        }
+        return auth.getName();
     }
 
     /**
@@ -233,44 +257,62 @@ public class NaryadListService {
     }
 
     /**
-     * SQL distinct YYYY-MM для дерева — та же семантика, что appendPeriodFilter.
-     * Mode 3: UNION beg+out по всем строкам периода; mode 4: max outoperdate при closed=1.
+     * SQL distinct YYYY-MM для дерева — та же семантика, что appendPeriodFilter, плюс ACL.
      */
-    private String periodTreeSql(int dateMode) {
+    private String periodTreeSql(int dateMode, MapSqlParameterSource params, Integer orgUnitId) {
+        StringBuilder aclWhere = new StringBuilder();
+        appendAcl(aclWhere, params, orgUnitId);
+        String acl = aclWhere.toString();
+
+        String authorJoins = "INNER JOIN burnar.users u ON d.narauthor = u.users_id "
+                + OrgAccessService.AUTHOR_ORG_JOIN_SQL;
+
         return switch (dateMode) {
             case 1 -> "SELECT DISTINCT to_char(dfz.begdate, 'YYYY-MM') AS ym "
                     + "FROM burnar.defnar d "
                     + "INNER JOIN burnar.defnarzad dfz ON d.key = dfz.narkey "
+                    + authorJoins
                     + "WHERE d.nartype = 1 AND dfz.begdate IS NOT NULL "
+                    + acl
                     + "ORDER BY ym";
             case 2 -> "SELECT DISTINCT to_char(dfp.begdate, 'YYYY-MM') AS ym "
                     + "FROM burnar.defnar d "
                     + "INNER JOIN burnar.defnarvip dfp ON d.key = dfp.narkey "
+                    + authorJoins
                     + "WHERE d.nartype = 1 AND dfp.begdate IS NOT NULL "
+                    + acl
                     + "ORDER BY ym";
             case 3 -> "SELECT DISTINCT sub.ym AS ym FROM ("
                     + "  SELECT to_char(vpd.begoperdate, 'YYYY-MM') AS ym "
                     + "  FROM burnar.defnar d "
                     + "  INNER JOIN burnar.vipolnenie_period vpd ON vpd.narkey = d.key "
+                    + "  " + authorJoins
                     + "  WHERE d.nartype = 1 "
+                    + acl
                     + "  UNION "
                     + "  SELECT to_char(vpd.outoperdate, 'YYYY-MM') AS ym "
                     + "  FROM burnar.defnar d "
                     + "  INNER JOIN burnar.vipolnenie_period vpd ON vpd.narkey = d.key "
-                    + "  WHERE d.nartype = 1"
+                    + "  " + authorJoins
+                    + "  WHERE d.nartype = 1 "
+                    + acl
                     + ") sub WHERE sub.ym IS NOT NULL ORDER BY ym";
             case 4 -> "SELECT DISTINCT to_char(vpd.outoperdate, 'YYYY-MM') AS ym "
                     + "FROM burnar.defnar d "
                     + "INNER JOIN burnar.defnarvip dv ON dv.narkey = d.key "
                     + "INNER JOIN burnar.vipolnenie_period vpd ON vpd.narkey = d.key "
+                    + authorJoins
                     + "WHERE d.nartype = 1 AND dv.closed = 1 "
                     + "AND vpd.outoperdate = (SELECT MAX(vp2.outoperdate) "
                     + "FROM burnar.vipolnenie_period vp2 WHERE vp2.narkey = d.key) "
                     + "AND vpd.outoperdate IS NOT NULL "
+                    + acl
                     + "ORDER BY ym";
             default -> "SELECT DISTINCT to_char(d.createdate, 'YYYY-MM') AS ym "
                     + "FROM burnar.defnar d "
+                    + authorJoins
                     + "WHERE d.nartype = 1 AND d.createdate IS NOT NULL "
+                    + acl
                     + "ORDER BY ym";
         };
     }

@@ -30,6 +30,11 @@ public class NaryadListFilter {
     private Integer dateMode;
     /** Первое число месяца yyyy-MM-dd из DynamicDateList; сравнение по YYYY-MM. */
     private String period;
+    /**
+     * Обрезка ACL по оргединице (только для ROLE_ADMIN).
+     * null / отсутствует = «Все» (полное sysboss-дерево пользователя).
+     */
+    private Integer orgUnitId;
 
     public String getCodNar() {
         return codNar;
@@ -141,5 +146,13 @@ public class NaryadListFilter {
 
     public void setPeriod(String period) {
         this.period = period;
+    }
+
+    public Integer getOrgUnitId() {
+        return orgUnitId;
+    }
+
+    public void setOrgUnitId(Integer orgUnitId) {
+        this.orgUnitId = orgUnitId;
     }
 }
