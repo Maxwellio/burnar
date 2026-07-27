@@ -2,13 +2,13 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
 import FormControl from '@mui/material/FormControl'
-import FormControlLabel from '@mui/material/FormControlLabel'
 import InputLabel from '@mui/material/InputLabel'
 import MenuItem from '@mui/material/MenuItem'
-import Radio from '@mui/material/Radio'
-import RadioGroup from '@mui/material/RadioGroup'
 import Select from '@mui/material/Select'
+import ToggleButton from '@mui/material/ToggleButton'
+import ToggleButtonGroup from '@mui/material/ToggleButtonGroup'
 import AddIcon from '@mui/icons-material/Add'
+import DateRangeIcon from '@mui/icons-material/DateRange'
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined'
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline'
 import { format, startOfMonth } from 'date-fns'
@@ -198,26 +198,46 @@ export default function Home() {
           overflow: 'hidden',
         }}
       >
-        <FormControl
-          component="fieldset"
-          sx={{ px: 1.5, pt: 1.5, pb: 0.5, flexShrink: 0 }}
-        >
-          <RadioGroup
+        {/* Режимы rgDate: копия UI ParameterSelector из mainComponent (пакет не трогаем) */}
+        <Box sx={{ px: 1, pt: 1.5, pb: 1, flexShrink: 0, width: '100%', boxSizing: 'border-box' }}>
+          <ToggleButtonGroup
             value={String(dateMode)}
-            onChange={(e) => setDateMode(Number(e.target.value))}
+            exclusive
+            // exclusive: повторный клик даёт null — игнорируем, чтобы не сбросить dateMode
+            onChange={(_e, next) => {
+              if (next !== null) setDateMode(Number(next))
+            }}
+            orientation="vertical"
+            fullWidth
+            size="small"
+            sx={{
+              '& .MuiToggleButton-root': {
+                justifyContent: 'flex-start',
+                textAlign: 'left',
+                color: 'black',
+                fontSize: '0.75rem',
+                lineHeight: 1.3,
+                px: 1,
+                py: 0.75,
+                textTransform: 'none',
+              },
+              '& .MuiToggleButton-root.Mui-selected': {
+                color: '#1976d2',
+                backgroundColor: '#D0EBFF',
+                '&:hover': {
+                  backgroundColor: '#B1D7FF',
+                },
+              },
+            }}
           >
             {DATE_MODE_OPTIONS.map((opt) => (
-              <FormControlLabel
-                key={opt.value}
-                value={String(opt.value)}
-                control={<Radio size="small" />}
-                label={opt.label}
-                TypographyProps={{ variant: 'body2' }}
-                sx={{ m: 0 }}
-              />
+              <ToggleButton key={opt.value} value={String(opt.value)}>
+                <DateRangeIcon sx={{ mr: 1, fontSize: 18 }} />
+                {opt.label}
+              </ToggleButton>
             ))}
-          </RadioGroup>
-        </FormControl>
+          </ToggleButtonGroup>
+        </Box>
 
         <Box
           sx={{
