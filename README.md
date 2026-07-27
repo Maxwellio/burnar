@@ -20,7 +20,7 @@ burnar/
 
 ## Backend
 
-Нужен локальный PostgreSQL с параметрами из `backend/src/main/resources/application.yml`
+Нужен локальный PostgreSQL с параметрами из `backend/src/main/resources/application.properties`
 (плейсхолдеры `your_db` / `your_username` / `your_password`, схема `burnar`).
 
 ```bash

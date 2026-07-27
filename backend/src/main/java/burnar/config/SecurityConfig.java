@@ -41,6 +41,7 @@ public class SecurityConfig {
                 .requestMatchers(new AntPathRequestMatcher("/api/login", "POST")).permitAll()
                 .requestMatchers(new AntPathRequestMatcher("/api/current-user", "GET")).permitAll()
                 .requestMatchers(new AntPathRequestMatcher("/api/health")).permitAll()
+                .requestMatchers(new AntPathRequestMatcher("/api/org-units")).hasRole("ADMIN")
                 .requestMatchers(new AntPathRequestMatcher("/api/**")).authenticated()
                 .anyRequest().permitAll()
             )
@@ -72,6 +73,12 @@ public class SecurityConfig {
                     new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED),
                     new AntPathRequestMatcher("/api/**")
                 )
+                .accessDeniedHandler((request, response, accessDeniedException) -> {
+                    response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+                    response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+                    response.getWriter().write(new ObjectMapper().writeValueAsString(
+                            Map.of("error", "Forbidden")));
+                })
             )
             .logout(logout -> logout
                 .logoutRequestMatcher(new AntPathRequestMatcher("/api/logout", "POST"))

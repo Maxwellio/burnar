@@ -16,7 +16,8 @@ import java.util.List;
 /**
  * Pageable-список нарядов бурения для BaseTable (useFetchData ждёт content/totalPages/totalElements).
  * Query page/size — Spring Data; колоночные фильтры — NaryadListFilter;
- * dateMode/period — боковая панель месяцев; /periods — дерево для DynamicDateList.
+ * dateMode/period — боковая панель месяцев; orgUnitId — админская обрезка ACL;
+ * /periods — дерево для DynamicDateList (с тем же ACL).
  */
 @RestController
 @RequestMapping("/api/naryady")
@@ -45,7 +46,8 @@ public class NaryadListController {
             @RequestParam(required = false) String dateCreate,
             @RequestParam(required = false) String autorNar,
             @RequestParam(defaultValue = "0") int dateMode,
-            @RequestParam(required = false) String period) {
+            @RequestParam(required = false) String period,
+            @RequestParam(required = false) Integer orgUnitId) {
         NaryadListFilter filter = new NaryadListFilter();
         filter.setCodNar(codNar);
         filter.setNameNar(nameNar);
@@ -61,12 +63,15 @@ public class NaryadListController {
         filter.setAutorNar(autorNar);
         filter.setDateMode(dateMode);
         filter.setPeriod(period);
+        filter.setOrgUnitId(orgUnitId);
         return naryadListService.findDrillingOrders(PageRequest.of(page, size), filter);
     }
 
-    /** Дерево годов/месяцев для DynamicDateList; dateMode как у списка. */
+    /** Дерево годов/месяцев для DynamicDateList; dateMode/orgUnitId как у списка. */
     @GetMapping("/periods")
-    public List<YearMonthsDto> periods(@RequestParam(defaultValue = "0") int dateMode) {
-        return naryadListService.findPeriodTree(dateMode);
+    public List<YearMonthsDto> periods(
+            @RequestParam(defaultValue = "0") int dateMode,
+            @RequestParam(required = false) Integer orgUnitId) {
+        return naryadListService.findPeriodTree(dateMode, orgUnitId);
     }
 }
