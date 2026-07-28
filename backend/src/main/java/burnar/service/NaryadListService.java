@@ -177,7 +177,7 @@ public class NaryadListService {
         appendPeriodFilter(where, params, filter);
 
         appendTextFilter(where, params, "codNar", filter.getCodNar(),
-                "CAST(d.key AS varchar) ILIKE CONCAT('%', :codNar, '%')");
+                "CAST(d.key AS varchar) ILIKE CONCAT(:codNar, '%')");
         appendTextFilter(where, params, "nameNar", filter.getNameNar(),
                 "d.nm ILIKE CONCAT('%', :nameNar, '%')");
         appendTextFilter(where, params, "ownerNar", filter.getOwnerNar(),
@@ -191,9 +191,9 @@ public class NaryadListService {
         appendDateFilter(where, params, "vipBegDate", filter.getVipBegDate(),
                 "dfp.begdate::date = CAST(:vipBegDate AS timestamp)::date");
         appendTextFilter(where, params, "skv", filter.getSkv(),
-                String.format(ZNPARAM_VALUE_SQL, 149) + " ILIKE CONCAT('%', :skv, '%')");
+                String.format(ZNPARAM_VALUE_SQL, 149) + " ILIKE CONCAT('____', :skv, '%')");
         appendTextFilter(where, params, "kust", filter.getKust(),
-                String.format(ZNPARAM_VALUE_SQL, 470) + " ILIKE CONCAT('%', :kust, '%')");
+                String.format(ZNPARAM_VALUE_SQL, 470) + " ILIKE CONCAT('__', :kust, '%')");
         appendTextFilter(where, params, "mest", filter.getMest(),
                 String.format(ZNPARAM_VALUE_SQL, 5) + " ILIKE CONCAT('%', :mest, '%')");
         appendDateFilter(where, params, "dateCreate", filter.getDateCreate(),
