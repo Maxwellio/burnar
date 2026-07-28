@@ -199,7 +199,7 @@ export default function Home() {
         }}
       >
         {/* Режимы rgDate: копия UI ParameterSelector из mainComponent (пакет не трогаем) */}
-        <Box sx={{ px: 1, pt: 1.5, pb: 1, flexShrink: 0, width: '100%', boxSizing: 'border-box' }}>
+        <Box sx={{ flexShrink: 0, width: '100%', boxSizing: 'border-box' }}>
           <ToggleButtonGroup
             value={String(dateMode)}
             exclusive
@@ -209,17 +209,32 @@ export default function Home() {
             }}
             orientation="vertical"
             fullWidth
-            size="small"
             sx={{
+              width: '100%',
+              // Встроены в панель: без скруглений и боковых отступов/рамок «карточки сверху»
+              borderRadius: 0,
+              '& .MuiToggleButtonGroup-grouped': {
+                borderRadius: '0 !important',
+                margin: 0,
+                borderLeft: 'none !important',
+                borderRight: 'none !important',
+              },
+              '& .MuiToggleButtonGroup-grouped:not(:first-of-type)': {
+                marginTop: 0,
+                borderTop: '1px solid',
+                borderColor: 'divider',
+              },
               '& .MuiToggleButton-root': {
                 justifyContent: 'flex-start',
                 textAlign: 'left',
                 color: 'black',
-                fontSize: '0.75rem',
-                lineHeight: 1.3,
-                px: 1,
-                py: 0.75,
+                fontSize: '0.875rem',
+                lineHeight: 1.4,
+                px: 2,
+                py: 1.25,
                 textTransform: 'none',
+                borderRadius: 0,
+                borderColor: 'divider',
               },
               '& .MuiToggleButton-root.Mui-selected': {
                 color: '#1976d2',
@@ -232,7 +247,7 @@ export default function Home() {
           >
             {DATE_MODE_OPTIONS.map((opt) => (
               <ToggleButton key={opt.value} value={String(opt.value)}>
-                <DateRangeIcon sx={{ mr: 1, fontSize: 18 }} />
+                <DateRangeIcon sx={{ mr: 1.25, fontSize: 22 }} />
                 {opt.label}
               </ToggleButton>
             ))}
@@ -338,7 +353,6 @@ export default function Home() {
           <AxiosProvider baseapi="/api">
             <BaseTable
               url="/naryady"
-              baseUrl="/api"
               columns={naryadColumns}
               filters={filters}
               setFilters={setFilters}
