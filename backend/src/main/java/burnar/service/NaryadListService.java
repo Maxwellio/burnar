@@ -25,7 +25,8 @@ import java.util.Map;
  * Параметры скв/куст/мест: znparams parcode 149 / 470 / 5.
  * Фильтры колонок BaseTable — см. buildWhere; составные: zadClose→dfz.begdate, vipClose→getallpervip.
  * Боковая панель месяцев: dateMode + period (см. appendPeriodFilter / findPeriodTree).
- * orgUnitId — только админ: точное совпадение орг. автора; без cut админ видит всё.
+ * orgUnitId — только админ: точное совпадение орг. автора (карьера без фильтра dtout);
+ * без cut админ видит всё.
  */
 @Service
 public class NaryadListService {
