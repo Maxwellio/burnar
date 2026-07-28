@@ -23,15 +23,15 @@ import java.util.stream.Collectors;
 public class OrgAccessService {
 
     /**
-     * Активная должность: dtenter/dtout как в Delphi NarListUnit.dfm (dtout NOT NULL в DDL).
+     * Карьера автора наряда для ACL: как Delphi NarListUnit — только dtenter &lt;= now,
+     * без фильтра dtout. Наряд остаётся в выборке и при уже закрытой должности автора.
      * Фрагмент внутри EXISTS; снаружи уже есть users u (автор наряда).
      */
-    private static final String ACTIVE_CAREER_FROM =
+    private static final String AUTHOR_CAREER_FROM =
             "FROM burnar.karjera k "
                     + "JOIN burnar.doljtostruct ds ON ds.key = k.doljinstru "
                     + "WHERE k.idpeople = u.people_id "
-                    + "AND k.dtenter <= CURRENT_DATE "
-                    + "AND k.dtout >= CURRENT_DATE ";
+                    + "AND k.dtenter <= CURRENT_DATE ";
 
     private final NamedParameterJdbcTemplate jdbc;
     private final BurnarProperties properties;
@@ -79,7 +79,8 @@ public class OrgAccessService {
     /**
      * Дописывает ACL в WHERE списка/дерева (users u уже в FROM как автор наряда).
      * Админ без orgUnitId («Все») — без ограничения. Админ с cut — точное совпадение орг. автора.
-     * Не-админ — sysboss-поддерево своей орг.; нет карьеры → AND 1=0.
+     * Не-админ — sysboss-поддерево своей орг.; нет карьеры у текущего пользователя → AND 1=0.
+     * У автора наряда закрытая карьера (dtout в прошлом) не скрывает наряд.
      */
     public void appendAuthorOrgAcl(
             StringBuilder where,
@@ -93,7 +94,7 @@ public class OrgAccessService {
             }
             params.addValue("aclOrgUnitId", orgUnitId);
             where.append("AND EXISTS (SELECT 1 ")
-                    .append(ACTIVE_CAREER_FROM)
+                    .append(AUTHOR_CAREER_FROM)
                     .append("AND ds.org = :aclOrgUnitId) ");
             return;
         }
@@ -106,7 +107,7 @@ public class OrgAccessService {
         params.addValue("aclUserOrgId", userOrg.get());
 
         where.append("AND EXISTS (SELECT 1 ")
-                .append(ACTIVE_CAREER_FROM)
+                .append(AUTHOR_CAREER_FROM)
                 .append("AND ds.org IN (")
                 .append("WITH RECURSIVE tr AS (")
                 .append("  SELECT c.id FROM burnar.org_stru c WHERE c.id = :aclUserOrgId ")
