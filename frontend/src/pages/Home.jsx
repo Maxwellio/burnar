@@ -17,7 +17,7 @@ import { fetchNaryadyPeriods } from '../api/naryadyApi.js'
 import { fetchOrgUnits } from '../api/orgUnitsApi.js'
 import { useAuth } from '../context/AuthContext.jsx'
 import { isAdmin } from '../utils/roles.js'
-import { naryadColumns } from './naryadColumns.js'
+import { naryadColumns } from './naryadColumns.jsx'
 
 /** Режимы отбора по датам — как rgDate в Delphi NarListUnit. */
 const DATE_MODE_OPTIONS = [
@@ -81,6 +81,10 @@ export default function Home() {
   const [dateMode, setDateMode] = useState(0)
   const [selectedDate, setSelectedDate] = useState(currentMonthStart)
   const [dates, setDates] = useState([])
+  /** false пока /periods не ответил и period не скорректирован — иначе BaseTable
+   *  стартует fetch с «текущим месяцем», а повторный fetch после pickPeriod
+   *  отбрасывается loading-guard в useFetchData (mainComponent). */
+  const [periodsReady, setPeriodsReady] = useState(false)
   const [orgUnitId, setOrgUnitId] = useState(ORG_ALL)
   const [orgUnits, setOrgUnits] = useState([])
   const [orgSelectVisible, setOrgSelectVisible] = useState(false)
@@ -152,20 +156,44 @@ export default function Home() {
     }
   }, [admin])
 
-  // Дерево месяцев с бэка при смене режима/орг; выбор текущего месяца или fallback
+  // Дерево месяцев с бэка при смене режима/орг; выбор текущего месяца или fallback.
+  // Filters + period выставляем синхронно до periodsReady, чтобы BaseTable
+  // смонтировался уже с корректным period (обход race с loading-guard).
   useEffect(() => {
     let cancelled = false
+    setPeriodsReady(false)
     const orgParam =
       admin && orgUnitId !== ORG_ALL ? Number(orgUnitId) : undefined
     fetchNaryadyPeriods(dateMode, orgParam)
       .then((tree) => {
         if (cancelled) return
-        setDates(Array.isArray(tree) ? tree : [])
-        setSelectedDate((prev) => pickPeriod(Array.isArray(tree) ? tree : [], prev))
+        const treeArr = Array.isArray(tree) ? tree : []
+        const period = pickPeriod(treeArr, sidebarRef.current.selectedDate)
+        const { dateMode: mode, orgUnitId: orgId, admin: isAdm } =
+          sidebarRef.current
+        setDates(treeArr)
+        setSelectedDate(period)
+        setFiltersState((prev) => {
+          const columnOnly = (prev || []).filter(
+            (f) => !SIDEBAR_FILTER_IDS.has(f.id),
+          )
+          const next = [
+            ...columnOnly,
+            { id: 'dateMode', value: mode },
+            { id: 'period', value: period },
+          ]
+          if (isAdm && orgId !== ORG_ALL) {
+            next.push({ id: 'orgUnitId', value: Number(orgId) })
+          }
+          return next
+        })
+        setPeriodsReady(true)
       })
       .catch(() => {
         if (cancelled) return
         setDates([])
+        // Даже при ошибке periods монтируем таблицу с текущим period из sidebarRef
+        setPeriodsReady(true)
       })
     return () => {
       cancelled = true
@@ -335,16 +363,18 @@ export default function Home() {
         </Box>
 
         <Box sx={{ flex: 1, minHeight: 0 }}>
-          <AxiosProvider baseapi="/api">
-            <BaseTable
-              url="/naryady"
-              baseUrl="/api"
-              columns={naryadColumns}
-              filters={filters}
-              setFilters={setFilters}
-              pageable
-            />
-          </AxiosProvider>
+          {periodsReady ? (
+            <AxiosProvider baseapi="/api">
+              <BaseTable
+                url="/naryady"
+                baseUrl="/api"
+                columns={naryadColumns}
+                filters={filters}
+                setFilters={setFilters}
+                pageable
+              />
+            </AxiosProvider>
+          ) : null}
         </Box>
       </Box>
     </Box>

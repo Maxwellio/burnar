@@ -1,4 +1,29 @@
+import Box from '@mui/material/Box'
+import LockOutlinedIcon from '@mui/icons-material/LockOutlined'
+import LockOpenOutlinedIcon from '@mui/icons-material/LockOpenOutlined'
 import { FILTER_TYPES } from 'mainComponent'
+
+/** Иконка закрытия: '1' — закрыт, '0' — открыт, иначе без иконки. */
+function CloseLockMark({ closed }) {
+  if (closed === '1') {
+    return <LockOutlinedIcon fontSize="small" color="action" sx={{ flexShrink: 0 }} />
+  }
+  if (closed === '0') {
+    return <LockOpenOutlinedIcon fontSize="small" color="action" sx={{ flexShrink: 0 }} />
+  }
+  return null
+}
+
+function CellWithLock({ closed, text }) {
+  return (
+    <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5, minWidth: 0 }}>
+      <CloseLockMark closed={closed} />
+      <Box component="span" sx={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>
+        {text ?? ''}
+      </Box>
+    </Box>
+  )
+}
 
 /**
  * Колонки списка нарядов — заголовки как в Delphi NarListUnit.grdDefNarList.
@@ -38,11 +63,9 @@ export const naryadColumns = [
     enableColumnFilter: true,
     meta: { filterVariant: FILTER_TYPES.DATE },
     accessorFn: (row) => row.begDate ?? '',
-    cell: ({ row }) => {
-      const closed = row.original.zadClose
-      const mark = closed === '1' ? '■ ' : closed === '0' ? '□ ' : ''
-      return `${mark}${row.original.begDate ?? ''}`
-    },
+    cell: ({ row }) => (
+      <CellWithLock closed={row.original.zadClose} text={row.original.begDate} />
+    ),
   },
   {
     // В Delphi в ячейку VipClose подставляется PerVip + иконка
@@ -51,11 +74,9 @@ export const naryadColumns = [
     size: 180,
     enableColumnFilter: true,
     accessorFn: (row) => row.perVip ?? '',
-    cell: ({ row }) => {
-      const closed = row.original.vipClose
-      const mark = closed === '1' ? '■ ' : closed === '0' ? '□ ' : ''
-      return `${mark}${row.original.perVip ?? ''}`
-    },
+    cell: ({ row }) => (
+      <CellWithLock closed={row.original.vipClose} text={row.original.perVip} />
+    ),
   },
   {
     accessorKey: 'vipBegDate',
