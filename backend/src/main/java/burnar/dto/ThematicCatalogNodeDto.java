@@ -4,20 +4,37 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Узел тематического каталога для полного tree-ответа.
- * children заполняется сервисом после ACL-выборки, поэтому клиент не делает
- * последовательных запросов за потомками.
+ * Узел eager-дерева тематического каталога для GET /api/catalog/tree.
+ * Для операции name уже содержит название из public.spr_oper, как в основном MDI Delphi.
  */
 public class ThematicCatalogNodeDto {
 
     private Integer id;
     private Integer parentId;
     private String name;
-    private Integer operKey;
+    private Integer operationId;
     private Integer ord;
     private Integer narType;
     private boolean hasChildren;
     private List<ThematicCatalogNodeDto> children = new ArrayList<>();
+
+    public ThematicCatalogNodeDto() {
+    }
+
+    public ThematicCatalogNodeDto(
+            Integer id,
+            Integer parentId,
+            String name,
+            Integer operationId,
+            Integer ord,
+            Integer narType) {
+        this.id = id;
+        this.parentId = parentId;
+        this.name = name;
+        this.operationId = operationId;
+        this.ord = ord;
+        this.narType = narType;
+    }
 
     public Integer getId() {
         return id;
@@ -43,12 +60,12 @@ public class ThematicCatalogNodeDto {
         this.name = name;
     }
 
-    public Integer getOperKey() {
-        return operKey;
+    public Integer getOperationId() {
+        return operationId;
     }
 
-    public void setOperKey(Integer operKey) {
-        this.operKey = operKey;
+    public void setOperationId(Integer operationId) {
+        this.operationId = operationId;
     }
 
     public Integer getOrd() {

@@ -9,12 +9,11 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 /**
- * HTTP-точка полного дерева тематических разделов.
- * Доступ требует аутентифицированную сессию по общему правилу /api/**;
- * логин пользователя намеренно не принимается из query-параметров.
+ * HTTP-точка входа read-only каталога. За аутентификацию отвечает общее правило /api/**
+ * в SecurityConfig, а пользовательский ACL и сборка дерева остаются в сервисе.
  */
 @RestController
-@RequestMapping("/api/thematic-catalog")
+@RequestMapping("/api/catalog")
 public class ThematicCatalogController {
 
     private final ThematicCatalogService thematicCatalogService;
@@ -23,8 +22,8 @@ public class ThematicCatalogController {
         this.thematicCatalogService = thematicCatalogService;
     }
 
-    @GetMapping
-    public List<ThematicCatalogNodeDto> getCatalog() {
-        return thematicCatalogService.getCatalog();
+    @GetMapping("/tree")
+    public List<ThematicCatalogNodeDto> tree() {
+        return thematicCatalogService.findTree();
     }
 }
