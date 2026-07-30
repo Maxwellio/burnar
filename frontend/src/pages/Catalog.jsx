@@ -1,4 +1,10 @@
 import { useEffect, useState } from 'react'
+import {
+  flexRender,
+  getCoreRowModel,
+  getExpandedRowModel,
+  useReactTable,
+} from '@tanstack/react-table'
 import Alert from '@mui/material/Alert'
 import Box from '@mui/material/Box'
 import CircularProgress from '@mui/material/CircularProgress'
@@ -6,20 +12,14 @@ import IconButton from '@mui/material/IconButton'
 import Typography from '@mui/material/Typography'
 import ChevronRightIcon from '@mui/icons-material/ChevronRight'
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
-import { AxiosProvider, BaseTreeTable, useApi } from 'mainComponent'
-
-const CATALOG_URL = '/thematic-catalog'
+import { fetchThematicCatalog } from '../api/thematicCatalogApi.js'
 
 /**
- * Axios после request-интерцептора переписывает config.url в полный путь
- * (`/thematic-catalog` → `/api/thematic-catalog`), поэтому точное `===` ломает
- * снятие loading/error и оставляет спиннер навсегда.
+ * Не используем BaseTreeTable для загрузки: в mainComponent по умолчанию lazy
+ * и жёсткий rootId 1000242 → GET /api/thematic-catalog/1000242 (404).
+ * loadMode="full" легко теряется из‑за кэша Vite optimizeDeps у file:-пакета.
+ * Тот же session-cookie путь, что у остального SPA (http.js).
  */
-function isCatalogRequest(config) {
-  const url = config?.url
-  return typeof url === 'string' && url.includes('thematic-catalog')
-}
-
 const catalogColumns = [
   {
     accessorKey: 'id',
@@ -61,80 +61,112 @@ const catalogColumns = [
   },
 ]
 
-/**
- * mainComponent загружает дерево сам и не отдаёт наружу loading/error.
- * Наблюдаем тот же Axios-запрос через интерцепторы, чтобы не дублировать GET каталога.
- */
-function CatalogTree() {
-  const api = useApi()
-  const [requestState, setRequestState] = useState({
-    loading: true,
-    error: null,
-    empty: false,
-  })
+/** Страница /catalog: ACL-дерево тематических разделов из одного GET-запроса. */
+export default function Catalog() {
+  const [data, setData] = useState([])
+  const [expanded, setExpanded] = useState({})
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
 
   useEffect(() => {
-    const requestId = api.interceptors.request.use((config) => {
-      if (isCatalogRequest(config)) {
-        setRequestState({ loading: true, error: null, empty: false })
-      }
-      return config
-    })
-    const responseId = api.interceptors.response.use(
-      (response) => {
-        if (isCatalogRequest(response.config)) {
-          setRequestState({
-            loading: false,
-            error: null,
-            empty: Array.isArray(response.data) && response.data.length === 0,
-          })
-        }
-        return response
-      },
-      (error) => {
-        if (isCatalogRequest(error.config)) {
-          const status = error.response?.status
-          setRequestState({
-            loading: false,
-            error:
-              status === 404
-                ? 'Эндпоинт /api/thematic-catalog не найден — перезапустите backend с актуальным кодом'
-                : 'Не удалось загрузить тематический каталог',
-            empty: false,
-          })
-        }
-        return Promise.reject(error)
-      },
-    )
-
+    let cancelled = false
+    setLoading(true)
+    setError(null)
+    fetchThematicCatalog()
+      .then((tree) => {
+        if (cancelled) return
+        setData(Array.isArray(tree) ? tree : [])
+        setLoading(false)
+      })
+      .catch(() => {
+        if (cancelled) return
+        setData([])
+        setError('Не удалось загрузить тематический каталог')
+        setLoading(false)
+      })
     return () => {
-      api.interceptors.request.eject(requestId)
-      api.interceptors.response.eject(responseId)
+      cancelled = true
     }
-  }, [api])
+  }, [])
+
+  const table = useReactTable({
+    data,
+    columns: catalogColumns,
+    state: { expanded },
+    onExpandedChange: setExpanded,
+    getCoreRowModel: getCoreRowModel(),
+    getExpandedRowModel: getExpandedRowModel(),
+    getSubRows: (row) => row.children,
+    getRowCanExpand: (row) =>
+      row.original.hasChildren ?? (row.subRows?.length ?? 0) > 0,
+  })
 
   return (
     <Box sx={{ p: 2, height: '100%', boxSizing: 'border-box' }}>
       <Typography variant="h6" gutterBottom>
         Тематический каталог
       </Typography>
-      {requestState.error ? (
+      {error ? (
         <Alert severity="error" sx={{ mb: 2 }}>
-          {requestState.error}
+          {error}
         </Alert>
       ) : null}
-      {requestState.empty ? (
+      {!loading && !error && data.length === 0 ? (
         <Typography color="text.secondary" sx={{ mb: 2 }}>
           В тематическом каталоге нет доступных разделов
         </Typography>
       ) : null}
-      <Box sx={{ position: 'relative', minHeight: 120 }}>
-        <BaseTreeTable
-          url={CATALOG_URL}
-          columns={catalogColumns}
-          loadMode="full"
-        />
-        {requestState.loading ? (
+      <Box sx={{ position: 'relative', minHeight: 120, overflow: 'auto' }}>
+        <Box
+          component="table"
+          sx={{
+            width: '100%',
+            borderCollapse: 'collapse',
+            '& th, & td': {
+              border: '1px solid',
+              borderColor: 'divider',
+              px: 1.5,
+              py: 1,
+              textAlign: 'left',
+              fontSize: '0.875rem',
+            },
+            '& th': {
+              bgcolor: '#F0F4FF',
+              color: '#364FC7',
+              fontWeight: 500,
+            },
+            '& tbody tr:hover': {
+              bgcolor: '#E7F0FF',
+            },
+          }}
+        >
+          <thead>
+            {table.getHeaderGroups().map((headerGroup) => (
+              <tr key={headerGroup.id}>
+                {headerGroup.headers.map((header) => (
+                  <th key={header.id}>
+                    {flexRender(
+                      header.column.columnDef.header,
+                      header.getContext(),
+                    )}
+                  </th>
+                ))}
+              </tr>
+            ))}
+          </thead>
+          <tbody>
+            {table.getRowModel().rows.map((row) => (
+              <tr key={row.id}>
+                {row.getVisibleCells().map((cell) => (
+                  <td key={cell.id}>
+                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </Box>
+        {loading ? (
           <Box
             sx={{
               position: 'absolute',
@@ -150,14 +182,5 @@ function CatalogTree() {
         ) : null}
       </Box>
     </Box>
-  )
-}
-
-/** Страница /catalog: ACL-дерево тематических разделов из одного GET-запроса. */
-export default function Catalog() {
-  return (
-    <AxiosProvider baseapi="/api">
-      <CatalogTree />
-    </AxiosProvider>
   )
 }
