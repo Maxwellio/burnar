@@ -10,6 +10,16 @@ import { AxiosProvider, BaseTreeTable, useApi } from 'mainComponent'
 
 const CATALOG_URL = '/thematic-catalog'
 
+/**
+ * Axios после request-интерцептора переписывает config.url в полный путь
+ * (`/thematic-catalog` → `/api/thematic-catalog`), поэтому точное `===` ломает
+ * снятие loading/error и оставляет спиннер навсегда.
+ */
+function isCatalogRequest(config) {
+  const url = config?.url
+  return typeof url === 'string' && url.includes('thematic-catalog')
+}
+
 const catalogColumns = [
   {
     accessorKey: 'id',
@@ -65,14 +75,14 @@ function CatalogTree() {
 
   useEffect(() => {
     const requestId = api.interceptors.request.use((config) => {
-      if (config.url === CATALOG_URL) {
+      if (isCatalogRequest(config)) {
         setRequestState({ loading: true, error: null, empty: false })
       }
       return config
     })
     const responseId = api.interceptors.response.use(
       (response) => {
-        if (response.config.url === CATALOG_URL) {
+        if (isCatalogRequest(response.config)) {
           setRequestState({
             loading: false,
             error: null,
@@ -82,10 +92,14 @@ function CatalogTree() {
         return response
       },
       (error) => {
-        if (error.config?.url === CATALOG_URL) {
+        if (isCatalogRequest(error.config)) {
+          const status = error.response?.status
           setRequestState({
             loading: false,
-            error: 'Не удалось загрузить тематический каталог',
+            error:
+              status === 404
+                ? 'Эндпоинт /api/thematic-catalog не найден — перезапустите backend с актуальным кодом'
+                : 'Не удалось загрузить тематический каталог',
             empty: false,
           })
         }
