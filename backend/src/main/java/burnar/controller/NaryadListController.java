@@ -1,5 +1,6 @@
 package burnar.controller;
 
+import burnar.dto.BrigadeDto;
 import burnar.dto.NaryadListDto;
 import burnar.dto.NaryadListFilter;
 import burnar.dto.YearMonthsDto;
@@ -17,7 +18,8 @@ import java.util.List;
  * Pageable-список нарядов бурения для BaseTable (useFetchData ждёт content/totalPages/totalElements).
  * Query page/size — Spring Data; колоночные фильтры — NaryadListFilter;
  * dateMode/period — боковая панель месяцев; orgUnitId — админская обрезка ACL;
- * /periods — дерево для DynamicDateList (с тем же ACL).
+ * /periods — дерево для DynamicDateList, /brigades — справочник для фильтра «Бригада»
+ * (оба с тем же ACL).
  */
 @RestController
 @RequestMapping("/api/naryady")
@@ -65,6 +67,15 @@ public class NaryadListController {
         filter.setPeriod(period);
         filter.setOrgUnitId(orgUnitId);
         return naryadListService.findDrillingOrders(PageRequest.of(page, size), filter);
+    }
+
+    /**
+     * Справочник бригад для SELECT-фильтра колонки «Бригада».
+     * Параметр называется org, а не orgUnitId — так его шлёт SelectFilter из mainComponent.
+     */
+    @GetMapping("/brigades")
+    public List<BrigadeDto> brigades(@RequestParam(required = false) Integer org) {
+        return naryadListService.findBrigades(org);
     }
 
     /** Дерево годов/месяцев для DynamicDateList; dateMode/orgUnitId как у списка. */

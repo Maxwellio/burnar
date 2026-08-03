@@ -1,5 +1,6 @@
 package burnar.service;
 
+import burnar.dto.BrigadeDto;
 import burnar.dto.NaryadListDto;
 import burnar.dto.NaryadListFilter;
 import burnar.dto.YearMonthsDto;
@@ -138,6 +139,27 @@ public class NaryadListService {
     }
 
     /**
+     * Справочник бригад для SELECT-фильтра колонки «Бригада»: только те орг. единицы,
+     * чьи наряды видны пользователю (тот же ACL, что у списка), подпись — путь как в owner_nar.
+     */
+    public List<BrigadeDto> findBrigades(Integer orgUnitId) {
+        MapSqlParameterSource params = new MapSqlParameterSource();
+        StringBuilder where = new StringBuilder("WHERE d.nartype = 1 ");
+        appendAcl(where, params, orgUnitId);
+
+        String sql = "SELECT b.id, b.nm FROM ("
+                + "  SELECT DISTINCT s.org AS id, " + OWNER_PATH_SQL + " AS nm "
+                + "  FROM burnar.defnar d "
+                + "  INNER JOIN burnar.spr_workers s ON d.ownernar = s.key "
+                + "  " + AUTHOR_USER_JOIN
+                + "  " + where
+                + "  AND s.org IS NOT NULL"
+                + ") b WHERE b.nm IS NOT NULL ORDER BY b.nm";
+        return jdbc.query(sql, params,
+                (rs, rowNum) -> new BrigadeDto(rs.getInt("id"), rs.getString("nm")));
+    }
+
+    /**
      * Дерево месяцев для DynamicDateList — только YYYY-MM, где есть наряды в выбранном dateMode,
      * с тем же ACL по орг. автора (и опциональной обрезкой orgUnitId для админа).
      */
@@ -181,8 +203,7 @@ public class NaryadListService {
                 "CAST(d.key AS varchar) ILIKE CONCAT(:codNar, '%')");
         appendTextFilter(where, params, "nameNar", filter.getNameNar(),
                 "d.nm ILIKE CONCAT('%', :nameNar, '%')");
-        appendTextFilter(where, params, "ownerNar", filter.getOwnerNar(),
-                OWNER_PATH_SQL + " ILIKE CONCAT('%', :ownerNar, '%')");
+        appendOwnerFilter(where, params, filter.getOwnerNar());
         appendTextFilter(where, params, "masterNar", filter.getMasterNar(),
                 "burnar.getmasters(d.key) ILIKE CONCAT('%', :masterNar, '%')");
         appendDateFilter(where, params, "zadClose", filter.getZadClose(),
@@ -325,6 +346,37 @@ public class NaryadListService {
             return trimmed.substring(0, 7);
         }
         return null;
+    }
+
+    /**
+     * Бригада: селектор шлёт id орг. единицы из /naryady/brigades — точное совпадение,
+     * иначе (произвольный текст) прежний ILIKE по пути бригады.
+     */
+    private void appendOwnerFilter(
+            StringBuilder where,
+            MapSqlParameterSource params,
+            String value) {
+        if (!StringUtils.hasText(value)) {
+            return;
+        }
+        String trimmed = value.trim();
+        Integer orgId = parseOrgId(trimmed);
+        if (orgId != null) {
+            params.addValue("ownerNarOrg", orgId);
+            where.append("AND s.org = :ownerNarOrg ");
+            return;
+        }
+        params.addValue("ownerNar", trimmed);
+        where.append("AND ").append(OWNER_PATH_SQL)
+                .append(" ILIKE CONCAT('%', :ownerNar, '%') ");
+    }
+
+    private static Integer parseOrgId(String value) {
+        try {
+            return Integer.valueOf(value);
+        } catch (NumberFormatException ex) {
+            return null;
+        }
     }
 
     private void appendTextFilter(
