@@ -1,19 +1,14 @@
 import Box from '@mui/material/Box'
-import { AxiosProvider, BaseTreeTable } from 'mainComponent'
-import { thematicCatalogColumns } from './thematicCatalogColumns.jsx'
+import Typography from '@mui/material/Typography'
 
-/** Read-only каталог получает всё разрешённое пользователю дерево одним запросом. */
+/** Заглушка раздела «Справочники» (/catalog). */
 export default function Catalog() {
   return (
-    <Box sx={{ flex: 1, minHeight: 0, p: 2 }}>
-      <AxiosProvider baseapi="/api">
-        <BaseTreeTable
-          url="/catalog/tree"
-          columns={thematicCatalogColumns}
-          mode="eager"
-          treeColumnId="name"
-        />
-      </AxiosProvider>
+    <Box sx={{ p: 2 }}>
+      <Typography variant="h6" gutterBottom>
+        Справочники
+      </Typography>
+      <Typography color="text.secondary">Раздел в разработке</Typography>
     </Box>
   )
 }
