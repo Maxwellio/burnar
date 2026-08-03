@@ -48,6 +48,12 @@ export const naryadColumns = [
     header: 'Бригада',
     size: 220,
     enableColumnFilter: true,
+    // Селектор по справочнику бригад: value = id орг. единицы, params → ?org= из BaseTable
+    meta: {
+      filterVariant: FILTER_TYPES.SELECT,
+      content: '/naryady/brigades',
+      params: true,
+    },
   },
   {
     accessorKey: 'masterNar',
