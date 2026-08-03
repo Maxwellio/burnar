@@ -93,6 +93,9 @@ export default function Home() {
     { id: 'period', value: currentMonthStart() },
   ])
 
+  /** Обрезка по структуре для запросов справочников; undefined = «Все» (и для не-админа). */
+  const orgParam = admin && orgUnitId !== ORG_ALL ? Number(orgUnitId) : undefined
+
   // Актуальные сайдбар/орг фильтры для inject при setFilters из BaseTable
   const sidebarRef = useRef({ dateMode, selectedDate, orgUnitId, admin })
   sidebarRef.current = { dateMode, selectedDate, orgUnitId, admin }
@@ -162,8 +165,6 @@ export default function Home() {
   useEffect(() => {
     let cancelled = false
     setPeriodsReady(false)
-    const orgParam =
-      admin && orgUnitId !== ORG_ALL ? Number(orgUnitId) : undefined
     fetchNaryadyPeriods(dateMode, orgParam)
       .then((tree) => {
         if (cancelled) return
@@ -385,6 +386,7 @@ export default function Home() {
                 columns={naryadColumns}
                 filters={filters}
                 setFilters={setFilters}
+                org={orgParam}
                 pageable
               />
             </AxiosProvider>
