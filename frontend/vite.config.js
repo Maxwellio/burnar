@@ -53,7 +53,7 @@ export default defineConfig({
       allow: [
         __dirname,
         // file:-пакет mainComponent лежит вне frontend/ — Vite должен читать его исходники
-        path.resolve(__dirname, '../../table_comp/src/mainComponent'),
+        path.resolve(__dirname, '../../table_comp/mainComponent'),
       ],
     },
     proxy: {

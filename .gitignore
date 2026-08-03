@@ -19,4 +19,9 @@ buildNumber.properties
 node_modules
 frontend/dist/
 
-frontend/dist/
+# Тестовые исходники и артефакты не публикуются в репозитории.
+**/test/
+**/tests/
+**/__tests__/
+**/test-results/
+**/coverage/
