@@ -2,6 +2,7 @@ import Assignment from '@mui/icons-material/Assignment'
 import MenuBook from '@mui/icons-material/MenuBook'
 import Assessment from '@mui/icons-material/Assessment'
 import Settings from '@mui/icons-material/Settings'
+import Badge from '@mui/icons-material/Badge'
 import AdminPanelSettings from '@mui/icons-material/AdminPanelSettings'
 import Logout from '@mui/icons-material/Logout'
 
@@ -32,6 +33,12 @@ export const menuItems = [
     text: 'Настройки',
     icon: <Settings />,
     path: '/settings',
+    roles: ['ROLE_USER', 'ROLE_ADMIN'],
+  },
+  {
+    text: 'Ответственные лица',
+    icon: <Badge />,
+    path: '/responsible-persons',
     roles: ['ROLE_USER', 'ROLE_ADMIN'],
   },
   {

@@ -9,8 +9,8 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 /**
- * Справочник оргединиц для админского Select «структура» на странице нарядов.
- * Доступ только ROLE_ADMIN (см. SecurityConfig).
+ * Справочник оргединиц для админского Select «структура»
+ * (наряды и ответственные лица). Доступ только ROLE_ADMIN (см. SecurityConfig).
  */
 @RestController
 @RequestMapping("/api/org-units")

@@ -9,6 +9,7 @@ import Login from './pages/Login.jsx'
 import Catalog from './pages/Catalog.jsx'
 import Reports from './pages/Reports.jsx'
 import Settings from './pages/Settings.jsx'
+import ResponsiblePersons from './pages/ResponsiblePersons.jsx'
 import Admin from './pages/Admin.jsx'
 
 /**
@@ -27,6 +28,7 @@ export default function App() {
             <Route path="/catalog" element={<Catalog />} />
             <Route path="/reports" element={<Reports />} />
             <Route path="/settings" element={<Settings />} />
+            <Route path="/responsible-persons" element={<ResponsiblePersons />} />
             <Route element={<AdminOnly />}>
               <Route path="/admin" element={<Admin />} />
             </Route>
