@@ -2,6 +2,7 @@ import { Routes, Route, Navigate } from 'react-router-dom'
 import { ThemeProvider, CssBaseline, GlobalStyles } from '@mui/material'
 import { theme, globalLegacyAnchorStyles } from './theme.js'
 import { AuthProvider } from './context/AuthContext.jsx'
+import { ConfirmProvider } from './context/ConfirmContext.jsx'
 import ProtectedLayout from './components/ProtectedLayout.jsx'
 import AdminOnly from './components/AdminOnly.jsx'
 import Home from './pages/Home.jsx'
@@ -14,6 +15,7 @@ import Admin from './pages/Admin.jsx'
 
 /**
  * Тема + маршруты: /login публичный, остальное под ProtectedLayout (сессия + AppBar/Drawer).
+ * ConfirmProvider — общий confirm (удаление и т.п.) для всех страниц.
  */
 export default function App() {
   return (
@@ -21,20 +23,22 @@ export default function App() {
       <CssBaseline />
       <GlobalStyles styles={globalLegacyAnchorStyles(theme)} />
       <AuthProvider>
-        <Routes>
-          <Route path="/login" element={<Login />} />
-          <Route element={<ProtectedLayout />}>
-            <Route path="/" element={<Home />} />
-            <Route path="/catalog" element={<Catalog />} />
-            <Route path="/reports" element={<Reports />} />
-            <Route path="/settings" element={<Settings />} />
-            <Route path="/responsible-persons" element={<ResponsiblePersons />} />
-            <Route element={<AdminOnly />}>
-              <Route path="/admin" element={<Admin />} />
+        <ConfirmProvider>
+          <Routes>
+            <Route path="/login" element={<Login />} />
+            <Route element={<ProtectedLayout />}>
+              <Route path="/" element={<Home />} />
+              <Route path="/catalog" element={<Catalog />} />
+              <Route path="/reports" element={<Reports />} />
+              <Route path="/settings" element={<Settings />} />
+              <Route path="/responsible-persons" element={<ResponsiblePersons />} />
+              <Route element={<AdminOnly />}>
+                <Route path="/admin" element={<Admin />} />
+              </Route>
+              <Route path="*" element={<Navigate to="/" replace />} />
             </Route>
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Route>
-        </Routes>
+          </Routes>
+        </ConfirmProvider>
       </AuthProvider>
     </ThemeProvider>
   )

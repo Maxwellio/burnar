@@ -10,9 +10,14 @@ import AddIcon from '@mui/icons-material/Add'
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined'
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline'
 import { AxiosProvider, BaseTable } from 'mainComponent'
-import { fetchResponsiblePersonOrgUnits } from '../api/responsiblePersonsApi.js'
+import {
+  deleteResponsiblePerson,
+  fetchResponsiblePersonOrgUnits,
+} from '../api/responsiblePersonsApi.js'
 import { useAuth } from '../context/AuthContext.jsx'
+import { useConfirm } from '../context/ConfirmContext.jsx'
 import { isAdmin } from '../utils/roles.js'
+import PeopleFormDialog from './PeopleFormDialog.jsx'
 import { careerColumns, peopleColumns } from './responsiblePersonColumns.jsx'
 
 /** Sentinel «Все» — не уходит в query как orgUnitId (как на главной). */
@@ -27,11 +32,12 @@ const buttonOutlinedSx = {
 
 /**
  * Master-detail: слева ответственные лица, справа карьеры выбранного (people.id).
- * Порт formUsersDoljn; кнопки пока визуал — CRUD в docs/responsible-persons-crud-notes.md.
- * Select «структура» — только ROLE_ADMIN; фильтр орг. режет левую таблицу через ?orgUnitId=.
+ * Слева: add/edit people + admin delete; справа кнопки карьер — пока визуал.
+ * Select «структура» — только ROLE_ADMIN.
  */
 export default function ResponsiblePersons() {
   const { user } = useAuth()
+  const confirm = useConfirm()
   const admin = isAdmin(user)
 
   const [selectedPeopleId, setSelectedPeopleId] = useState(null)
@@ -39,6 +45,10 @@ export default function ResponsiblePersons() {
   const [orgUnits, setOrgUnits] = useState([])
   const [orgSelectVisible, setOrgSelectVisible] = useState(false)
   const [peopleFilters, setPeopleFilters] = useState([])
+  const [peopleRenderSignal, setPeopleRenderSignal] = useState(0)
+
+  const [formOpen, setFormOpen] = useState(false)
+  const [formMode, setFormMode] = useState('add')
 
   // Админский cut орг.: как на Home — в filters BaseTable → query orgUnitId
   const injectOrgFilter = useCallback(
@@ -103,6 +113,37 @@ export default function ResponsiblePersons() {
     return []
   }, [admin, orgUnitId])
 
+  const handleAdd = () => {
+    setFormMode('add')
+    setFormOpen(true)
+  }
+
+  const handleEdit = () => {
+    if (!hasPerson) return
+    setFormMode('edit')
+    setFormOpen(true)
+  }
+
+  const handlePersonSaved = ({ id }) => {
+    if (id != null) {
+      setSelectedPeopleId(id)
+    }
+    setPeopleRenderSignal((n) => n + 1)
+  }
+
+  const handleDelete = async () => {
+    if (!admin || !hasPerson) return
+    const ok = await confirm('Удалить пользователя?', { action: 'удаление' })
+    if (!ok) return
+    try {
+      await deleteResponsiblePerson(selectedPeopleId)
+      setSelectedPeopleId(null)
+      setPeopleRenderSignal((n) => n + 1)
+    } catch (e) {
+      console.error(e)
+    }
+  }
+
   return (
     <Box
       sx={{
@@ -141,6 +182,7 @@ export default function ResponsiblePersons() {
             variant="contained"
             startIcon={<AddIcon />}
             disableElevation
+            onClick={handleAdd}
             sx={{ textTransform: 'none', fontWeight: 600 }}
           >
             Добавить
@@ -148,10 +190,23 @@ export default function ResponsiblePersons() {
           <Button
             variant="outlined"
             startIcon={<EditOutlinedIcon />}
+            disabled={!hasPerson}
+            onClick={handleEdit}
             sx={buttonOutlinedSx}
           >
             Редактировать
           </Button>
+          {admin && (
+            <Button
+              variant="outlined"
+              startIcon={<DeleteOutlineIcon />}
+              disabled={!hasPerson}
+              onClick={handleDelete}
+              sx={buttonOutlinedSx}
+            >
+              Удалить
+            </Button>
+          )}
 
           {orgSelectVisible && (
             <FormControl
@@ -185,6 +240,7 @@ export default function ResponsiblePersons() {
               filters={peopleFilters}
               setFilters={setPeopleFiltersSafe}
               setSelectedId={setSelectedPeopleId}
+              reRenderSignal={peopleRenderSignal}
               pageable
             />
           </AxiosProvider>
@@ -269,6 +325,14 @@ export default function ResponsiblePersons() {
           )}
         </Box>
       </Box>
+
+      <PeopleFormDialog
+        open={formOpen}
+        mode={formMode}
+        peopleId={formMode === 'edit' ? selectedPeopleId : null}
+        onClose={() => setFormOpen(false)}
+        onSaved={handlePersonSaved}
+      />
     </Box>
   )
 }
