@@ -15,9 +15,9 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
- * ACL по оргструктуре автора наряда (burnar.org_stru.sysboss).
- * Вызывается из NaryadListService (список и дерево месяцев); без JOIN в FROM —
- * проверка через EXISTS, чтобы несколько строк karjera не размножали наряды.
+ * ACL по оргструктуре: sysboss-поддерево для авторов нарядов;
+ * parent-поддерево для списка ответственных лиц (formUsersDoljn).
+ * resolveUserOrgId / isAdmin / listFilterOrgUnits — общие для обеих страниц.
  */
 @Service
 public class OrgAccessService {
@@ -129,5 +129,51 @@ public class OrgAccessService {
                         + "WHERE id IN (:ids) ORDER BY nm",
                 new MapSqlParameterSource("ids", ids),
                 (rs, rowNum) -> new OrgUnitDto(rs.getInt("id"), rs.getString("nm")));
+    }
+
+    /**
+     * ACL списка ответственных лиц (formUsersDoljn): поддерево по org_stru.parent.
+     * Не-админ — корень = resolveUserOrgId; админ без orgUnitId — без ограничения;
+     * админ с cut — parent-поддерево выбранного СП.
+     * {@code orgColumnExpr} — SQL-выражение колонки орг. (например {@code ds.org}).
+     *
+     * @return false если список должен быть пустым (нет карьеры у не-админа / нет сессии)
+     */
+    public boolean appendOrgParentSubtreeFilter(
+            StringBuilder where,
+            MapSqlParameterSource params,
+            String username,
+            Integer orgUnitId,
+            String orgColumnExpr) {
+        if (!StringUtils.hasText(username)) {
+            where.append("AND 1=0 ");
+            return false;
+        }
+
+        Integer rootOrg;
+        if (isAdmin(username)) {
+            if (orgUnitId == null) {
+                return true;
+            }
+            rootOrg = orgUnitId;
+        } else {
+            Optional<Integer> userOrg = resolveUserOrgId(username);
+            if (userOrg.isEmpty()) {
+                where.append("AND 1=0 ");
+                return false;
+            }
+            rootOrg = userOrg.get();
+        }
+
+        params.addValue("aclParentRootOrgId", rootOrg);
+        where.append("AND ").append(orgColumnExpr).append(" IN (")
+                .append("WITH RECURSIVE tr AS (")
+                .append("  SELECT c.id FROM burnar.org_stru c WHERE c.id = :aclParentRootOrgId ")
+                .append("  UNION ALL ")
+                .append("  SELECT c.id FROM burnar.org_stru c ")
+                .append("  INNER JOIN tr ON c.parent = tr.id")
+                .append(") SELECT tr.id FROM tr")
+                .append(") ");
+        return true;
     }
 }

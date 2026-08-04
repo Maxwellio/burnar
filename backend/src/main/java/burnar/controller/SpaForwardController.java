@@ -23,6 +23,8 @@ public class SpaForwardController {
             "/reports/**",
             "/settings",
             "/settings/**",
+            "/responsible-persons",
+            "/responsible-persons/**",
             "/admin",
             "/admin/**"
     })
