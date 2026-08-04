@@ -33,8 +33,12 @@ public class ResponsiblePersonController {
     public Page<ResponsiblePersonDto> list(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "100") int size,
-            @RequestParam(required = false) Integer orgUnitId) {
-        return responsiblePersonService.findPeople(PageRequest.of(page, size), orgUnitId);
+            @RequestParam(required = false) Integer orgUnitId,
+            @RequestParam(required = false) String id,
+            @RequestParam(required = false) String fio,
+            @RequestParam(required = false) String oraName) {
+        return responsiblePersonService.findPeople(
+                PageRequest.of(page, size), orgUnitId, id, fio, oraName);
     }
 
     /** Select «структура»: id 1,5,6,7,8,123 (Delphi qrPodr), не /api/org-units нарядов. */

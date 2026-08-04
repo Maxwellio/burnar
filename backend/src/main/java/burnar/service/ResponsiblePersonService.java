@@ -12,6 +12,7 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 
 import java.util.Collections;
 import java.util.List;
@@ -86,8 +87,14 @@ public class ResponsiblePersonService {
     /**
      * Pageable-список людей с карьерой в ACL-поддереве (как strUser в Delphi без чекбоксов).
      * DISTINCT — у человека может быть несколько строк karjera в том же поддереве.
+     * id/fio/oraName — колоночные фильтры BaseTable (query = accessorKey).
      */
-    public Page<ResponsiblePersonDto> findPeople(Pageable pageable, Integer orgUnitId) {
+    public Page<ResponsiblePersonDto> findPeople(
+            Pageable pageable,
+            Integer orgUnitId,
+            String id,
+            String fio,
+            String oraName) {
         MapSqlParameterSource params = new MapSqlParameterSource();
         StringBuilder where = new StringBuilder("WHERE 1=1 ");
         String username = currentUsername();
@@ -95,6 +102,13 @@ public class ResponsiblePersonService {
                 where, params, username, orgUnitId, "ds.org")) {
             return new PageImpl<>(Collections.emptyList(), pageable, 0);
         }
+
+        appendTextFilter(where, params, "id", id,
+                "CAST(p.id AS varchar) ILIKE CONCAT(:id, '%')");
+        appendTextFilter(where, params, "fio", fio,
+                "p.fio ILIKE CONCAT('%', :fio, '%')");
+        appendTextFilter(where, params, "oraName", oraName,
+                "u.ora_name ILIKE CONCAT('%', :oraName, '%')");
 
         String countSql = "SELECT COUNT(*) FROM ("
                 + "SELECT DISTINCT p.id " + PEOPLE_FROM + where
@@ -113,6 +127,20 @@ public class ResponsiblePersonService {
                 + "LIMIT :limit OFFSET :offset";
         List<ResponsiblePersonDto> content = jdbc.query(listSql, params, PEOPLE_MAPPER);
         return new PageImpl<>(content, pageable, total);
+    }
+
+    /** Колоночный текстовый фильтр BaseTable — пустые значения пропускаем. */
+    private static void appendTextFilter(
+            StringBuilder where,
+            MapSqlParameterSource params,
+            String paramName,
+            String value,
+            String condition) {
+        if (!StringUtils.hasText(value)) {
+            return;
+        }
+        params.addValue(paramName, value.trim());
+        where.append("AND ").append(condition).append(' ');
     }
 
     /** Карьеры выбранного человека; проверка ACL — человек должен быть виден текущему пользователю. */

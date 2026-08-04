@@ -3,22 +3,26 @@
  * Левая таблица: people; правая: karjera (пути/даты как в Delphi formUsersDoljn).
  */
 
-/** Люди: код / ФИО / логин — BaseTable выбирает по row.original.id (= people.id). */
+/** Люди: код / ФИО / логин — BaseTable выбирает по row.original.id (= people.id).
+ *  enableColumnFilter: query id/fio/oraName → ResponsiblePersonService (как наряды). */
 export const peopleColumns = [
   {
     accessorKey: 'id',
     header: 'Код',
     size: 80,
+    enableColumnFilter: true,
   },
   {
     accessorKey: 'fio',
     header: 'ФИО',
     size: 220,
+    enableColumnFilter: true,
   },
   {
     accessorKey: 'oraName',
     header: 'Логин',
     size: 140,
+    enableColumnFilter: true,
   },
 ]
 
