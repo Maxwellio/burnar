@@ -10,7 +10,7 @@ import AddIcon from '@mui/icons-material/Add'
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined'
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline'
 import { AxiosProvider, BaseTable } from 'mainComponent'
-import { fetchOrgUnits } from '../api/orgUnitsApi.js'
+import { fetchResponsiblePersonOrgUnits } from '../api/responsiblePersonsApi.js'
 import { useAuth } from '../context/AuthContext.jsx'
 import { isAdmin } from '../utils/roles.js'
 import { careerColumns, peopleColumns } from './responsiblePersonColumns.jsx'
@@ -76,7 +76,7 @@ export default function ResponsiblePersons() {
       return undefined
     }
     let cancelled = false
-    fetchOrgUnits()
+    fetchResponsiblePersonOrgUnits()
       .then((list) => {
         if (cancelled) return
         setOrgUnits(Array.isArray(list) ? list : [])

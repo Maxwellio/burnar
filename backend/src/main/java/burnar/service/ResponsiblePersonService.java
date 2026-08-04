@@ -1,6 +1,7 @@
 package burnar.service;
 
 import burnar.dto.CareerDto;
+import burnar.dto.OrgUnitDto;
 import burnar.dto.ResponsiblePersonDto;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
@@ -22,6 +23,12 @@ import java.util.List;
  */
 @Service
 public class ResponsiblePersonService {
+
+    /**
+     * Корни Select «структура» — как Delphi qrPodr (id in 1,5,6,7,8,123).
+     * Не путать с burnar.org-filter-ids у нарядов.
+     */
+    private static final List<Integer> PODR_FILTER_IDS = List.of(1, 5, 6, 7, 8, 123);
 
     /** Полный путь подразделения — тот же CTE, что OWNER_PATH_SQL у нарядов. */
     private static final String ORG_PATH_SQL =
@@ -65,6 +72,15 @@ public class ResponsiblePersonService {
     public ResponsiblePersonService(NamedParameterJdbcTemplate jdbc, OrgAccessService orgAccessService) {
         this.jdbc = jdbc;
         this.orgAccessService = orgAccessService;
+    }
+
+    /** Справочник СП для админского Select на этой странице (константные id, не org-filter-ids). */
+    public List<OrgUnitDto> listFilterOrgUnits() {
+        return jdbc.query(
+                "SELECT id, nm FROM burnar.org_stru "
+                        + "WHERE id IN (:ids) ORDER BY nm",
+                new MapSqlParameterSource("ids", PODR_FILTER_IDS),
+                (rs, rowNum) -> new OrgUnitDto(rs.getInt("id"), rs.getString("nm")));
     }
 
     /**

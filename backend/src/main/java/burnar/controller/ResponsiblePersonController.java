@@ -1,6 +1,7 @@
 package burnar.controller;
 
 import burnar.dto.CareerDto;
+import burnar.dto.OrgUnitDto;
 import burnar.dto.ResponsiblePersonDto;
 import burnar.service.ResponsiblePersonService;
 import org.springframework.data.domain.Page;
@@ -11,9 +12,12 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.List;
+
 /**
  * Pageable read-API для страницы «Ответственные лица» (BaseTable слева/справа).
  * Доступ — любой authenticated (SecurityConfig /api/**); orgUnitId meaningfully только для админа.
+ * /org-units объявлен до /{peopleId}/…, чтобы литерал не ушёл в path variable.
  */
 @RestController
 @RequestMapping("/api/responsible-persons")
@@ -31,6 +35,12 @@ public class ResponsiblePersonController {
             @RequestParam(defaultValue = "100") int size,
             @RequestParam(required = false) Integer orgUnitId) {
         return responsiblePersonService.findPeople(PageRequest.of(page, size), orgUnitId);
+    }
+
+    /** Select «структура»: id 1,5,6,7,8,123 (Delphi qrPodr), не /api/org-units нарядов. */
+    @GetMapping("/org-units")
+    public List<OrgUnitDto> orgUnits() {
+        return responsiblePersonService.listFilterOrgUnits();
     }
 
     @GetMapping("/{peopleId}/careers")
