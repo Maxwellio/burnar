@@ -1,6 +1,7 @@
 package burnar.service;
 
 import burnar.dto.CareerDto;
+import burnar.dto.CareerWriteRequest;
 import burnar.dto.IdResponse;
 import burnar.dto.OrgUnitDto;
 import burnar.dto.ResponsiblePersonCreateRequest;
@@ -81,6 +82,8 @@ public class ResponsiblePersonService {
         dto.setDtOut(rs.getString("dtout"));
         dto.setDoljNm(rs.getString("dolj_nm"));
         dto.setOrgNm(rs.getString("org_nm"));
+        dto.setOrgId(rs.getInt("org_id"));
+        dto.setDoljId(rs.getInt("dolj_id"));
         return dto;
     };
 
@@ -239,15 +242,78 @@ public class ResponsiblePersonService {
         params.addValue("offset", pageable.getOffset());
 
         String listSql = "SELECT k.key AS id, "
-                + "to_char(k.dtenter, 'DD.MM.YYYY') AS dtenter, "
-                + "to_char(k.dtout, 'DD.MM.YYYY') AS dtout, "
+                + "to_char(k.dtenter, 'YYYY-MM-DD') AS dtenter, "
+                + "to_char(k.dtout, 'YYYY-MM-DD') AS dtout, "
                 + "sp.nm AS dolj_nm, "
-                + ORG_PATH_SQL + " AS org_nm "
+                + ORG_PATH_SQL + " AS org_nm, "
+                + "d.org AS org_id, "
+                + "sp.key AS dolj_id "
                 + fromSql
                 + "ORDER BY k.dtenter, k.dtout "
                 + "LIMIT :limit OFFSET :offset";
         List<CareerDto> content = jdbc.query(listSql, params, CAREER_MAPPER);
         return new PageImpl<>(content, pageable, total);
+    }
+
+    /** Одна карьера для prefill формы (add из выбранной / edit). */
+    public CareerDto getCareer(int peopleId, int careerKey) {
+        requirePersonVisible(peopleId);
+        requireCareerBelongsToPerson(peopleId, careerKey);
+        MapSqlParameterSource params = new MapSqlParameterSource()
+                .addValue("peopleId", peopleId)
+                .addValue("careerKey", careerKey);
+        String sql = "SELECT k.key AS id, "
+                + "to_char(k.dtenter, 'YYYY-MM-DD') AS dtenter, "
+                + "to_char(k.dtout, 'YYYY-MM-DD') AS dtout, "
+                + "sp.nm AS dolj_nm, "
+                + ORG_PATH_SQL + " AS org_nm, "
+                + "d.org AS org_id, "
+                + "sp.key AS dolj_id "
+                + "FROM burnar.karjera k "
+                + "JOIN burnar.doljtostruct d ON d.key = k.doljinstru "
+                + "JOIN burnar.sprdoljnost sp ON sp.key = d.doljnost "
+                + "WHERE k.idpeople = :peopleId AND k.key = :careerKey";
+        List<CareerDto> rows = jdbc.query(sql, params, CAREER_MAPPER);
+        if (rows.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Career not found");
+        }
+        return rows.get(0);
+    }
+
+    /** Insert карьеры через karjera_add (akarjera_id = null, stat = 2). */
+    public void createCareer(int peopleId, CareerWriteRequest req) {
+        requirePersonVisible(peopleId);
+        ParsedCareerDates dates = parseCareerRequest(req);
+        jdbc.getJdbcTemplate().execute((Connection con) -> {
+            callKarjeraAdd(con, peopleId, null, dates.dateIn, dates.dateOut,
+                    dates.orgId, dates.doljId, 2);
+            return null;
+        });
+    }
+
+    /** Update карьеры через karjera_add (akarjera_id = key, stat = 1). */
+    public void updateCareer(int peopleId, int careerKey, CareerWriteRequest req) {
+        requirePersonVisible(peopleId);
+        requireCareerBelongsToPerson(peopleId, careerKey);
+        ParsedCareerDates dates = parseCareerRequest(req);
+        jdbc.getJdbcTemplate().execute((Connection con) -> {
+            callKarjeraAdd(con, peopleId, careerKey, dates.dateIn, dates.dateOut,
+                    dates.orgId, dates.doljId, 1);
+            return null;
+        });
+    }
+
+    /** Удаление выбранной карьеры — как Delphi ToolButton12 (key текущей строки). */
+    public void deleteCareer(int peopleId, int careerKey) {
+        requirePersonVisible(peopleId);
+        int deleted = jdbc.update(
+                "DELETE FROM burnar.karjera WHERE key = :key AND idpeople = :peopleId",
+                new MapSqlParameterSource()
+                        .addValue("key", careerKey)
+                        .addValue("peopleId", peopleId));
+        if (deleted == 0) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Career not found");
+        }
     }
 
     /** Карточка для формы edit; 404 если нет или вне ACL. */
@@ -341,6 +407,75 @@ public class ResponsiblePersonService {
             }
             return null;
         });
+    }
+
+    private void requireCareerBelongsToPerson(int peopleId, int careerKey) {
+        Long n = jdbc.queryForObject(
+                "SELECT COUNT(*) FROM burnar.karjera WHERE key = :key AND idpeople = :peopleId",
+                new MapSqlParameterSource()
+                        .addValue("key", careerKey)
+                        .addValue("peopleId", peopleId),
+                Long.class);
+        if (n == null || n == 0) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Career not found");
+        }
+    }
+
+    private static ParsedCareerDates parseCareerRequest(CareerWriteRequest req) {
+        if (req == null || req.getOrgId() == null || req.getDoljId() == null
+                || !StringUtils.hasText(req.getDateIn()) || !StringUtils.hasText(req.getDateOut())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "dateIn, dateOut, orgId, doljId are required");
+        }
+        try {
+            return new ParsedCareerDates(
+                    LocalDate.parse(req.getDateIn().trim()),
+                    LocalDate.parse(req.getDateOut().trim()),
+                    req.getOrgId(),
+                    req.getDoljId());
+        } catch (Exception e) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "dates must be yyyy-MM-dd");
+        }
+    }
+
+    private static void callKarjeraAdd(
+            Connection con,
+            int peopleId,
+            Integer careerKey,
+            LocalDate dateIn,
+            LocalDate dateOut,
+            int orgId,
+            int doljId,
+            int stat) throws java.sql.SQLException {
+        try (CallableStatement cs = con.prepareCall(
+                "{call burnar.karjera_add(?, ?, ?, ?, ?, ?, ?)}")) {
+            cs.setInt(1, peopleId);
+            if (careerKey != null) {
+                cs.setInt(2, careerKey);
+            } else {
+                cs.setNull(2, Types.INTEGER);
+            }
+            cs.setDate(3, Date.valueOf(dateIn));
+            cs.setDate(4, Date.valueOf(dateOut));
+            cs.setInt(5, orgId);
+            cs.setInt(6, doljId);
+            cs.setBigDecimal(7, BigDecimal.valueOf(stat));
+            cs.execute();
+        }
+    }
+
+    private static final class ParsedCareerDates {
+        private final LocalDate dateIn;
+        private final LocalDate dateOut;
+        private final int orgId;
+        private final int doljId;
+
+        private ParsedCareerDates(LocalDate dateIn, LocalDate dateOut, int orgId, int doljId) {
+            this.dateIn = dateIn;
+            this.dateOut = dateOut;
+            this.orgId = orgId;
+            this.doljId = doljId;
+        }
     }
 
     private static Integer callPeopleAdd(

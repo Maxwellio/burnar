@@ -53,3 +53,40 @@ export async function deleteResponsiblePerson(peopleId) {
     throw new Error(`Request failed: ${res.status}`)
   }
 }
+
+/** Карточка карьеры для prefill формы. */
+export function fetchCareer(peopleId, careerKey) {
+  return requestJson(`/responsible-persons/${peopleId}/careers/${careerKey}`)
+}
+
+export async function createCareer(peopleId, body) {
+  const res = await request(`/responsible-persons/${peopleId}/careers`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+    body: JSON.stringify(body),
+  })
+  if (!res.ok) {
+    throw new Error(`Request failed: ${res.status}`)
+  }
+}
+
+export async function updateCareer(peopleId, careerKey, body) {
+  const res = await request(`/responsible-persons/${peopleId}/careers/${careerKey}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+    body: JSON.stringify(body),
+  })
+  if (!res.ok) {
+    throw new Error(`Request failed: ${res.status}`)
+  }
+}
+
+export async function deleteCareer(peopleId, careerKey) {
+  const res = await request(`/responsible-persons/${peopleId}/careers/${careerKey}`, {
+    method: 'DELETE',
+    headers: { Accept: 'application/json' },
+  })
+  if (!res.ok) {
+    throw new Error(`Request failed: ${res.status}`)
+  }
+}

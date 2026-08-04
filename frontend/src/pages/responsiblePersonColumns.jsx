@@ -1,10 +1,20 @@
 /**
  * Колонки master-detail «Ответственные лица».
- * Левая таблица: people; правая: karjera (пути/даты как в Delphi formUsersDoljn).
+ * Левая таблица: people; правая: karjera (даты с бэка — yyyy-MM-dd).
  */
+import { format, parseISO } from 'date-fns'
 
-/** Люди: код / ФИО / логин — BaseTable выбирает по row.original.id (= people.id).
- *  enableColumnFilter: query id/fio/oraName → ResponsiblePersonService (как наряды). */
+/** ISO yyyy-MM-dd → dd.MM.yyyy для отображения в таблице. */
+function formatIsoDate(value) {
+  if (!value) return ''
+  try {
+    return format(parseISO(value), 'dd.MM.yyyy')
+  } catch {
+    return value
+  }
+}
+
+/** Люди: код / ФИО / логин — BaseTable выбирает по row.original.id (= people.id). */
 export const peopleColumns = [
   {
     accessorKey: 'id',
@@ -26,17 +36,19 @@ export const peopleColumns = [
   },
 ]
 
-/** Карьеры выбранного человека: даты, должность, отдел (полный путь). */
+/** Карьеры: даты форматируем из ISO; orgId/doljId в строке есть для форм, не показываем. */
 export const careerColumns = [
   {
     accessorKey: 'dtEnter',
     header: 'Дата начала работы',
     size: 140,
+    cell: ({ getValue }) => formatIsoDate(getValue()),
   },
   {
     accessorKey: 'dtOut',
     header: 'Дата окончания работы',
     size: 150,
+    cell: ({ getValue }) => formatIsoDate(getValue()),
   },
   {
     accessorKey: 'doljNm',

@@ -11,12 +11,14 @@ import EditOutlinedIcon from '@mui/icons-material/EditOutlined'
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline'
 import { AxiosProvider, BaseTable } from 'mainComponent'
 import {
+  deleteCareer,
   deleteResponsiblePerson,
   fetchResponsiblePersonOrgUnits,
 } from '../api/responsiblePersonsApi.js'
 import { useAuth } from '../context/AuthContext.jsx'
 import { useConfirm } from '../context/ConfirmContext.jsx'
 import { isAdmin } from '../utils/roles.js'
+import CareerFormDialog from './CareerFormDialog.jsx'
 import PeopleFormDialog from './PeopleFormDialog.jsx'
 import { careerColumns, peopleColumns } from './responsiblePersonColumns.jsx'
 
@@ -31,8 +33,7 @@ const buttonOutlinedSx = {
 }
 
 /**
- * Master-detail: слева ответственные лица, справа карьеры выбранного (people.id).
- * Слева: add/edit people + admin delete; справа кнопки карьер — пока визуал.
+ * Master-detail: слева people (CRUD), справа карьеры (CRUD через karjera_add / DELETE).
  * Select «структура» — только ROLE_ADMIN.
  */
 export default function ResponsiblePersons() {
@@ -41,14 +42,19 @@ export default function ResponsiblePersons() {
   const admin = isAdmin(user)
 
   const [selectedPeopleId, setSelectedPeopleId] = useState(null)
+  const [selectedCareerId, setSelectedCareerId] = useState(null)
   const [orgUnitId, setOrgUnitId] = useState(ORG_ALL)
   const [orgUnits, setOrgUnits] = useState([])
   const [orgSelectVisible, setOrgSelectVisible] = useState(false)
   const [peopleFilters, setPeopleFilters] = useState([])
   const [peopleRenderSignal, setPeopleRenderSignal] = useState(0)
+  const [careerRenderSignal, setCareerRenderSignal] = useState(0)
 
-  const [formOpen, setFormOpen] = useState(false)
-  const [formMode, setFormMode] = useState('add')
+  const [peopleFormOpen, setPeopleFormOpen] = useState(false)
+  const [peopleFormMode, setPeopleFormMode] = useState('add')
+
+  const [careerFormOpen, setCareerFormOpen] = useState(false)
+  const [careerFormMode, setCareerFormMode] = useState('add')
 
   // Админский cut орг.: как на Home — в filters BaseTable → query orgUnitId
   const injectOrgFilter = useCallback(
@@ -74,9 +80,15 @@ export default function ResponsiblePersons() {
 
   useEffect(() => {
     setPeopleFilters((prev) => injectOrgFilter(prev))
-    // Смена структуры сбрасывает выбор — иначе правая панель может показать «чужие» карьеры
     setSelectedPeopleId(null)
+    setSelectedCareerId(null)
   }, [orgUnitId, admin, injectOrgFilter])
+
+  // Смена человека слева сбрасывает выбор карьеры
+  const handleSelectPeople = useCallback((id) => {
+    setSelectedPeopleId(id)
+    setSelectedCareerId(null)
+  }, [])
 
   useEffect(() => {
     if (!admin) {
@@ -104,8 +116,8 @@ export default function ResponsiblePersons() {
   }, [admin])
 
   const hasPerson = selectedPeopleId != null
+  const hasCareer = selectedCareerId != null
 
-  // В careers уходит только orgUnitId (тот же cut, что у списка людей)
   const careerFilters = useMemo(() => {
     if (admin && orgUnitId !== ORG_ALL) {
       return [{ id: 'orgUnitId', value: Number(orgUnitId) }]
@@ -113,15 +125,15 @@ export default function ResponsiblePersons() {
     return []
   }, [admin, orgUnitId])
 
-  const handleAdd = () => {
-    setFormMode('add')
-    setFormOpen(true)
+  const handleAddPerson = () => {
+    setPeopleFormMode('add')
+    setPeopleFormOpen(true)
   }
 
-  const handleEdit = () => {
+  const handleEditPerson = () => {
     if (!hasPerson) return
-    setFormMode('edit')
-    setFormOpen(true)
+    setPeopleFormMode('edit')
+    setPeopleFormOpen(true)
   }
 
   const handlePersonSaved = ({ id }) => {
@@ -129,16 +141,49 @@ export default function ResponsiblePersons() {
       setSelectedPeopleId(id)
     }
     setPeopleRenderSignal((n) => n + 1)
+    setCareerRenderSignal((n) => n + 1)
   }
 
-  const handleDelete = async () => {
+  const handleDeletePerson = async () => {
     if (!admin || !hasPerson) return
     const ok = await confirm('Удалить пользователя?', { action: 'удаление' })
     if (!ok) return
     try {
       await deleteResponsiblePerson(selectedPeopleId)
       setSelectedPeopleId(null)
+      setSelectedCareerId(null)
       setPeopleRenderSignal((n) => n + 1)
+    } catch (e) {
+      console.error(e)
+    }
+  }
+
+  const handleAddCareer = () => {
+    if (!hasPerson) return
+    setCareerFormMode('add')
+    setCareerFormOpen(true)
+  }
+
+  const handleEditCareer = () => {
+    if (!hasPerson || !hasCareer) return
+    setCareerFormMode('edit')
+    setCareerFormOpen(true)
+  }
+
+  const handleCareerSaved = () => {
+    setCareerRenderSignal((n) => n + 1)
+  }
+
+  const handleDeleteCareer = async () => {
+    if (!hasPerson || !hasCareer) return
+    const ok = await confirm('Удалить выбранную карьеру пользователя?', {
+      action: 'удаление',
+    })
+    if (!ok) return
+    try {
+      await deleteCareer(selectedPeopleId, selectedCareerId)
+      setSelectedCareerId(null)
+      setCareerRenderSignal((n) => n + 1)
     } catch (e) {
       console.error(e)
     }
@@ -182,7 +227,7 @@ export default function ResponsiblePersons() {
             variant="contained"
             startIcon={<AddIcon />}
             disableElevation
-            onClick={handleAdd}
+            onClick={handleAddPerson}
             sx={{ textTransform: 'none', fontWeight: 600 }}
           >
             Добавить
@@ -191,7 +236,7 @@ export default function ResponsiblePersons() {
             variant="outlined"
             startIcon={<EditOutlinedIcon />}
             disabled={!hasPerson}
-            onClick={handleEdit}
+            onClick={handleEditPerson}
             sx={buttonOutlinedSx}
           >
             Редактировать
@@ -201,7 +246,7 @@ export default function ResponsiblePersons() {
               variant="outlined"
               startIcon={<DeleteOutlineIcon />}
               disabled={!hasPerson}
-              onClick={handleDelete}
+              onClick={handleDeletePerson}
               sx={buttonOutlinedSx}
             >
               Удалить
@@ -239,7 +284,7 @@ export default function ResponsiblePersons() {
               columns={peopleColumns}
               filters={peopleFilters}
               setFilters={setPeopleFiltersSafe}
-              setSelectedId={setSelectedPeopleId}
+              setSelectedId={handleSelectPeople}
               reRenderSignal={peopleRenderSignal}
               pageable
             />
@@ -247,7 +292,7 @@ export default function ResponsiblePersons() {
         </Box>
       </Box>
 
-      {/* Правая панель: карьеры выбранного человека */}
+      {/* Правая панель: карьеры */}
       <Box
         sx={{
           flex: 1,
@@ -274,6 +319,7 @@ export default function ResponsiblePersons() {
             startIcon={<AddIcon />}
             disableElevation
             disabled={!hasPerson}
+            onClick={handleAddCareer}
             sx={{ textTransform: 'none', fontWeight: 600 }}
           >
             Добавить
@@ -281,7 +327,8 @@ export default function ResponsiblePersons() {
           <Button
             variant="outlined"
             startIcon={<EditOutlinedIcon />}
-            disabled={!hasPerson}
+            disabled={!hasCareer}
+            onClick={handleEditCareer}
             sx={buttonOutlinedSx}
           >
             Редактировать
@@ -289,7 +336,8 @@ export default function ResponsiblePersons() {
           <Button
             variant="outlined"
             startIcon={<DeleteOutlineIcon />}
-            disabled={!hasPerson}
+            disabled={!hasCareer}
+            onClick={handleDeleteCareer}
             sx={buttonOutlinedSx}
           >
             Удалить
@@ -300,11 +348,12 @@ export default function ResponsiblePersons() {
           {hasPerson ? (
             <AxiosProvider baseapi="/api">
               <BaseTable
-                // key: смена человека/орг. перемонтирует таблицу (свежий fetch)
                 key={`${selectedPeopleId}-${orgUnitId}`}
                 url={`/responsible-persons/${selectedPeopleId}/careers`}
                 columns={careerColumns}
                 filters={careerFilters}
+                setSelectedId={setSelectedCareerId}
+                reRenderSignal={careerRenderSignal}
                 pageable
               />
             </AxiosProvider>
@@ -327,11 +376,27 @@ export default function ResponsiblePersons() {
       </Box>
 
       <PeopleFormDialog
-        open={formOpen}
-        mode={formMode}
-        peopleId={formMode === 'edit' ? selectedPeopleId : null}
-        onClose={() => setFormOpen(false)}
+        open={peopleFormOpen}
+        mode={peopleFormMode}
+        peopleId={peopleFormMode === 'edit' ? selectedPeopleId : null}
+        onClose={() => setPeopleFormOpen(false)}
         onSaved={handlePersonSaved}
+      />
+
+      <CareerFormDialog
+        open={careerFormOpen}
+        mode={careerFormMode}
+        peopleId={selectedPeopleId}
+        // add: prefill из выбранной строки если есть; edit: обязательно selectedCareerId
+        careerKey={
+          careerFormMode === 'edit'
+            ? selectedCareerId
+            : hasCareer
+              ? selectedCareerId
+              : null
+        }
+        onClose={() => setCareerFormOpen(false)}
+        onSaved={handleCareerSaved}
       />
     </Box>
   )

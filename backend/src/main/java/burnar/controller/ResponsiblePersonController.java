@@ -1,6 +1,7 @@
 package burnar.controller;
 
 import burnar.dto.CareerDto;
+import burnar.dto.CareerWriteRequest;
 import burnar.dto.IdResponse;
 import burnar.dto.OrgUnitDto;
 import burnar.dto.ResponsiblePersonCreateRequest;
@@ -25,7 +26,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 /**
- * API страницы «Ответственные лица»: список/карьеры + CRUD people.
+ * API страницы «Ответственные лица»: список/карьеры + CRUD people и careers.
  * Литералы /org-units, /positions, /org-tree — до /{peopleId}, иначе уйдут в path variable.
  */
 @RestController
@@ -101,5 +102,37 @@ public class ResponsiblePersonController {
             @RequestParam(required = false) Integer orgUnitId) {
         return responsiblePersonService.findCareers(
                 peopleId, PageRequest.of(page, size), orgUnitId);
+    }
+
+    @GetMapping("/{peopleId}/careers/{careerKey}")
+    public CareerDto career(
+            @PathVariable int peopleId,
+            @PathVariable int careerKey) {
+        return responsiblePersonService.getCareer(peopleId, careerKey);
+    }
+
+    @PostMapping("/{peopleId}/careers")
+    @ResponseStatus(HttpStatus.CREATED)
+    public void createCareer(
+            @PathVariable int peopleId,
+            @RequestBody CareerWriteRequest body) {
+        responsiblePersonService.createCareer(peopleId, body);
+    }
+
+    @PutMapping("/{peopleId}/careers/{careerKey}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void updateCareer(
+            @PathVariable int peopleId,
+            @PathVariable int careerKey,
+            @RequestBody CareerWriteRequest body) {
+        responsiblePersonService.updateCareer(peopleId, careerKey, body);
+    }
+
+    @DeleteMapping("/{peopleId}/careers/{careerKey}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void deleteCareer(
+            @PathVariable int peopleId,
+            @PathVariable int careerKey) {
+        responsiblePersonService.deleteCareer(peopleId, careerKey);
     }
 }

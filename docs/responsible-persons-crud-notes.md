@@ -1,15 +1,15 @@
 # Ответственные лица — шпаргалка CRUD
 
-Источники: Delphi `formUsersDoljn.pas` / `formPeopleAdd.pas`, DDL в `C:\WORK\bd_bur-main`.
+Источники: Delphi `formUsersDoljn.pas` / `formPeopleAdd.pas` / `formNewEditCareer.pas`, DDL в `C:\WORK\bd_bur-main`.
 
 ## Статус реализации
 
 | Часть | Статус |
 |-------|--------|
 | Список людей + карьеры (read) | сделано |
-| Add / Edit people (модалка + API) | **сделано** |
+| Add / Edit people | **сделано** |
 | Delete people (admin, `deleteUser`) | **сделано** |
-| CRUD карьер справа | не сделано |
+| CRUD карьер справа | **сделано** |
 | Учётки / пароль (админ-панель) | не сделано |
 
 ---
@@ -18,105 +18,75 @@
 
 ```text
 people (id, fio, tabn, fioreports, codr3, fiorodpad)
-  ├─ users (users_id, ora_name, people_id, active, note, dtenter, dtout, password)
+  ├─ users (...)
   └─ karjera (key, idpeople, dtenter, dtout, doljinstru)
-         └─ doljtostruct (key, doljnost, org, boss)
-                ├─ sprdoljnost (key, nm)
-                └─ org_stru (id, parent, nm)
+         └─ doljtostruct → sprdoljnost + org_stru
 ```
-
-Sequences: `burnar.seq_people`, `burnar.seq_users`, `burnar.seq_doljtostruct`.  
-`karjera.key` при INSERT = `null` — триггер `ftrg_karjera_ins_before`.
 
 ---
 
 ## 2. Кнопки UI → реализация
 
-### Слева (people) — сделано
+### Слева (people)
 
 | Кнопка | API | БД |
 |--------|-----|-----|
-| Добавить | `POST /api/responsible-persons` | `CALL burnar.people_add` (`acodr3 = null`) |
-| Редактировать | `PUT /api/responsible-persons/{id}` | `UPDATE people SET fio, tabn, fioreports, fiorodpad` |
-| Удалить (только admin) | `DELETE /api/responsible-persons/{id}` | `CALL burnar.deleteUser` + `useConfirm` |
+| Добавить | `POST /api/responsible-persons` | `people_add` (`acodr3 = null`) |
+| Редактировать | `PUT /api/responsible-persons/{id}` | `UPDATE people` (+ `fiorodpad`) |
+| Удалить (admin) | `DELETE /api/responsible-persons/{id}` | `deleteUser` + `useConfirm` |
 
-Форма: `PeopleFormDialog` в `DraggableDialog`.  
-Поля: ФИО, инициалы (`fioreports`), род.п. (`fiorodpad`), таб.№, дата начала, должность, подразделение. **Без `codr3`.**  
-Edit: дата / должность / подразделение **скрыты**.
+**Отличие от Delphi:** `fiorodpad` сохраняем на add и edit. Без поля `codr3`.
 
-**Отличие от Delphi:** `fiorodpad` сохраняем и на add, и на edit (в Delphi add всегда `null`, edit не обновлял поле).
+### Справа (карьеры)
 
-### Справа (карьеры) — ещё не сделано
+| Кнопка | API | БД |
+|--------|-----|-----|
+| Добавить | `POST .../{peopleId}/careers` | `karjera_add` (`akarjera_id = null`, `stat = 2`) |
+| Редактировать | `PUT .../careers/{key}` | `karjera_add` (`akarjera_id = key`, `stat = 1`) |
+| Удалить | `DELETE .../careers/{key}` | `DELETE FROM karjera WHERE key AND idpeople` |
 
-| Кнопка | Действие Delphi | Целевая реализация |
-|--------|-----------------|-------------------|
-| Добавить | `karjera_add` (`akarjera_id = null`) | `POST .../careers` |
-| Редактировать | `karjera_add` (`akarjera_id = key`) | `PUT .../careers/{key}` |
-| Удалить | `DELETE FROM karjera` | `DELETE .../careers/{key}` |
+Confirm удаления: «Удалить выбранную карьеру пользователя?» (в Delphi текст был «последнюю», код удалял выделенную строку — в вебе текст и код согласованы).
+
+«Добавить» активна при выбранном человеке слева (без гейта «последняя строка» из Delphi `grKareraListClick`).
+
+Форма `CareerFormDialog`: дата начала/окончания, должность, подразделение. Валидация только org+dolj (как Delphi). Prefill add из выбранной карьеры через `GET .../careers/{key}`, иначе `dateIn=today`, `dateOut=2040-01-01`.
 
 ### Админ-панель (позже)
 
 | Действие | Процедура |
 |----------|-----------|
-| Учётка | `burnar.add_user` |
-| Пароль | `burnar.change_password_strict` |
-
-Удаление человека уже на странице ответственных (admin), не только в админ-панели.
+| Учётка | `add_user` |
+| Пароль | `change_password_strict` |
 
 ---
 
-## 3. Реализованные API
+## 3. API
 
 | Метод | Назначение |
 |-------|------------|
-| `GET /api/responsible-persons?page&size&orgUnitId&id&fio&oraName` | Список (BaseTable) |
-| `GET /api/responsible-persons/org-units` | Select «структура» (id 1,5,6,7,8,123) |
-| `GET /api/responsible-persons/positions` | `sprdoljnost` |
-| `GET /api/responsible-persons/org-tree` | Пути орг. для комбо add (админ: корни 1,5,6,7,8,91,123; иначе от `resolveUserOrgId`) |
-| `GET /api/responsible-persons/{id}` | Карточка edit: fio, fioreports, fiorodpad, tabn |
-| `POST /api/responsible-persons` | `people_add` → `{ id }` |
-| `PUT /api/responsible-persons/{id}` | UPDATE people (+ fiorodpad) |
-| `DELETE /api/responsible-persons/{id}` | `deleteUser`, только admin |
-| `GET /api/responsible-persons/{id}/careers` | Карьеры |
+| `GET /responsible-persons` | Список people |
+| `GET /responsible-persons/org-units` | Select структура |
+| `GET /responsible-persons/positions` | Должности |
+| `GET /responsible-persons/org-tree` | Пути орг. для комбо |
+| `GET /responsible-persons/{id}` | Карточка people |
+| `POST/PUT/DELETE /responsible-persons[/{id}]` | CRUD people |
+| `GET /responsible-persons/{id}/careers` | Список карьер (`dtEnter`/`dtOut` ISO, `orgId`/`doljId`) |
+| `GET /responsible-persons/{id}/careers/{key}` | Карточка карьеры |
+| `POST /responsible-persons/{id}/careers` | `karjera_add` insert |
+| `PUT /responsible-persons/{id}/careers/{key}` | `karjera_add` update |
+| `DELETE /responsible-persons/{id}/careers/{key}` | DELETE karjera |
 
-ACL: `OrgAccessService.appendOrgParentSubtreeFilter` (parent).  
-Фронт: `BaseTable.setSelectedId` → `row.original.id` (= `people.id` / `karjera.key`).
-
----
-
-## 4. Процедуры (справочно)
-
-### `burnar.people_add`
-
-Параметры: `afio, acodr3, atabn, afioreports, afiorodpad, datein, aorg_id, adolj_id, apeople_id (INOUT)`.  
-Внутри: `karjera_add(..., dateOut='01.01.2040', ...)`.
-
-### `burnar.karjera_add`
-
-Ветка по `akarjera_id IS NULL` (insert) / иначе update. `stat` в теле не читается.
-
-### `burnar.deleteUser(peopleid)`
-
-Каскад: `users` → `znpodpis` → `karjera` → `people`.
+ACL: `appendOrgParentSubtreeFilter` (parent).
 
 ---
 
-## 5. UI-инфра (из substitute)
+## 4. UI-инфра
 
-| Файл | Роль |
-|------|------|
-| `frontend/src/components/DraggableDialog.jsx` | Перетаскиваемые формы |
-| `frontend/src/hooks/useDraggableDialog.js` | Drag-логика |
-| `frontend/src/components/ConfirmDialog.jsx` | Confirm UI |
-| `frontend/src/context/ConfirmContext.jsx` | `ConfirmProvider` / `useConfirm()` |
-
-`ConfirmProvider` в `App.jsx` внутри `AuthProvider`. Дальнейшие подтверждения — только через `useConfirm`.
+`DraggableDialog`, `ConfirmDialog` / `useConfirm` (`ConfirmProvider` в `App.jsx`).
 
 ---
 
-## 6. Следующий этап (карьеры)
+## 5. `karjera_add` (справочно)
 
-- `POST/PUT/DELETE` careers → `karjera_add` / `DELETE karjera`
-- Модалка: dateIn/Out, org, должность
-- Confirm на удаление карьеры через `useConfirm`
-- `reRenderSignal` правой таблицы
+Параметры: `apeople, akarjera_id, datein, dateout, aorg_id, adolj_id, stat`.  
+Ветка по `akarjera_id IS NULL`; `stat` в теле не читается. При отсутствии пары dolj+org создаёт `doljtostruct`.
