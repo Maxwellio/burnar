@@ -1,9 +1,8 @@
 package burnar.dto;
 
 /**
- * Период карьеры ответственного лица (правая BaseTable).
- * id = karjera.key — нужен будущим кнопкам edit/delete.
- * orgNm — полный путь по org_stru.parent (как в Delphi qrKarera).
+ * Период карьеры (правая BaseTable + форма).
+ * id = karjera.key; dtEnter/dtOut — yyyy-MM-dd; orgId/doljId — для CareerFormDialog.
  */
 public class CareerDto {
 
@@ -12,6 +11,8 @@ public class CareerDto {
     private String dtOut;
     private String doljNm;
     private String orgNm;
+    private Integer orgId;
+    private Integer doljId;
 
     public Integer getId() {
         return id;
@@ -51,5 +52,21 @@ public class CareerDto {
 
     public void setOrgNm(String orgNm) {
         this.orgNm = orgNm;
+    }
+
+    public Integer getOrgId() {
+        return orgId;
+    }
+
+    public void setOrgId(Integer orgId) {
+        this.orgId = orgId;
+    }
+
+    public Integer getDoljId() {
+        return doljId;
+    }
+
+    public void setDoljId(Integer doljId) {
+        this.doljId = doljId;
     }
 }
