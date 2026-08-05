@@ -401,7 +401,7 @@ public class ResponsiblePersonService {
         }
         requirePersonVisible(peopleId);
         jdbc.getJdbcTemplate().execute((Connection con) -> {
-            try (CallableStatement cs = con.prepareCall("{call burnar.deleteUser(?)}")) {
+            try (CallableStatement cs = con.prepareCall("CALL burnar.deleteUser(?)")) {
                 cs.setBigDecimal(1, BigDecimal.valueOf(peopleId));
                 cs.execute();
             }
@@ -447,8 +447,9 @@ public class ResponsiblePersonService {
             int orgId,
             int doljId,
             int stat) throws java.sql.SQLException {
+        // PostgreSQL PROCEDURE — только нативный CALL; JDBC {call …} уходит как function.
         try (CallableStatement cs = con.prepareCall(
-                "{call burnar.karjera_add(?, ?, ?, ?, ?, ?, ?)}")) {
+                "CALL burnar.karjera_add(?, ?, ?, ?, ?, ?, ?)")) {
             cs.setInt(1, peopleId);
             if (careerKey != null) {
                 cs.setInt(2, careerKey);
@@ -488,9 +489,10 @@ public class ResponsiblePersonService {
             int orgId,
             int doljId) throws java.sql.SQLException {
         // INOUT apeople_id — 9-й параметр; acodr3 всегда null (поле не в UI).
-        // Escape-syntax {call …} — надёжнее отдаёт INOUT apeople_id через registerOutParameter.
+        // PostgreSQL PROCEDURE — только нативный CALL; JDBC {call …} уходит как function →
+        // "… is a procedure … use CALL".
         try (CallableStatement cs = con.prepareCall(
-                "{call burnar.people_add(?, ?, ?, ?, ?, ?, ?, ?, ?)}")) {
+                "CALL burnar.people_add(?, ?, ?, ?, ?, ?, ?, ?, ?)")) {
             cs.setString(1, fio);
             cs.setNull(2, Types.NUMERIC);
             if (tabn != null) {
