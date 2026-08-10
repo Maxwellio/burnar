@@ -59,6 +59,18 @@ export function fetchCareer(peopleId, careerKey) {
   return requestJson(`/responsible-persons/${peopleId}/careers/${careerKey}`)
 }
 
+/**
+ * Полное число карьер человека (без orgUnitId) — для предупреждения
+ * при удалении последней (триггер БД удалит и пользователя).
+ * @returns {Promise<number>}
+ */
+export async function fetchCareerTotal(peopleId) {
+  const page = await requestJson(
+    `/responsible-persons/${peopleId}/careers?page=0&size=1`,
+  )
+  return Number(page.totalElements) || 0
+}
+
 export async function createCareer(peopleId, body) {
   const res = await request(`/responsible-persons/${peopleId}/careers`, {
     method: 'POST',

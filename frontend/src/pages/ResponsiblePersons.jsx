@@ -13,6 +13,7 @@ import { AxiosProvider, BaseTable } from 'mainComponent'
 import {
   deleteCareer,
   deleteResponsiblePerson,
+  fetchCareerTotal,
   fetchResponsiblePersonOrgUnits,
 } from '../api/responsiblePersonsApi.js'
 import { useAuth } from '../context/AuthContext.jsx'
@@ -176,14 +177,29 @@ export default function ResponsiblePersons() {
 
   const handleDeleteCareer = async () => {
     if (!hasPerson || !hasCareer) return
-    const ok = await confirm('Удалить выбранную карьеру пользователя?', {
-      action: 'удаление',
-    })
+    let careerTotal
+    try {
+      // Без orgUnitId: триггер срабатывает по последней карьере в БД, не по видимым в фильтре
+      careerTotal = await fetchCareerTotal(selectedPeopleId)
+    } catch (e) {
+      console.error(e)
+      return
+    }
+    const isOnlyCareer = careerTotal === 1
+    const message = isOnlyCareer
+      ? 'Удалить выбранную карьеру пользователя? Вместе с ней будет удалён и сам пользователь.'
+      : 'Удалить выбранную карьеру пользователя?'
+    const ok = await confirm(message, { action: 'удаление' })
     if (!ok) return
     try {
       await deleteCareer(selectedPeopleId, selectedCareerId)
       setSelectedCareerId(null)
       setCareerRenderSignal((n) => n + 1)
+      // Последняя карьера → пользователь исчезнет из левого JOIN-списка
+      if (isOnlyCareer) {
+        setSelectedPeopleId(null)
+        setPeopleRenderSignal((n) => n + 1)
+      }
     } catch (e) {
       console.error(e)
     }
