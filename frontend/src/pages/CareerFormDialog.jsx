@@ -33,7 +33,7 @@ const emptyForm = () => ({
 /**
  * Модалка add/edit карьеры (Delphi frmNewEditCareer) в DraggableDialog.
  * Валидация как в Delphi: обязательны должность и подразделение; даты без взаимной проверки.
- * Prefill: edit / add с выбранной строкой — GET career; иначе дефолтные даты.
+ * Add — всегда дефолтные даты и пустые org/dolj; edit — GET career.
  */
 export default function CareerFormDialog({
   open,
@@ -55,8 +55,10 @@ export default function CareerFormDialog({
     if (!open || peopleId == null) return undefined
 
     let cancelled = false
+    // Сразу сбрасываем, чтобы после edit→add не мелькали старые значения
     setError('')
     setSaving(false)
+    setForm(emptyForm())
 
     const load = async () => {
       setLoading(true)
@@ -66,8 +68,7 @@ export default function CareerFormDialog({
         setPositions(Array.isArray(pos) ? pos : [])
         setOrgTree(Array.isArray(orgs) ? orgs : [])
 
-        // Prefill из выбранной карьеры (edit всегда; add — если есть careerKey)
-        if (careerKey != null) {
+        if (isEdit && careerKey != null) {
           const detail = await fetchCareer(peopleId, careerKey)
           if (cancelled) return
           setForm({
@@ -76,8 +77,6 @@ export default function CareerFormDialog({
             orgId: detail.orgId != null ? String(detail.orgId) : '',
             doljId: detail.doljId != null ? String(detail.doljId) : '',
           })
-        } else {
-          setForm(emptyForm())
         }
       } catch (e) {
         if (!cancelled) {

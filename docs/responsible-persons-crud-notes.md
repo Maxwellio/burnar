@@ -49,7 +49,7 @@ Confirm удаления: «Удалить выбранную карьеру п�
 
 «Добавить» активна при выбранном человеке слева (без гейта «последняя строка» из Delphi `grKareraListClick`).
 
-Форма `CareerFormDialog`: дата начала/окончания, должность, подразделение. Валидация только org+dolj (как Delphi). Prefill add из выбранной карьеры через `GET .../careers/{key}`, иначе `dateIn=today`, `dateOut=2040-01-01`.
+Форма `CareerFormDialog`: дата начала/окончания, должность, подразделение. Валидация только org+dolj (как Delphi). Add — всегда `dateIn=today`, `dateOut=2040-01-01`, пустые org/dolj; edit — prefill через `GET .../careers/{key}`.
 
 ### Админ-панель (позже)
 

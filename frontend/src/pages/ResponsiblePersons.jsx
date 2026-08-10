@@ -403,14 +403,7 @@ export default function ResponsiblePersons() {
         open={careerFormOpen}
         mode={careerFormMode}
         peopleId={selectedPeopleId}
-        // add: prefill из выбранной строки если есть; edit: обязательно selectedCareerId
-        careerKey={
-          careerFormMode === 'edit'
-            ? selectedCareerId
-            : hasCareer
-              ? selectedCareerId
-              : null
-        }
+        careerKey={careerFormMode === 'edit' ? selectedCareerId : null}
         onClose={() => setCareerFormOpen(false)}
         onSaved={handleCareerSaved}
       />

@@ -53,8 +53,10 @@ export default function PeopleFormDialog({
     if (!open) return undefined
 
     let cancelled = false
+    // Сброс при каждом open — иначе после edit→add остаются ФИО прошлой карточки
     setError('')
     setSaving(false)
+    setForm(emptyForm())
 
     const load = async () => {
       setLoading(true)
@@ -72,7 +74,6 @@ export default function PeopleFormDialog({
           setPositions([])
           setOrgTree([])
         } else {
-          setForm(emptyForm())
           const [pos, orgs] = await Promise.all([fetchPositions(), fetchOrgTree()])
           if (cancelled) return
           setPositions(Array.isArray(pos) ? pos : [])
