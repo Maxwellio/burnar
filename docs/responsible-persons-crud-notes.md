@@ -10,7 +10,7 @@
 | Add / Edit people | **сделано** |
 | Delete people (admin, `deleteUser`) | **сделано** |
 | CRUD карьер справа | **сделано** |
-| Учётки / пароль (админ-панель) | не сделано |
+| Учётки / пароль (админ-панель) | read layout — см. [admin-panel-notes.md](admin-panel-notes.md); write не сделано |
 
 ---
 

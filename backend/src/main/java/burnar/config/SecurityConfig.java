@@ -42,6 +42,7 @@ public class SecurityConfig {
                 .requestMatchers(new AntPathRequestMatcher("/api/current-user", "GET")).permitAll()
                 .requestMatchers(new AntPathRequestMatcher("/api/health")).permitAll()
                 .requestMatchers(new AntPathRequestMatcher("/api/org-units")).hasRole("ADMIN")
+                .requestMatchers(new AntPathRequestMatcher("/api/admin/**")).hasRole("ADMIN")
                 .requestMatchers(new AntPathRequestMatcher("/api/**")).authenticated()
                 .anyRequest().permitAll()
             )
