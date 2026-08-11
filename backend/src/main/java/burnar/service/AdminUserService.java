@@ -82,13 +82,16 @@ public class AdminUserService {
     /**
      * Pageable-список людей с полями учётки (как admin-grid Delphi).
      * Колоночные фильтры BaseTable: id, fio, oraName, note.
+     * Чекбоксы: accountKind (responsible|users), activeKind (active|inactive).
      */
     public Page<AdminUserDto> findUsers(
             Pageable pageable,
             String id,
             String fio,
             String oraName,
-            String note) {
+            String note,
+            String accountKind,
+            String activeKind) {
         MapSqlParameterSource params = new MapSqlParameterSource();
         StringBuilder where = new StringBuilder("WHERE 1=1 ");
         String username = currentUsername();
@@ -96,6 +99,9 @@ public class AdminUserService {
                 where, params, username, null, "ds.org")) {
             return new PageImpl<>(Collections.emptyList(), pageable, 0);
         }
+
+        AdminUserListFilters.appendAccountKind(where, accountKind);
+        AdminUserListFilters.appendActiveKind(where, activeKind);
 
         appendTextFilter(where, params, "id", id,
                 "CAST(p.id AS varchar) ILIKE CONCAT(:id, '%')");
