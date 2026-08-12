@@ -13,7 +13,8 @@
 | Карьеры (read) через `/api/responsible-persons/{id}/careers` | **сделано** |
 | Колонка «Роль» (`spr_role`) | отложено |
 | Кнопки CRUD / сохранение формы / пароль | не сделано |
-| Фильтры Delphi «Должностные лица» / «Пользователи ПО», Excel | отложено |
+| Фильтры списка: ответственные/пользователи, активные/неактивные | **сделано** |
+| Excel | отложено |
 
 ---
 
@@ -41,6 +42,18 @@ people (id, fio, …)
 ACL списка: `OrgAccessService.appendOrgParentSubtreeFilter` (как у ответственных лиц).  
 Фильтры BaseTable (query): `id`, `fio`, `oraName`, опционально `note`.
 
+Чекбоксы тулбара (query, AND с колоночным поиском; по умолчанию выкл = без фильтра):
+
+| UI | Query | SQL |
+|----|-------|-----|
+| Ответственные лица | `accountKind=responsible` | `u.users_id IS NULL` |
+| Пользователи | `accountKind=users` | `u.users_id IS NOT NULL` |
+| Активные | `activeKind=active` | `u.active = 1` |
+| Неактивные | `activeKind=inactive` | `u.active = 0` |
+
+Внутри каждой пары — взаимоисключение (повторный клик снимает фильтр).  
+«Ответственные лица» + «Активные/Неактивные» → пустой список (ожидаемо: без учётки нет `active`).
+
 Статус в таблице: из `active` — «Подключен» / «Отключен» (как Delphi `account_status`).
 
 ---
@@ -55,7 +68,7 @@ ACL списка: `OrgAccessService.appendOrgParentSubtreeFilter` (как у о�
 | Редактировать ФИО | `PUT /responsible-persons/{id}` или отдельный | ToolButton10 |
 | Сохранить учётку (форма справа) | `CALL burnar.add_user(...)` | ToolButton8; сейчас `p_role_id => null` |
 | Удалить | `CALL burnar.deleteUser(id)` | Уже есть на странице ответственных |
-| Сменить пароль | `CALL burnar.change_password_strict(...)` | UnitChangePass |
+| Сменить пароль (кнопка убрана с тулбара) | `CALL burnar.change_password_strict(...)` | UnitChangePass; UI позже |
 | Должности (справочник) | отдельный экран / modal | ToolButton14, `frmSprdolj_list` |
 | Excel | выгрузка | `btnPrintToExcel`, шаблон Users.xls |
 
@@ -84,6 +97,6 @@ ACL списка: `OrgAccessService.appendOrgParentSubtreeFilter` (как у о�
 ## 5. Отложенное / отличия от substitute
 
 - Колонка и справочник ролей (`spr_role`) — когда появится колонка в `users` или иное решение.
-- Клиентские фильтры substitute (search / org / role checkboxes) — не обязательны; колоночные фильтры BaseTable достаточны.
+- Чекбоксы списка (accountKind / activeKind) сделаны; org/role checkboxes из substitute не обязательны.
 - Телефон / «Первое подключение» из substitute в burnar нет.
 - Страница «Ответственные лица» не меняется; админка — учётная оболочка над теми же people/карьерами.

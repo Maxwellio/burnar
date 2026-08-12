@@ -1,11 +1,12 @@
-import { useCallback, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
+import Checkbox from '@mui/material/Checkbox'
+import FormControlLabel from '@mui/material/FormControlLabel'
 import Typography from '@mui/material/Typography'
 import AddIcon from '@mui/icons-material/Add'
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined'
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline'
-import LockResetIcon from '@mui/icons-material/LockReset'
 import { AxiosProvider, BaseTable } from 'mainComponent'
 import AdminUserFormPanel from './AdminUserFormPanel.jsx'
 import { adminUserColumns } from './adminUserColumns.jsx'
@@ -18,18 +19,60 @@ const buttonOutlinedSx = {
   color: 'text.secondary',
 }
 
+const FILTER_IDS = ['accountKind', 'activeKind']
+
 /**
  * Админ-панель: слева users BaseTable, справа всегда форма + карьеры.
- * Кнопки пока без логики — карта будущих действий в docs/admin-panel-notes.md.
+ * Чекбоксы списка → query accountKind / activeKind (см. docs/admin-panel-notes.md).
+ * Кнопки CRUD пока без логики.
  */
 export default function Admin() {
   const [selectedPeopleId, setSelectedPeopleId] = useState(null)
   const [, setSelectedCareerId] = useState(null)
   const [usersFilters, setUsersFilters] = useState([])
+  const [accountKind, setAccountKind] = useState(null)
+  const [activeKind, setActiveKind] = useState(null)
+
+  const injectListFilters = useCallback(
+    (list) => {
+      const without = (list || []).filter((f) => !FILTER_IDS.includes(f.id))
+      const next = [...without]
+      if (accountKind) {
+        next.push({ id: 'accountKind', value: accountKind })
+      }
+      if (activeKind) {
+        next.push({ id: 'activeKind', value: activeKind })
+      }
+      return next
+    },
+    [accountKind, activeKind],
+  )
+
+  const setUsersFiltersSafe = useCallback(
+    (updater) => {
+      setUsersFilters((prev) => {
+        const next = typeof updater === 'function' ? updater(prev) : updater
+        return injectListFilters(next)
+      })
+    },
+    [injectListFilters],
+  )
+
+  useEffect(() => {
+    setUsersFilters((prev) => injectListFilters(prev))
+  }, [injectListFilters])
 
   const handleSelectPeople = useCallback((id) => {
     setSelectedPeopleId(id)
     setSelectedCareerId(null)
+  }, [])
+
+  const toggleAccountKind = useCallback((value) => {
+    setAccountKind((prev) => (prev === value ? null : value))
+  }, [])
+
+  const toggleActiveKind = useCallback((value) => {
+    setActiveKind((prev) => (prev === value ? null : value))
   }, [])
 
   const hasPerson = selectedPeopleId != null
@@ -94,14 +137,51 @@ export default function Admin() {
           >
             Удалить
           </Button>
-          <Button
-            variant="outlined"
-            startIcon={<LockResetIcon />}
-            disabled
-            sx={buttonOutlinedSx}
-          >
-            Сменить пароль
-          </Button>
+
+          <FormControlLabel
+            control={
+              <Checkbox
+                size="small"
+                checked={accountKind === 'responsible'}
+                onChange={() => toggleAccountKind('responsible')}
+              />
+            }
+            label="Ответственные лица"
+            sx={{ ml: 1, mr: 0 }}
+          />
+          <FormControlLabel
+            control={
+              <Checkbox
+                size="small"
+                checked={accountKind === 'users'}
+                onChange={() => toggleAccountKind('users')}
+              />
+            }
+            label="Пользователи"
+            sx={{ mr: 0 }}
+          />
+          <FormControlLabel
+            control={
+              <Checkbox
+                size="small"
+                checked={activeKind === 'active'}
+                onChange={() => toggleActiveKind('active')}
+              />
+            }
+            label="Активные"
+            sx={{ ml: 1, mr: 0 }}
+          />
+          <FormControlLabel
+            control={
+              <Checkbox
+                size="small"
+                checked={activeKind === 'inactive'}
+                onChange={() => toggleActiveKind('inactive')}
+              />
+            }
+            label="Неактивные"
+            sx={{ mr: 0 }}
+          />
         </Box>
 
         <Box sx={{ flex: 1, minHeight: 0 }}>
@@ -110,7 +190,7 @@ export default function Admin() {
               url="/admin/users"
               columns={adminUserColumns}
               filters={usersFilters}
-              setFilters={setUsersFilters}
+              setFilters={setUsersFiltersSafe}
               setSelectedId={handleSelectPeople}
               pageable
             />
