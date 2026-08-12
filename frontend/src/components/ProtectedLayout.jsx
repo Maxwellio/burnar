@@ -8,7 +8,7 @@ import Navigation from './Navigation.jsx'
 
 /**
  * Оболочка защищённых маршрутов — каркас из navcode.txt.
- * Фон/бордеры из theme.palette (background / divider / text).
+ * Шапка и Drawer используют theme.palette.sidebar; контент — background / text.
  */
 export default function ProtectedLayout() {
   const { user, loading, fetchUser } = useAuth()
@@ -61,18 +61,18 @@ export default function ProtectedLayout() {
           position="static"
           elevation={0}
           sx={{
-            bgcolor: 'background.paper',
+            bgcolor: 'sidebar.bg',
             borderBottom: 1,
-            borderColor: 'divider',
-            color: 'text.primary',
+            borderColor: 'sidebar.divider',
+            color: 'sidebar.textActive',
           }}
         >
           <Toolbar disableGutters sx={{ minHeight: '48px !important', px: 1 }}>
             <Navigation />
-            <Box sx={{ textAlign: 'left', flex: 1, pl: 2, fontWeight: 600 }}>
+            <Box sx={{ textAlign: 'left', flex: 1, pl: 2, fontWeight: 600, color: 'sidebar.textActive' }}>
               Burnar
             </Box>
-            <Box sx={{ textAlign: 'right', flex: 1, pr: 2, color: 'text.secondary' }}>
+            <Box sx={{ textAlign: 'right', flex: 1, pr: 2, color: 'sidebar.text' }}>
               {user.username}
             </Box>
           </Toolbar>
