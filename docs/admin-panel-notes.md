@@ -11,8 +11,9 @@
 | Лейаут: таблица пользователей + правая панель (форма + карьеры) | **сделано** |
 | Read-API списка и карточки (`/api/admin/users`) | **сделано** |
 | Карьеры (read) через `/api/responsible-persons/{id}/careers` | **сделано** |
+| CRUD карьер (reuse API/диалог ответственных лиц) | **сделано** |
 | Колонка «Роль» (`spr_role`) | отложено |
-| Кнопки CRUD / сохранение формы / пароль | не сделано |
+| Левый тулбар учёток / сохранение формы / пароль | не сделано |
 | Фильтры списка: ответственные/пользователи, активные/неактивные | **сделано** |
 | Excel | отложено |
 
@@ -29,13 +30,14 @@ people (id, fio, …)
 
 ---
 
-## 2. API (сейчас — только read)
+## 2. API
 
 | Метод | Назначение |
 |-------|------------|
 | `GET /api/admin/users` | Pageable-список: `id`, `fio`, `oraName`, `usersId`, `active`, `dtEnter`, `dtOut`, `note` |
 | `GET /api/admin/users/{peopleId}` | Карточка для правой формы (те же поля + без пароля) |
 | `GET /api/responsible-persons/{id}/careers` | Карьеры выбранного (reuse) |
+| `POST/PUT/DELETE .../careers[/{key}]` | Write карьер (тот же API, что на «Ответственных лицах») |
 
 Доступ: `ROLE_ADMIN` (`SecurityConfig` → `/api/admin/**`).
 
@@ -72,15 +74,15 @@ ACL списка: `OrgAccessService.appendOrgParentSubtreeFilter` (как у о�
 | Должности (справочник) | отдельный экран / modal | ToolButton14, `frmSprdolj_list` |
 | Excel | выгрузка | `btnPrintToExcel`, шаблон Users.xls |
 
-### Правый тулбар (карьеры)
+### Правый тулбар (карьеры) — **сделано**
 
-| Кнопка | API (уже на «Ответственные лица») | БД |
-|--------|-----------------------------------|-----|
+| Кнопка | API (reuse «Ответственные лица») | БД |
+|--------|----------------------------------|-----|
 | Добавить | `POST .../careers` | `karjera_add` (`stat = 2`) |
 | Редактировать | `PUT .../careers/{key}` | `karjera_add` (`stat = 1`) |
 | Удалить | `DELETE .../careers/{key}` | `DELETE FROM karjera` |
 
-В админке кнопки пока **без обработчиков** (только ориентир лейаута). CRUD карьер уже живёт на `/responsible-persons`.
+В `Admin.jsx`: `CareerFormDialog` + `useConfirm`; при удалении последней карьеры — предупреждение и refresh левой таблицы (`usersRenderSignal`), т.к. `/admin/users` JOIN'ит `karjera`.
 
 ---
 

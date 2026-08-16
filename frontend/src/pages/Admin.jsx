@@ -8,7 +8,10 @@ import AddIcon from '@mui/icons-material/Add'
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined'
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline'
 import { AxiosProvider, BaseTable } from 'mainComponent'
+import { deleteCareer, fetchCareerTotal } from '../api/responsiblePersonsApi.js'
+import { useConfirm } from '../context/ConfirmContext.jsx'
 import AdminUserFormPanel from './AdminUserFormPanel.jsx'
+import CareerFormDialog from './CareerFormDialog.jsx'
 import { adminUserColumns } from './adminUserColumns.jsx'
 import { careerColumns } from './responsiblePersonColumns.jsx'
 
@@ -22,16 +25,24 @@ const buttonOutlinedSx = {
 const FILTER_IDS = ['accountKind', 'activeKind']
 
 /**
- * Админ-панель: слева users BaseTable, справа всегда форма + карьеры.
+ * Админ-панель: слева users BaseTable, справа форма учётки + карьеры.
  * Чекбоксы списка → query accountKind / activeKind (см. docs/admin-panel-notes.md).
- * Кнопки CRUD пока без логики.
+ * CRUD карьер — тот же API/диалог, что на «Ответственных лицах»;
+ * левый тулбар учёток и сохранение формы пока заглушки.
  */
 export default function Admin() {
+  const confirm = useConfirm()
+
   const [selectedPeopleId, setSelectedPeopleId] = useState(null)
-  const [, setSelectedCareerId] = useState(null)
+  const [selectedCareerId, setSelectedCareerId] = useState(null)
   const [usersFilters, setUsersFilters] = useState([])
+  const [usersRenderSignal, setUsersRenderSignal] = useState(0)
+  const [careerRenderSignal, setCareerRenderSignal] = useState(0)
   const [accountKind, setAccountKind] = useState(null)
   const [activeKind, setActiveKind] = useState(null)
+
+  const [careerFormOpen, setCareerFormOpen] = useState(false)
+  const [careerFormMode, setCareerFormMode] = useState('add')
 
   const injectListFilters = useCallback(
     (list) => {
@@ -62,6 +73,7 @@ export default function Admin() {
     setUsersFilters((prev) => injectListFilters(prev))
   }, [injectListFilters])
 
+  // Смена человека слева сбрасывает выбор карьеры
   const handleSelectPeople = useCallback((id) => {
     setSelectedPeopleId(id)
     setSelectedCareerId(null)
@@ -76,6 +88,54 @@ export default function Admin() {
   }, [])
 
   const hasPerson = selectedPeopleId != null
+  const hasCareer = selectedCareerId != null
+
+  const handleAddCareer = () => {
+    if (!hasPerson) return
+    setCareerFormMode('add')
+    setCareerFormOpen(true)
+  }
+
+  const handleEditCareer = () => {
+    if (!hasPerson || !hasCareer) return
+    setCareerFormMode('edit')
+    setCareerFormOpen(true)
+  }
+
+  const handleCareerSaved = () => {
+    setCareerRenderSignal((n) => n + 1)
+  }
+
+  // Удаление карьеры: предупреждение про каскад people, если это последняя в БД
+  const handleDeleteCareer = async () => {
+    if (!hasPerson || !hasCareer) return
+    let careerTotal
+    try {
+      // Без orgUnitId: триггер срабатывает по последней карьере в БД, не по видимым в фильтре
+      careerTotal = await fetchCareerTotal(selectedPeopleId)
+    } catch (e) {
+      console.error(e)
+      return
+    }
+    const isOnlyCareer = careerTotal === 1
+    const message = isOnlyCareer
+      ? 'Удалить выбранную карьеру пользователя? Вместе с ней будет удалён и сам пользователь.'
+      : 'Удалить выбранную карьеру пользователя?'
+    const ok = await confirm(message, { action: 'удаление' })
+    if (!ok) return
+    try {
+      await deleteCareer(selectedPeopleId, selectedCareerId)
+      setSelectedCareerId(null)
+      setCareerRenderSignal((n) => n + 1)
+      // Последняя карьера → пользователь исчезнет из JOIN-списка /admin/users
+      if (isOnlyCareer) {
+        setSelectedPeopleId(null)
+        setUsersRenderSignal((n) => n + 1)
+      }
+    } catch (e) {
+      console.error(e)
+    }
+  }
 
   return (
     <Box
@@ -192,6 +252,7 @@ export default function Admin() {
               filters={usersFilters}
               setFilters={setUsersFiltersSafe}
               setSelectedId={handleSelectPeople}
+              reRenderSignal={usersRenderSignal}
               pageable
             />
           </AxiosProvider>
@@ -250,7 +311,8 @@ export default function Admin() {
               variant="contained"
               startIcon={<AddIcon />}
               disableElevation
-              disabled
+              disabled={!hasPerson}
+              onClick={handleAddCareer}
               sx={{ textTransform: 'none', fontWeight: 600 }}
             >
               Добавить
@@ -258,7 +320,8 @@ export default function Admin() {
             <Button
               variant="outlined"
               startIcon={<EditOutlinedIcon />}
-              disabled
+              disabled={!hasCareer}
+              onClick={handleEditCareer}
               sx={buttonOutlinedSx}
             >
               Редактировать
@@ -266,7 +329,8 @@ export default function Admin() {
             <Button
               variant="outlined"
               startIcon={<DeleteOutlineIcon />}
-              disabled
+              disabled={!hasCareer}
+              onClick={handleDeleteCareer}
               sx={buttonOutlinedSx}
             >
               Удалить
@@ -281,6 +345,7 @@ export default function Admin() {
                   url={`/responsible-persons/${selectedPeopleId}/careers`}
                   columns={careerColumns}
                   setSelectedId={setSelectedCareerId}
+                  reRenderSignal={careerRenderSignal}
                   pageable
                 />
               </AxiosProvider>
@@ -302,6 +367,15 @@ export default function Admin() {
           </Box>
         </Box>
       </Box>
+
+      <CareerFormDialog
+        open={careerFormOpen}
+        mode={careerFormMode}
+        peopleId={selectedPeopleId}
+        careerKey={careerFormMode === 'edit' ? selectedCareerId : null}
+        onClose={() => setCareerFormOpen(false)}
+        onSaved={handleCareerSaved}
+      />
     </Box>
   )
 }
