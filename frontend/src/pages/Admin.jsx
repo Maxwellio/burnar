@@ -81,10 +81,13 @@ export default function Admin() {
 
   const toggleAccountKind = useCallback((value) => {
     setAccountKind((prev) => (prev === value ? null : value))
+    // Без учётки нет active — сбрасываем конфликтующую пару
+    if (value === 'responsible') setActiveKind(null)
   }, [])
 
   const toggleActiveKind = useCallback((value) => {
     setActiveKind((prev) => (prev === value ? null : value))
+    setAccountKind((prev) => (prev === 'responsible' ? null : prev))
   }, [])
 
   const hasPerson = selectedPeopleId != null

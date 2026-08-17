@@ -21,7 +21,8 @@ Approved approach: BaseTable `filters` → query params → SQL (как `orgUnit
 
 Query params: `accountKind=responsible|users`, `activeKind=active|inactive`.
 
-Пересечение «Ответственные лица» + «Активные/Неактивные» даёт пустой список (ожидаемо).
+«Ответственные лица» и «Активные/Неактивные» взаимно сбрасывают друг друга в UI
+(без учётки нет `active`; пересечение иначе было бы пустым).
 
 ## Frontend
 
