@@ -24,6 +24,8 @@ export default function AdminUserFormPanel({ peopleId, mode = 'view' }) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const [fio, setFio] = useState('')
+  const [fioReports, setFioReports] = useState('')
+  const [fioRodPad, setFioRodPad] = useState('')
   const [oraName, setOraName] = useState('')
   const [password, setPassword] = useState('')
   const [dtEnter, setDtEnter] = useState('')
@@ -39,6 +41,8 @@ export default function AdminUserFormPanel({ peopleId, mode = 'view' }) {
 
   const resetAccountFields = () => {
     setFio('')
+    setFioReports('')
+    setFioRodPad('')
     setOraName('')
     setPassword('')
     setDtEnter('')
@@ -81,6 +85,8 @@ export default function AdminUserFormPanel({ peopleId, mode = 'view' }) {
         if (cancelled) return
         setUsersId(data.usersId ?? null)
         setFio(data.fio ?? '')
+        setFioReports(data.fioreports ?? '')
+        setFioRodPad(data.fiorodpad ?? '')
         setOraName(data.oraName ?? '')
         setDtEnter(data.dtEnter ? String(data.dtEnter).slice(0, 10) : '')
         setDtOut(data.dtOut ? String(data.dtOut).slice(0, 10) : '')
@@ -91,6 +97,8 @@ export default function AdminUserFormPanel({ peopleId, mode = 'view' }) {
         if (cancelled) return
         setError(e instanceof Error ? e.message : 'Не удалось загрузить пользователя')
         setFio('')
+        setFioReports('')
+        setFioRodPad('')
         setOraName('')
         setDtEnter('')
         setDtOut('')
@@ -159,6 +167,24 @@ export default function AdminUserFormPanel({ peopleId, mode = 'view' }) {
         label="ФИО"
         value={fio}
         onChange={(e) => setFio(e.target.value)}
+        fullWidth
+        disabled={disabled}
+      />
+
+      <TextField
+        size="small"
+        label="Инициалы, фамилия"
+        value={fioReports}
+        onChange={(e) => setFioReports(e.target.value)}
+        fullWidth
+        disabled={disabled}
+      />
+
+      <TextField
+        size="small"
+        label="Инициалы, фамилия (в родительном падеже)"
+        value={fioRodPad}
+        onChange={(e) => setFioRodPad(e.target.value)}
         fullWidth
         disabled={disabled}
       />

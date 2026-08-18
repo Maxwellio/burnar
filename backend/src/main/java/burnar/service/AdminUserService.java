@@ -43,6 +43,9 @@ public class AdminUserService {
                     + "to_char(u.dtout, 'YYYY-MM-DD') AS dtout, "
                     + "u.note ";
 
+    private static final String DETAIL_SELECT =
+            USER_SELECT + ", p.fioreports, p.fiorodpad ";
+
     private static final RowMapper<AdminUserDto> LIST_MAPPER = (rs, rowNum) -> {
         AdminUserDto dto = new AdminUserDto();
         dto.setId(rs.getInt("id"));
@@ -62,6 +65,8 @@ public class AdminUserService {
         dto.setId(rs.getInt("id"));
         dto.setUsersId((Integer) rs.getObject("users_id"));
         dto.setFio(rs.getString("fio"));
+        dto.setFioreports(rs.getString("fioreports"));
+        dto.setFiorodpad(rs.getString("fiorodpad"));
         dto.setOraName(rs.getString("ora_name"));
         Number active = (Number) rs.getObject("active");
         dto.setActive(active == null ? null : active.intValue());
@@ -137,7 +142,7 @@ public class AdminUserService {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found");
         }
         List<AdminUserDetailDto> rows = jdbc.query(
-                "SELECT " + USER_SELECT
+                "SELECT " + DETAIL_SELECT
                         + "FROM burnar.people p "
                         + "LEFT JOIN burnar.users u ON u.people_id = p.id "
                         + "WHERE p.id = :id",
