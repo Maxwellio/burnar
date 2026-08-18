@@ -10,7 +10,7 @@
 | Add / Edit people | **сделано** |
 | Delete people (admin, `deleteUser`) | **сделано** |
 | CRUD карьер справа | **сделано** |
-| Учётки / пароль (админ-панель) | read layout — см. [admin-panel-notes.md](admin-panel-notes.md); write не сделано |
+| Учётки / пароль (админ-панель) | **сделано** — см. [admin-panel-notes.md](admin-panel-notes.md) |
 
 ---
 
@@ -51,12 +51,11 @@ Confirm удаления: «Удалить выбранную карьеру п�
 
 Форма `CareerFormDialog`: дата начала/окончания, должность, подразделение. Валидация только org+dolj (как Delphi). Add — всегда `dateIn=today`, `dateOut=2040-01-01`, пустые org/dolj; edit — prefill через `GET .../careers/{key}`.
 
-### Админ-панель (позже)
+### Админ-панель
 
-| Действие | Процедура |
-|----------|-----------|
-| Учётка | `add_user` |
-| Пароль | `change_password_strict` |
+| Действие | Реализация |
+|----------|------------|
+| Учётка / пароль | `POST/PUT /api/admin/users` → `people_add` + `add_user` (bcrypt в Java) |
 
 ---
 

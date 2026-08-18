@@ -2,7 +2,7 @@ package burnar.dto;
 
 /**
  * Карточка пользователя для правой формы админ-панели (GET /api/admin/users/{peopleId}).
- * Пароль не отдаём — поле на форме всегда пустое до будущего CRUD.
+ * Пароль не отдаём — на форме всегда пусто; смена только plaintext в POST/PUT.
  */
 public class AdminUserDetailDto {
 

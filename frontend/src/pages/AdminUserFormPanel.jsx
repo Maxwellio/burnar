@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import Box from '@mui/material/Box'
+import Button from '@mui/material/Button'
 import Checkbox from '@mui/material/Checkbox'
 import FormControl from '@mui/material/FormControl'
 import FormControlLabel from '@mui/material/FormControlLabel'
@@ -10,18 +11,23 @@ import Stack from '@mui/material/Stack'
 import TextField from '@mui/material/TextField'
 import Typography from '@mui/material/Typography'
 import { format } from 'date-fns'
-import { fetchAdminUser } from '../api/adminUsersApi.js'
+import { createAdminUser, fetchAdminUser, updateAdminUser } from '../api/adminUsersApi.js'
 import { fetchOrgTree, fetchPositions } from '../api/responsiblePersonsApi.js'
 
 /**
- * Верх правой панели админки: поля учётки (read + локальный state).
- * mode='add' — заготовка формы нового пользователя (сохранение позже).
+ * Верх правой панели админки: поля учётки и кнопка Добавить/Сохранить.
+ * Пустой логин → только people; заполненный → add_user (bcrypt на бэкенде).
  *
- * @param {{ peopleId: number | null, mode?: 'view' | 'add' }} props
+ * @param {{
+ *   peopleId: number | null,
+ *   mode?: 'view' | 'add',
+ *   onSaved?: (peopleId: number) => void,
+ * }} props
  */
-export default function AdminUserFormPanel({ peopleId, mode = 'view' }) {
+export default function AdminUserFormPanel({ peopleId, mode = 'view', onSaved }) {
   const isAdding = mode === 'add'
   const [loading, setLoading] = useState(false)
+  const [saving, setSaving] = useState(false)
   const [error, setError] = useState(null)
   const [fio, setFio] = useState('')
   const [fioReports, setFioReports] = useState('')
@@ -52,6 +58,7 @@ export default function AdminUserFormPanel({ peopleId, mode = 'view' }) {
     setUsersId(null)
     setError(null)
     setLoading(false)
+    setSaving(false)
   }
 
   const resetCareerFields = () => {
@@ -142,6 +149,8 @@ export default function AdminUserFormPanel({ peopleId, mode = 'view' }) {
   }, [isAdding])
 
   const disabled = !isAdding && (peopleId == null || loading)
+  const loginFilled = oraName.trim() !== ''
+  const activeDisabled = disabled || !loginFilled
   const title = isAdding
     ? 'Добавление пользователя'
     : peopleId == null
@@ -149,6 +158,72 @@ export default function AdminUserFormPanel({ peopleId, mode = 'view' }) {
       : usersId != null
         ? `Пользователь #${usersId}`
         : `Человек #${peopleId} (без учётки)`
+
+  const canSave = (() => {
+    if (saving || loading) return false
+    if (!fio.trim()) return false
+    if (isAdding) {
+      if (!dateIn || orgId === '' || doljId === '') return false
+    } else if (peopleId == null) {
+      return false
+    }
+    return true
+  })()
+
+  const showSaveButton = isAdding || peopleId != null
+
+  const handleOraNameChange = (event) => {
+    const value = event.target.value
+    setOraName(value)
+    if (!value.trim()) setActive(false)
+  }
+
+  const handleSave = async () => {
+    // Add: people_add, затем add_user только при логине. Edit: people + опционально учётка.
+    if (!canSave) return
+    setSaving(true)
+    setError(null)
+    const body = {
+      fio: fio.trim(),
+      fioreports: fioReports.trim(),
+      fiorodpad: fioRodPad.trim(),
+      oraName: oraName.trim(),
+      password,
+      active: loginFilled ? active : false,
+      note,
+      dtEnter: dtEnter || null,
+      dtOut: dtOut || null,
+    }
+    if (isAdding) {
+      body.dateIn = dateIn
+      body.orgId = Number(orgId)
+      body.doljId = Number(doljId)
+    }
+    try {
+      if (isAdding) {
+        const created = await createAdminUser(body)
+        onSaved?.(created.id)
+      } else {
+        await updateAdminUser(peopleId, body)
+        const data = await fetchAdminUser(peopleId)
+        setUsersId(data.usersId ?? null)
+        setFio(data.fio ?? '')
+        setFioReports(data.fioreports ?? '')
+        setFioRodPad(data.fiorodpad ?? '')
+        setOraName(data.oraName ?? '')
+        setDtEnter(data.dtEnter ? String(data.dtEnter).slice(0, 10) : '')
+        setDtOut(data.dtOut ? String(data.dtOut).slice(0, 10) : '')
+        setNote(data.note ?? '')
+        setActive(data.active === 1)
+        setPassword('')
+        onSaved?.(peopleId)
+      }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Ошибка сохранения')
+    } finally {
+      setSaving(false)
+    }
+  }
 
   return (
     <Stack spacing={1.5} sx={{ width: '100%', flexShrink: 0 }}>
@@ -238,7 +313,7 @@ export default function AdminUserFormPanel({ peopleId, mode = 'view' }) {
         size="small"
         label="Логин"
         value={oraName}
-        onChange={(e) => setOraName(e.target.value)}
+        onChange={handleOraNameChange}
         fullWidth
         disabled={disabled}
       />
@@ -252,7 +327,11 @@ export default function AdminUserFormPanel({ peopleId, mode = 'view' }) {
         fullWidth
         disabled={disabled}
         autoComplete="new-password"
-        helperText="Сохранение и смена пароля — в следующей итерации"
+        helperText={
+          isAdding || usersId == null
+            ? 'Если пусто и логин задан — пароль 123'
+            : 'Если пусто — пароль не меняется'
+        }
       />
 
       <TextField
@@ -294,12 +373,26 @@ export default function AdminUserFormPanel({ peopleId, mode = 'view' }) {
             <Checkbox
               checked={active}
               onChange={(e) => setActive(e.target.checked)}
-              disabled={disabled}
+              disabled={activeDisabled}
             />
           }
           label="Активен"
         />
       </Box>
+
+      {showSaveButton && (
+        <Box>
+          <Button
+            variant="contained"
+            disableElevation
+            disabled={!canSave}
+            onClick={handleSave}
+            sx={{ textTransform: 'none', fontWeight: 600 }}
+          >
+            {isAdding ? 'Добавить' : 'Сохранить'}
+          </Button>
+        </Box>
+      )}
     </Stack>
   )
 }

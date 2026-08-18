@@ -28,7 +28,7 @@ const FILTER_IDS = ['accountKind', 'activeKind']
  * Админ-панель: слева users BaseTable, справа форма учётки + карьеры.
  * Чекбоксы списка → query accountKind / activeKind (см. docs/admin-panel-notes.md).
  * CRUD карьер — тот же API/диалог, что на «Ответственных лицах»;
- * «Добавить» слева открывает форму нового пользователя (сохранение позже).
+ * «Добавить» слева открывает форму; сохранение — кнопка на форме справа.
  */
 export default function Admin() {
   const confirm = useConfirm()
@@ -87,6 +87,14 @@ export default function Admin() {
     setSelectedPeopleId(null)
     setSelectedCareerId(null)
     setAddUserSession((n) => n + 1)
+  }
+
+  // После save: обновить левую таблицу и показать созданную/сохранённую карточку.
+  const handleUserSaved = (peopleId) => {
+    setUsersRenderSignal((n) => n + 1)
+    setIsAddingUser(false)
+    setSelectedPeopleId(peopleId)
+    setSelectedCareerId(null)
   }
 
   const toggleAccountKind = useCallback((value) => {
@@ -289,6 +297,7 @@ export default function Admin() {
             key={isAddingUser ? `add-${addUserSession}` : 'view'}
             peopleId={selectedPeopleId}
             mode={isAddingUser ? 'add' : 'view'}
+            onSaved={handleUserSaved}
           />
         </Box>
 

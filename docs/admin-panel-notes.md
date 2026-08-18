@@ -13,7 +13,8 @@
 | Карьеры (read) через `/api/responsible-persons/{id}/careers` | **сделано** |
 | CRUD карьер (reuse API/диалог ответственных лиц) | **сделано** |
 | Колонка «Роль» (`spr_role`) | отложено |
-| Левый тулбар учёток / сохранение формы / пароль | не сделано |
+| Сохранение формы / пароль (bcrypt → `add_user`) | **сделано** |
+| Удаление из левого тулбара | не сделано |
 | Фильтры списка: ответственные/пользователи, активные/неактивные | **сделано** |
 | Excel | отложено |
 
@@ -36,6 +37,8 @@ people (id, fio, …)
 |-------|------------|
 | `GET /api/admin/users` | Pageable-список: `id`, `fio`, `oraName`, `usersId`, `active`, `dtEnter`, `dtOut`, `note` |
 | `GET /api/admin/users/{peopleId}` | Карточка для правой формы (те же поля + без пароля) |
+| `POST /api/admin/users` | Создать: `people_add`, при логине — `add_user` (пароль уже bcrypt) |
+| `PUT /api/admin/users/{peopleId}` | ФИО + при логине `add_user`; пустой пароль на существующей учётке не меняет hash |
 | `GET /api/responsible-persons/{id}/careers` | Карьеры выбранного (reuse) |
 | `POST/PUT/DELETE .../careers[/{key}]` | Write карьер (тот же API, что на «Ответственных лицах») |
 
@@ -58,19 +61,20 @@ ACL списка: `OrgAccessService.appendOrgParentSubtreeFilter` (как у о�
 
 Статус в таблице: из `active` — «Подключен» / «Отключен» (как Delphi `account_status`).
 
+Пароль: фронт шлёт plaintext (или пусто); `AdminUserService` делает bcrypt и передаёт хеш в `add_user`. Процедура должна **не** вызывать `get_hash`: INSERT пишет `p_password` как есть; UPDATE меняет `password` только если `p_password` не пустой.
+
 ---
 
 ## 3. Кнопки UI → будущая реализация
 
 ### Левый тулбар (люди / учётки)
 
-| Кнопка (план UI) | Будущий API / процедура | Примечание |
-|------------------|-------------------------|------------|
-| Добавить | `people_add` и/или `add_user` | Delphi: ToolButton4 / formPeopleAdd |
-| Редактировать ФИО | `PUT /responsible-persons/{id}` или отдельный | ToolButton10 |
-| Сохранить учётку (форма справа) | `CALL burnar.add_user(...)` | ToolButton8; сейчас `p_role_id => null` |
-| Удалить | `CALL burnar.deleteUser(id)` | Уже есть на странице ответственных |
-| Сменить пароль (кнопка убрана с тулбара) | `CALL burnar.change_password_strict(...)` | UnitChangePass; UI позже |
+| Кнопка | API / процедура | Примечание |
+|--------|-----------------|------------|
+| Добавить (слева) | открывает форму `mode=add` | Delphi: ToolButton4 |
+| Добавить / Сохранить (форма справа) | `POST/PUT /api/admin/users` → `people_add` и/или `add_user` | bcrypt на сервисе; `p_role_id = null`. Без логина — только ответственное лицо, «Активен» выкл. |
+| Удалить | `CALL burnar.deleteUser(id)` | кнопка пока disabled |
+| Сменить пароль (кнопка убрана с тулбара) | поле пароля на форме + `add_user` | пустой пароль при UPDATE не меняет hash |
 | Должности (справочник) | отдельный экран / modal | ToolButton14, `frmSprdolj_list` |
 | Excel | выгрузка | `btnPrintToExcel`, шаблон Users.xls |
 
@@ -90,7 +94,7 @@ ACL списка: `OrgAccessService.appendOrgParentSubtreeFilter` (как у о�
 
 - Страница: `frontend/src/pages/Admin.jsx` (`/admin`, `AdminOnly`).
 - Колонки: `adminUserColumns.jsx` — код, ФИО, логин, статус, даты, заметка (**без роли**).
-- Форма: `AdminUserFormPanel.jsx` — ФИО, логин, пароль (пусто), даты, примечание, «Активен»; данные с `GET /api/admin/users/{id}`.
+- Форма: `AdminUserFormPanel.jsx` — ФИО, логин, пароль, даты, примечание, «Активен», кнопка «Добавить»/«Сохранить» под чекбоксом.
 - Правая панель всегда открыта, шире (~7 : 3.5), верх — форма, низ — BaseTable карьер.
 - Таблицы: `BaseTable` из `mainComponent`.
 
