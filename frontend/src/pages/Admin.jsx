@@ -28,7 +28,7 @@ const FILTER_IDS = ['accountKind', 'activeKind']
  * Админ-панель: слева users BaseTable, справа форма учётки + карьеры.
  * Чекбоксы списка → query accountKind / activeKind (см. docs/admin-panel-notes.md).
  * CRUD карьер — тот же API/диалог, что на «Ответственных лицах»;
- * левый тулбар учёток и сохранение формы пока заглушки.
+ * «Добавить» слева открывает форму нового пользователя (сохранение позже).
  */
 export default function Admin() {
   const confirm = useConfirm()
@@ -43,6 +43,8 @@ export default function Admin() {
 
   const [careerFormOpen, setCareerFormOpen] = useState(false)
   const [careerFormMode, setCareerFormMode] = useState('add')
+  const [isAddingUser, setIsAddingUser] = useState(false)
+  const [addUserSession, setAddUserSession] = useState(0)
 
   const injectListFilters = useCallback(
     (list) => {
@@ -73,11 +75,19 @@ export default function Admin() {
     setUsersFilters((prev) => injectListFilters(prev))
   }, [injectListFilters])
 
-  // Смена человека слева сбрасывает выбор карьеры
+  // Смена человека слева сбрасывает выбор карьеры и режим добавления
   const handleSelectPeople = useCallback((id) => {
+    setIsAddingUser(false)
     setSelectedPeopleId(id)
     setSelectedCareerId(null)
   }, [])
+
+  const handleAddUser = () => {
+    setIsAddingUser(true)
+    setSelectedPeopleId(null)
+    setSelectedCareerId(null)
+    setAddUserSession((n) => n + 1)
+  }
 
   const toggleAccountKind = useCallback((value) => {
     setAccountKind((prev) => (prev === value ? null : value))
@@ -179,18 +189,10 @@ export default function Admin() {
             variant="contained"
             startIcon={<AddIcon />}
             disableElevation
-            disabled
+            onClick={handleAddUser}
             sx={{ textTransform: 'none', fontWeight: 600 }}
           >
             Добавить
-          </Button>
-          <Button
-            variant="outlined"
-            startIcon={<EditOutlinedIcon />}
-            disabled
-            sx={buttonOutlinedSx}
-          >
-            Редактировать
           </Button>
           <Button
             variant="outlined"
@@ -283,7 +285,11 @@ export default function Admin() {
             pr: 0.5,
           }}
         >
-          <AdminUserFormPanel peopleId={selectedPeopleId} />
+          <AdminUserFormPanel
+            key={isAddingUser ? `add-${addUserSession}` : 'view'}
+            peopleId={selectedPeopleId}
+            mode={isAddingUser ? 'add' : 'view'}
+          />
         </Box>
 
         <Box
