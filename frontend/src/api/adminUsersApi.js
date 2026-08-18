@@ -8,6 +8,8 @@ import { requestJson } from './http.js'
  *   id: number,
  *   usersId: number | null,
  *   fio: string | null,
+ *   fioreports: string | null,
+ *   fiorodpad: string | null,
  *   oraName: string | null,
  *   active: number | null,
  *   dtEnter: string | null,
