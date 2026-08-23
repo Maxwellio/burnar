@@ -14,7 +14,7 @@
 | CRUD карьер (reuse API/диалог ответственных лиц) | **сделано** |
 | Колонка «Роль» (`spr_role`) | отложено |
 | Сохранение формы / пароль (bcrypt → `add_user`) | **сделано** |
-| Удаление из левого тулбара | не сделано |
+| Удаление из левого тулбара | **сделано** |
 | Фильтры списка: ответственные/пользователи, активные/неактивные | **сделано** |
 | Excel | отложено |
 
@@ -65,7 +65,7 @@ ACL списка: `OrgAccessService.appendOrgParentSubtreeFilter` (как у о�
 
 ---
 
-## 3. Кнопки UI → будущая реализация
+## 3. Кнопки UI
 
 ### Левый тулбар (люди / учётки)
 
@@ -73,7 +73,7 @@ ACL списка: `OrgAccessService.appendOrgParentSubtreeFilter` (как у о�
 |--------|-----------------|------------|
 | Добавить (слева) | открывает форму `mode=add` | Delphi: ToolButton4 |
 | Добавить / Сохранить (форма справа) | `POST/PUT /api/admin/users` → `people_add` и/или `add_user` | bcrypt на сервисе; `p_role_id = null`. Без логина — только ответственное лицо, «Активен» выкл. |
-| Удалить | `CALL burnar.deleteUser(id)` | кнопка пока disabled |
+| Удалить | `DELETE /api/responsible-persons/{id}` → `deleteUser` | confirm; каскад users/карьеры/people |
 | Сменить пароль (кнопка убрана с тулбара) | поле пароля на форме + `add_user` | пустой пароль при UPDATE не меняет hash |
 | Должности (справочник) | отдельный экран / modal | ToolButton14, `frmSprdolj_list` |
 | Excel | выгрузка | `btnPrintToExcel`, шаблон Users.xls |

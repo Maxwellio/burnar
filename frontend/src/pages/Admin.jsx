@@ -8,7 +8,11 @@ import AddIcon from '@mui/icons-material/Add'
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined'
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline'
 import { AxiosProvider, BaseTable } from 'mainComponent'
-import { deleteCareer, fetchCareerTotal } from '../api/responsiblePersonsApi.js'
+import {
+  deleteCareer,
+  deleteResponsiblePerson,
+  fetchCareerTotal,
+} from '../api/responsiblePersonsApi.js'
 import { useConfirm } from '../context/ConfirmContext.jsx'
 import AdminUserFormPanel from './AdminUserFormPanel.jsx'
 import CareerFormDialog from './CareerFormDialog.jsx'
@@ -114,6 +118,22 @@ export default function Admin() {
   const hasPerson = selectedPeopleId != null
   const hasCareer = selectedCareerId != null
 
+  // Каскад через burnar.deleteUser — тот же API, что на «Ответственных лицах».
+  const handleDeletePerson = async () => {
+    if (!hasPerson) return
+    const ok = await confirm('Удалить пользователя?', { action: 'удаление' })
+    if (!ok) return
+    try {
+      await deleteResponsiblePerson(selectedPeopleId)
+      setSelectedPeopleId(null)
+      setSelectedCareerId(null)
+      setIsAddingUser(false)
+      setUsersRenderSignal((n) => n + 1)
+    } catch (e) {
+      console.error(e)
+    }
+  }
+
   const handleAddCareer = () => {
     if (!hasPerson) return
     setCareerFormMode('add')
@@ -208,7 +228,8 @@ export default function Admin() {
           <Button
             variant="outlined"
             startIcon={<DeleteOutlineIcon />}
-            disabled
+            disabled={!hasPerson}
+            onClick={handleDeletePerson}
             sx={buttonOutlinedSx}
           >
             Удалить
