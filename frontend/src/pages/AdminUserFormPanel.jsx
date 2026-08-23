@@ -22,9 +22,15 @@ import { fetchOrgTree, fetchPositions } from '../api/responsiblePersonsApi.js'
  *   peopleId: number | null,
  *   mode?: 'view' | 'add',
  *   onSaved?: (peopleId: number) => void,
+ *   positionsTick?: number,
  * }} props
  */
-export default function AdminUserFormPanel({ peopleId, mode = 'view', onSaved }) {
+export default function AdminUserFormPanel({
+  peopleId,
+  mode = 'view',
+  onSaved,
+  positionsTick = 0,
+}) {
   const isAdding = mode === 'add'
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -122,6 +128,7 @@ export default function AdminUserFormPanel({ peopleId, mode = 'view', onSaved })
     }
   }, [peopleId, isAdding])
 
+  // positionsTick: справочник должностей изменился, пока форма add уже открыта
   useEffect(() => {
     if (!isAdding) {
       setPositions([])
@@ -146,7 +153,7 @@ export default function AdminUserFormPanel({ peopleId, mode = 'view', onSaved })
     return () => {
       cancelled = true
     }
-  }, [isAdding])
+  }, [isAdding, positionsTick])
 
   const disabled = !isAdding && (peopleId == null || loading)
   const loginFilled = oraName.trim() !== ''

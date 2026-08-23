@@ -12,6 +12,7 @@ import { deleteCareer, fetchCareerTotal } from '../api/responsiblePersonsApi.js'
 import { useConfirm } from '../context/ConfirmContext.jsx'
 import AdminUserFormPanel from './AdminUserFormPanel.jsx'
 import CareerFormDialog from './CareerFormDialog.jsx'
+import PositionsDictionaryDialog from './PositionsDictionaryDialog.jsx'
 import { adminUserColumns } from './adminUserColumns.jsx'
 import { careerColumns } from './responsiblePersonColumns.jsx'
 
@@ -28,7 +29,7 @@ const FILTER_IDS = ['accountKind', 'activeKind']
  * Админ-панель: слева users BaseTable, справа форма учётки + карьеры.
  * Чекбоксы списка → query accountKind / activeKind (см. docs/admin-panel-notes.md).
  * CRUD карьер — тот же API/диалог, что на «Ответственных лицах»;
- * «Добавить» слева открывает форму; сохранение — кнопка на форме справа.
+ * «Добавить» слева открывает форму; «Должности» — модальный справочник sprdoljnost.
  */
 export default function Admin() {
   const confirm = useConfirm()
@@ -45,6 +46,8 @@ export default function Admin() {
   const [careerFormMode, setCareerFormMode] = useState('add')
   const [isAddingUser, setIsAddingUser] = useState(false)
   const [addUserSession, setAddUserSession] = useState(0)
+  const [positionsOpen, setPositionsOpen] = useState(false)
+  const [positionsTick, setPositionsTick] = useState(0)
 
   const injectListFilters = useCallback(
     (list) => {
@@ -210,6 +213,13 @@ export default function Admin() {
           >
             Удалить
           </Button>
+          <Button
+            variant="outlined"
+            onClick={() => setPositionsOpen(true)}
+            sx={buttonOutlinedSx}
+          >
+            Должности
+          </Button>
 
           <FormControlLabel
             control={
@@ -298,6 +308,7 @@ export default function Admin() {
             peopleId={selectedPeopleId}
             mode={isAddingUser ? 'add' : 'view'}
             onSaved={handleUserSaved}
+            positionsTick={positionsTick}
           />
         </Box>
 
@@ -393,6 +404,11 @@ export default function Admin() {
         careerKey={careerFormMode === 'edit' ? selectedCareerId : null}
         onClose={() => setCareerFormOpen(false)}
         onSaved={handleCareerSaved}
+      />
+      <PositionsDictionaryDialog
+        open={positionsOpen}
+        onClose={() => setPositionsOpen(false)}
+        onChanged={() => setPositionsTick((n) => n + 1)}
       />
     </Box>
   )
