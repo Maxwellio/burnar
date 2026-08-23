@@ -33,7 +33,7 @@ const FILTER_IDS = ['accountKind', 'activeKind']
  * Админ-панель: слева users BaseTable, справа форма учётки + карьеры.
  * Чекбоксы списка → query accountKind / activeKind (см. docs/admin-panel-notes.md).
  * CRUD карьер — тот же API/диалог, что на «Ответственных лицах»;
- * «Добавить» слева открывает форму; «Должности» — модальный справочник sprdoljnost.
+ * «Добавить» слева открывает форму (карьеры скрыты); «Должности» — модальный справочник sprdoljnost.
  */
 export default function Admin() {
   const confirm = useConfirm()
@@ -303,7 +303,7 @@ export default function Admin() {
         </Box>
       </Box>
 
-      {/* Правая панель: форма сверху, карьеры снизу — всегда открыта */}
+      {/* Правая панель: форма; карьеры — только вне режима добавления */}
       <Box
         sx={{
           flex: { xs: '1 1 auto', md: '3.5 1 0' },
@@ -318,8 +318,10 @@ export default function Admin() {
       >
         <Box
           sx={{
-            flexShrink: 0,
-            maxHeight: { xs: '45%', md: '48%' },
+            flex: isAddingUser ? 1 : undefined,
+            flexShrink: isAddingUser ? undefined : 0,
+            maxHeight: isAddingUser ? undefined : { xs: '45%', md: '48%' },
+            minHeight: 0,
             overflow: 'auto',
             pr: 0.5,
           }}
@@ -333,89 +335,91 @@ export default function Admin() {
           />
         </Box>
 
-        <Box
-          sx={{
-            flex: 1,
-            minHeight: 0,
-            display: 'flex',
-            flexDirection: 'column',
-            gap: 1.5,
-            borderTop: 1,
-            borderColor: 'divider',
-            pt: 2,
-          }}
-        >
+        {!isAddingUser && (
           <Box
             sx={{
+              flex: 1,
+              minHeight: 0,
               display: 'flex',
-              alignItems: 'center',
-              gap: 1,
-              flexWrap: 'wrap',
-              flexShrink: 0,
+              flexDirection: 'column',
+              gap: 1.5,
+              borderTop: 1,
+              borderColor: 'divider',
+              pt: 2,
             }}
           >
-            <Typography variant="subtitle2" color="text.secondary" sx={{ mr: 1 }}>
-              Карьеры
-            </Typography>
-            <Button
-              variant="contained"
-              startIcon={<AddIcon />}
-              disableElevation
-              disabled={!hasPerson}
-              onClick={handleAddCareer}
-              sx={{ textTransform: 'none', fontWeight: 600 }}
+            <Box
+              sx={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 1,
+                flexWrap: 'wrap',
+                flexShrink: 0,
+              }}
             >
-              Добавить
-            </Button>
-            <Button
-              variant="outlined"
-              startIcon={<EditOutlinedIcon />}
-              disabled={!hasCareer}
-              onClick={handleEditCareer}
-              sx={buttonOutlinedSx}
-            >
-              Редактировать
-            </Button>
-            <Button
-              variant="outlined"
-              startIcon={<DeleteOutlineIcon />}
-              disabled={!hasCareer}
-              onClick={handleDeleteCareer}
-              sx={buttonOutlinedSx}
-            >
-              Удалить
-            </Button>
-          </Box>
-
-          <Box sx={{ flex: 1, minHeight: 0 }}>
-            {hasPerson ? (
-              <AxiosProvider baseapi="/api">
-                <BaseTable
-                  key={selectedPeopleId}
-                  url={`/responsible-persons/${selectedPeopleId}/careers`}
-                  columns={careerColumns}
-                  setSelectedId={setSelectedCareerId}
-                  reRenderSignal={careerRenderSignal}
-                  pageable
-                />
-              </AxiosProvider>
-            ) : (
-              <Box
-                sx={{
-                  height: '100%',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  px: 2,
-                }}
+              <Typography variant="subtitle2" color="text.secondary" sx={{ mr: 1 }}>
+                Карьеры
+              </Typography>
+              <Button
+                variant="contained"
+                startIcon={<AddIcon />}
+                disableElevation
+                disabled={!hasPerson}
+                onClick={handleAddCareer}
+                sx={{ textTransform: 'none', fontWeight: 600 }}
               >
-                <Typography variant="body2" color="text.secondary" textAlign="center">
-                  Выберите пользователя слева, чтобы увидеть карьеры
-                </Typography>
-              </Box>
-            )}
+                Добавить
+              </Button>
+              <Button
+                variant="outlined"
+                startIcon={<EditOutlinedIcon />}
+                disabled={!hasCareer}
+                onClick={handleEditCareer}
+                sx={buttonOutlinedSx}
+              >
+                Редактировать
+              </Button>
+              <Button
+                variant="outlined"
+                startIcon={<DeleteOutlineIcon />}
+                disabled={!hasCareer}
+                onClick={handleDeleteCareer}
+                sx={buttonOutlinedSx}
+              >
+                Удалить
+              </Button>
+            </Box>
+
+            <Box sx={{ flex: 1, minHeight: 0 }}>
+              {hasPerson ? (
+                <AxiosProvider baseapi="/api">
+                  <BaseTable
+                    key={selectedPeopleId}
+                    url={`/responsible-persons/${selectedPeopleId}/careers`}
+                    columns={careerColumns}
+                    setSelectedId={setSelectedCareerId}
+                    reRenderSignal={careerRenderSignal}
+                    pageable
+                  />
+                </AxiosProvider>
+              ) : (
+                <Box
+                  sx={{
+                    height: '100%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    px: 2,
+                  }}
+                >
+                  <Typography variant="body2" color="text.secondary" textAlign="center">
+                    Выберите пользователя слева, чтобы увидеть карьеры
+                  </Typography>
+                </Box>
+              )}
+            </Box>
           </Box>
-        </Box>
+        )}
       </Box>
 
       <CareerFormDialog
