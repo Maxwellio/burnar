@@ -88,6 +88,8 @@ ACL списка: `OrgAccessService.appendOrgParentSubtreeFilter` (как у о�
 
 В `Admin.jsx`: `CareerFormDialog` + `useConfirm`; при удалении последней карьеры — предупреждение и refresh левой таблицы (`usersRenderSignal`), т.к. `/admin/users` JOIN'ит `karjera`.
 
+`doljtostruct` — общий справочник пар должность×подразделение (`UNIQUE (doljnost, org)`), на одну строку могут ссылаться несколько карьер. Удаление/смена карьеры и `deleteUser` не должны трогать пару, пока на неё ещё есть `karjera`; сироты снимает триггер `trg_karjera_cleanup_doljtostruct` в `bd_bur`. Справочник должностей удаляет `sprdoljnost` только если нет ни одной карьеры (включая закрытые) и нет `spr_workers.boss`; перед этим чистит оставшиеся сироты этой должности.
+
 ---
 
 ## 4. UI

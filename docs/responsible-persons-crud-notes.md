@@ -89,3 +89,5 @@ ACL: `appendOrgParentSubtreeFilter` (parent).
 
 Параметры: `apeople, akarjera_id, datein, dateout, aorg_id, adolj_id, stat`.  
 Ветка по `akarjera_id IS NULL`; `stat` в теле не читается. При отсутствии пары dolj+org создаёт `doljtostruct`.
+
+`doljtostruct` общий (`UNIQUE (doljnost, org)`). `DELETE FROM karjera` / `deleteUser` / смена `DOLJINSTRU` в `karjera_add` сами пару не удаляют; неиспользуемую строку снимает триггер `trg_karjera_cleanup_doljtostruct` (см. `bd_bur`). Справочник должностей в админке дополнительно чистит сирот этой должности перед `DELETE sprdoljnost`.
