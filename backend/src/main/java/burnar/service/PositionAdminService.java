@@ -23,6 +23,8 @@ import java.util.List;
  * CRUD справочника должностей (Delphi SprDolj_list → burnar.sprdoljnost).
  * Прямой SQL: процедур IUD в БД нет. key выдаёт триггер ftrg_sprdoljnost_ins_before;
  * rank не пишем. Вызывается только из PositionAdminController (/api/admin/positions).
+ * Удаление чистит неиспользуемые строки doljtostruct этой должности (сироты после
+ * удаления/смены карьер), иначе FK fk_dolj блокирует sprdoljnost.
  */
 @Service
 public class PositionAdminService {
@@ -113,18 +115,58 @@ public class PositionAdminService {
     }
 
     /**
-     * Как Delphi ToolButton3: голый DELETE.
-     * FK doljtostruct.doljnost / spr_workers.boss → 409, без предварительной проверки.
+     * Удаление sprdoljnost. Карьеры (включая закрытые) и spr_workers.boss блокируют.
+     * Сироты doljtostruct этой должности снимаются, иначе FK fk_dolj не даёт удалить
+     * справочник после удаления/смены карьер. Триггер в bd_bur чистит сироты на лету;
+     * здесь страховка для уже накопившихся строк и на случай, если триггер ещё не накатили.
      */
     @Transactional
     public void deletePosition(int id) {
+        MapSqlParameterSource idParam = new MapSqlParameterSource("id", id);
+        Long exists = jdbc.queryForObject(
+                "SELECT COUNT(*) FROM burnar.sprdoljnost WHERE \"key\" = :id",
+                idParam,
+                Long.class);
+        if (exists == null || exists == 0L) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Должность не найдена");
+        }
+
+        Long careerCount = jdbc.queryForObject(
+                "SELECT COUNT(*) FROM burnar.karjera k "
+                        + "JOIN burnar.doljtostruct ds ON ds.key = k.doljinstru "
+                        + "WHERE ds.doljnost = :id",
+                idParam,
+                Long.class);
+        if (careerCount != null && careerCount > 0L) {
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT,
+                    "Нельзя удалить должность: она указана в карьере пользователя");
+        }
+
+        Long workersCount = jdbc.queryForObject(
+                "SELECT COUNT(*) FROM burnar.spr_workers WHERE boss = :id",
+                idParam,
+                Long.class);
+        if (workersCount != null && workersCount > 0L) {
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT,
+                    "Нельзя удалить должность: она назначена командиром бригады");
+        }
+
         try {
-            int deleted = jdbc.update(
+            jdbc.update(
+                    "UPDATE burnar.doljtostruct SET boss = NULL "
+                            + "WHERE boss IN ("
+                            + "SELECT key FROM ("
+                            + "SELECT ds.key FROM burnar.doljtostruct ds WHERE ds.doljnost = :id"
+                            + ") t)",
+                    idParam);
+            jdbc.update(
+                    "DELETE FROM burnar.doljtostruct WHERE doljnost = :id",
+                    idParam);
+            jdbc.update(
                     "DELETE FROM burnar.sprdoljnost WHERE \"key\" = :id",
-                    new MapSqlParameterSource("id", id));
-            if (deleted == 0) {
-                throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Должность не найдена");
-            }
+                    idParam);
         } catch (DataIntegrityViolationException ex) {
             throw new ResponseStatusException(
                     HttpStatus.CONFLICT,
