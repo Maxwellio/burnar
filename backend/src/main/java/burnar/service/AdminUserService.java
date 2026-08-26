@@ -111,6 +111,7 @@ public class AdminUserService {
      * Pageable-список людей с полями учётки (как admin-grid Delphi).
      * Колоночные фильтры BaseTable: id, fio, oraName, note.
      * Чекбоксы: accountKind (responsible|users), activeKind (active|inactive).
+     * Сортировка хедеров: sortBy (active|dtEnter|dtOut), sortDir (asc|desc).
      */
     public Page<AdminUserDto> findUsers(
             Pageable pageable,
@@ -119,7 +120,9 @@ public class AdminUserService {
             String oraName,
             String note,
             String accountKind,
-            String activeKind) {
+            String activeKind,
+            String sortBy,
+            String sortDir) {
         MapSqlParameterSource params = new MapSqlParameterSource();
         StringBuilder where = new StringBuilder("WHERE 1=1 ");
         String username = currentUsername();
@@ -151,9 +154,11 @@ public class AdminUserService {
         params.addValue("limit", pageable.getPageSize());
         params.addValue("offset", pageable.getOffset());
 
-        String listSql = "SELECT DISTINCT " + USER_SELECT
+        // Подзапрос: SELECT DISTINCT нельзя ORDER BY выражениями вне select list.
+        String listSql = "SELECT * FROM (SELECT DISTINCT " + USER_SELECT
                 + PEOPLE_FROM + where
-                + "ORDER BY p.fio "
+                + ") t "
+                + AdminUserListFilters.orderByClause(sortBy, sortDir)
                 + "LIMIT :limit OFFSET :offset";
         List<AdminUserDto> content = jdbc.query(listSql, params, LIST_MAPPER);
         return new PageImpl<>(content, pageable, total);

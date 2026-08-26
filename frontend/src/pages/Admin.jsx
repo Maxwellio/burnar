@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
 import Checkbox from '@mui/material/Checkbox'
@@ -17,7 +17,7 @@ import { useConfirm } from '../context/ConfirmContext.jsx'
 import AdminUserFormPanel from './AdminUserFormPanel.jsx'
 import CareerFormDialog from './CareerFormDialog.jsx'
 import PositionsDictionaryDialog from './PositionsDictionaryDialog.jsx'
-import { adminUserColumns } from './adminUserColumns.jsx'
+import { createAdminUserColumns } from './adminUserColumns.jsx'
 import { careerColumns } from './responsiblePersonColumns.jsx'
 
 const buttonOutlinedSx = {
@@ -27,11 +27,15 @@ const buttonOutlinedSx = {
   color: 'text.secondary',
 }
 
-const FILTER_IDS = ['accountKind', 'activeKind']
+const CHECKBOX_FILTER_IDS = ['accountKind', 'activeKind']
+const SORT_FILTER_IDS = ['sortBy', 'sortDir']
+const INJECTED_FILTER_IDS = [...CHECKBOX_FILTER_IDS, ...SORT_FILTER_IDS]
+const SEARCH_FILTER_IDS = ['id', 'fio', 'oraName', 'note']
 
 /**
  * Админ-панель: слева users BaseTable, справа форма учётки + карьеры.
- * Чекбоксы списка → query accountKind / activeKind (см. docs/admin-panel-notes.md).
+ * Чекбоксы списка → query accountKind / activeKind;
+ * сортировка хедеров → sortBy / sortDir (см. docs/admin-panel-notes.md).
  * CRUD карьер — тот же API/диалог, что на «Ответственных лицах»;
  * «Добавить» слева открывает форму (карьеры скрыты); «Должности» — модальный справочник sprdoljnost.
  */
@@ -45,6 +49,8 @@ export default function Admin() {
   const [careerRenderSignal, setCareerRenderSignal] = useState(0)
   const [accountKind, setAccountKind] = useState(null)
   const [activeKind, setActiveKind] = useState(null)
+  const [sortBy, setSortBy] = useState(null)
+  const [sortDir, setSortDir] = useState('asc')
 
   const [careerFormOpen, setCareerFormOpen] = useState(false)
   const [careerFormMode, setCareerFormMode] = useState('add')
@@ -55,7 +61,7 @@ export default function Admin() {
 
   const injectListFilters = useCallback(
     (list) => {
-      const without = (list || []).filter((f) => !FILTER_IDS.includes(f.id))
+      const without = (list || []).filter((f) => !INJECTED_FILTER_IDS.includes(f.id))
       const next = [...without]
       if (accountKind) {
         next.push({ id: 'accountKind', value: accountKind })
@@ -63,9 +69,13 @@ export default function Admin() {
       if (activeKind) {
         next.push({ id: 'activeKind', value: activeKind })
       }
+      if (sortBy) {
+        next.push({ id: 'sortBy', value: sortBy })
+        next.push({ id: 'sortDir', value: sortDir })
+      }
       return next
     },
-    [accountKind, activeKind],
+    [accountKind, activeKind, sortBy, sortDir],
   )
 
   const setUsersFiltersSafe = useCallback(
@@ -114,6 +124,33 @@ export default function Admin() {
     setActiveKind((prev) => (prev === value ? null : value))
     setAccountKind((prev) => (prev === 'responsible' ? null : prev))
   }, [])
+
+  const handleSort = useCallback((columnId) => {
+    if (sortBy === columnId) {
+      setSortDir((prev) => (prev === 'asc' ? 'desc' : 'asc'))
+      return
+    }
+    setSortBy(columnId)
+    setSortDir('asc')
+  }, [sortBy])
+
+  const handleResetFilters = useCallback(() => {
+    setSortBy(null)
+    setSortDir('asc')
+    setUsersFilters((prev) =>
+      (prev || []).filter((f) => CHECKBOX_FILTER_IDS.includes(f.id)),
+    )
+  }, [])
+
+  const usersColumns = useMemo(
+    () => createAdminUserColumns({ sortBy, sortDir, onSort: handleSort }),
+    [sortBy, sortDir, handleSort],
+  )
+
+  const hasSearch = (usersFilters || []).some(
+    (f) => SEARCH_FILTER_IDS.includes(f.id) && String(f.value ?? '').trim() !== '',
+  )
+  const hasSort = Boolean(sortBy)
 
   const hasPerson = selectedPeopleId != null
   const hasCareer = selectedCareerId != null
@@ -286,13 +323,21 @@ export default function Admin() {
             label="Неактивные"
             sx={{ mr: 0 }}
           />
+          <Button
+            variant="outlined"
+            disabled={!hasSearch && !hasSort}
+            onClick={handleResetFilters}
+            sx={buttonOutlinedSx}
+          >
+            Сбросить фильтры
+          </Button>
         </Box>
 
         <Box sx={{ flex: 1, minHeight: 0 }}>
           <AxiosProvider baseapi="/api">
             <BaseTable
               url="/admin/users"
-              columns={adminUserColumns}
+              columns={usersColumns}
               filters={usersFilters}
               setFilters={setUsersFiltersSafe}
               setSelectedId={handleSelectPeople}

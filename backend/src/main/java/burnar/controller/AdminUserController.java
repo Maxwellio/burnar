@@ -48,7 +48,9 @@ public class AdminUserController {
             @RequestParam(required = false) String oraName,
             @RequestParam(required = false) String note,
             @RequestParam(required = false) String accountKind,
-            @RequestParam(required = false) String activeKind) {
+            @RequestParam(required = false) String activeKind,
+            @RequestParam(required = false) String sortBy,
+            @RequestParam(required = false) String sortDir) {
         return adminUserService.findUsers(
                 PageRequest.of(page, size),
                 id,
@@ -56,7 +58,9 @@ public class AdminUserController {
                 oraName,
                 note,
                 accountKind,
-                activeKind);
+                activeKind,
+                sortBy,
+                sortDir);
     }
 
     @GetMapping("/{peopleId}")
