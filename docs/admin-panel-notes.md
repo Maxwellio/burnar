@@ -16,6 +16,7 @@
 | Сохранение формы / пароль (bcrypt → `add_user`) | **сделано** |
 | Удаление из левого тулбара | **сделано** |
 | Фильтры списка: ответственные/пользователи, активные/неактивные | **сделано** |
+| Фильтр списка по структуре (Select, как у ответственных лиц) | **сделано** |
 | Excel | отложено |
 
 ---
@@ -46,6 +47,8 @@ people (id, fio, …)
 
 ACL списка: `OrgAccessService.appendOrgParentSubtreeFilter` (как у ответственных лиц).  
 Фильтры BaseTable (query): `id`, `fio`, `oraName`, опционально `note`.
+Select «структура» (query `orgUnitId`, тот же справочник `GET /responsible-persons/org-units`,
+что у ответственных лиц): parent-поддерево выбранного СП; «Все» = без cut. Не режет карьеры справа.
 
 Чекбоксы тулбара (query, AND с колоночным поиском; по умолчанию выкл = без фильтра):
 
@@ -55,6 +58,7 @@ ACL списка: `OrgAccessService.appendOrgParentSubtreeFilter` (как у о�
 | Пользователи | `accountKind=users` | `u.users_id IS NOT NULL` |
 | Активные | `activeKind=active` | `u.active = 1` |
 | Неактивные | `activeKind=inactive` | `u.active = 0` |
+| Структура (Select, «Все» по умолчанию) | `orgUnitId=<id>` | parent-поддерево `ds.org` |
 
 Внутри каждой пары — взаимоисключение (повторный клик снимает фильтр).  
 «Ответственные лица» и «Активные/Неактивные» взаимно сбрасывают друг друга в UI (без учётки нет `active`).
@@ -76,6 +80,7 @@ ACL списка: `OrgAccessService.appendOrgParentSubtreeFilter` (как у о�
 | Удалить | `DELETE /api/responsible-persons/{id}` → `deleteUser` | confirm; каскад users/карьеры/people |
 | Сменить пароль (кнопка убрана с тулбара) | поле пароля на форме + `add_user` | пустой пароль при UPDATE не меняет hash |
 | Должности (справочник) | отдельный экран / modal | ToolButton14, `frmSprdolj_list` |
+| Структура (Select) | `orgUnitId` → parent-поддерево | как у ответственных лиц; «Все»; не режет карьеры |
 | Excel | выгрузка | `btnPrintToExcel`, шаблон Users.xls |
 
 ### Правый тулбар (карьеры) — **сделано**
@@ -105,6 +110,7 @@ ACL списка: `OrgAccessService.appendOrgParentSubtreeFilter` (как у о�
 ## 5. Отложенное / отличия от substitute
 
 - Колонка и справочник ролей (`spr_role`) — когда появится колонка в `users` или иное решение.
-- Чекбоксы списка (accountKind / activeKind) сделаны; org/role checkboxes из substitute не обязательны.
+- Чекбоксы списка (accountKind / activeKind) и Select «структура» (`orgUnitId`) сделаны;
+  role checkbox из substitute не обязателен.
 - Телефон / «Первое подключение» из substitute в burnar нет.
 - Страница «Ответственные лица» не меняется; админка — учётная оболочка над теми же people/карьерами.

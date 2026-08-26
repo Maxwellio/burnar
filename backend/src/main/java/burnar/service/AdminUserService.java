@@ -111,6 +111,7 @@ public class AdminUserService {
      * Pageable-список людей с полями учётки (как admin-grid Delphi).
      * Колоночные фильтры BaseTable: id, fio, oraName, note.
      * Чекбоксы: accountKind (responsible|users), activeKind (active|inactive).
+     * orgUnitId — админский cut parent-поддерева (как у ответственных лиц; «Все» = null).
      */
     public Page<AdminUserDto> findUsers(
             Pageable pageable,
@@ -119,12 +120,13 @@ public class AdminUserService {
             String oraName,
             String note,
             String accountKind,
-            String activeKind) {
+            String activeKind,
+            Integer orgUnitId) {
         MapSqlParameterSource params = new MapSqlParameterSource();
         StringBuilder where = new StringBuilder("WHERE 1=1 ");
         String username = currentUsername();
         if (!orgAccessService.appendOrgParentSubtreeFilter(
-                where, params, username, null, "ds.org")) {
+                where, params, username, orgUnitId, "ds.org")) {
             return new PageImpl<>(Collections.emptyList(), pageable, 0);
         }
 

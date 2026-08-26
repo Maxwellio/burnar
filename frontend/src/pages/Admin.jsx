@@ -2,7 +2,11 @@ import { useCallback, useEffect, useState } from 'react'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
 import Checkbox from '@mui/material/Checkbox'
+import FormControl from '@mui/material/FormControl'
 import FormControlLabel from '@mui/material/FormControlLabel'
+import InputLabel from '@mui/material/InputLabel'
+import MenuItem from '@mui/material/MenuItem'
+import Select from '@mui/material/Select'
 import Typography from '@mui/material/Typography'
 import AddIcon from '@mui/icons-material/Add'
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined'
@@ -12,6 +16,7 @@ import {
   deleteCareer,
   deleteResponsiblePerson,
   fetchCareerTotal,
+  fetchResponsiblePersonOrgUnits,
 } from '../api/responsiblePersonsApi.js'
 import { useConfirm } from '../context/ConfirmContext.jsx'
 import AdminUserFormPanel from './AdminUserFormPanel.jsx'
@@ -20,6 +25,9 @@ import PositionsDictionaryDialog from './PositionsDictionaryDialog.jsx'
 import { adminUserColumns } from './adminUserColumns.jsx'
 import { careerColumns } from './responsiblePersonColumns.jsx'
 
+/** Sentinel «Все» — не уходит в query как orgUnitId (как у ответственных лиц). */
+const ORG_ALL = 'all'
+
 const buttonOutlinedSx = {
   textTransform: 'none',
   bgcolor: 'background.paper',
@@ -27,13 +35,14 @@ const buttonOutlinedSx = {
   color: 'text.secondary',
 }
 
-const FILTER_IDS = ['accountKind', 'activeKind']
+const FILTER_IDS = ['accountKind', 'activeKind', 'orgUnitId']
 
 /**
  * Админ-панель: слева users BaseTable, справа форма учётки + карьеры.
- * Чекбоксы списка → query accountKind / activeKind (см. docs/admin-panel-notes.md).
- * CRUD карьер — тот же API/диалог, что на «Ответственных лицах»;
- * «Добавить» слева открывает форму (карьеры скрыты); «Должности» — модальный справочник sprdoljnost.
+ * Чекбоксы списка → query accountKind / activeKind; Select «структура» → orgUnitId
+ * (см. docs/admin-panel-notes.md). CRUD карьер — тот же API/диалог, что на
+ * «Ответственных лицах»; «Добавить» слева открывает форму (карьеры скрыты);
+ * «Должности» — модальный справочник sprdoljnost.
  */
 export default function Admin() {
   const confirm = useConfirm()
@@ -45,6 +54,9 @@ export default function Admin() {
   const [careerRenderSignal, setCareerRenderSignal] = useState(0)
   const [accountKind, setAccountKind] = useState(null)
   const [activeKind, setActiveKind] = useState(null)
+  const [orgUnitId, setOrgUnitId] = useState(ORG_ALL)
+  const [orgUnits, setOrgUnits] = useState([])
+  const [orgSelectVisible, setOrgSelectVisible] = useState(false)
 
   const [careerFormOpen, setCareerFormOpen] = useState(false)
   const [careerFormMode, setCareerFormMode] = useState('add')
@@ -63,9 +75,12 @@ export default function Admin() {
       if (activeKind) {
         next.push({ id: 'activeKind', value: activeKind })
       }
+      if (orgUnitId !== ORG_ALL) {
+        next.push({ id: 'orgUnitId', value: Number(orgUnitId) })
+      }
       return next
     },
-    [accountKind, activeKind],
+    [accountKind, activeKind, orgUnitId],
   )
 
   const setUsersFiltersSafe = useCallback(
@@ -81,6 +96,31 @@ export default function Admin() {
   useEffect(() => {
     setUsersFilters((prev) => injectListFilters(prev))
   }, [injectListFilters])
+
+  // Смена структуры — только выбор слева и карьера; режим «Добавить» не трогаем
+  useEffect(() => {
+    setSelectedPeopleId(null)
+    setSelectedCareerId(null)
+  }, [orgUnitId])
+
+  useEffect(() => {
+    let cancelled = false
+    fetchResponsiblePersonOrgUnits()
+      .then((list) => {
+        if (cancelled) return
+        setOrgUnits(Array.isArray(list) ? list : [])
+        setOrgSelectVisible(true)
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setOrgUnits([])
+          setOrgSelectVisible(false)
+        }
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   // Смена человека слева сбрасывает выбор карьеры и режим добавления
   const handleSelectPeople = useCallback((id) => {
@@ -286,6 +326,29 @@ export default function Admin() {
             label="Неактивные"
             sx={{ mr: 0 }}
           />
+
+          {orgSelectVisible && (
+            <FormControl
+              size="small"
+              sx={{ ml: 'auto', minWidth: 180, bgcolor: 'background.paper' }}
+            >
+              <InputLabel id="admin-org-structure-label">структура</InputLabel>
+              <Select
+                labelId="admin-org-structure-label"
+                id="admin-org-structure-select"
+                label="структура"
+                value={orgUnitId}
+                onChange={(e) => setOrgUnitId(e.target.value)}
+              >
+                <MenuItem value={ORG_ALL}>Все</MenuItem>
+                {orgUnits.map((u) => (
+                  <MenuItem key={u.id} value={String(u.id)}>
+                    {u.name}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          )}
         </Box>
 
         <Box sx={{ flex: 1, minHeight: 0 }}>
