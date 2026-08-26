@@ -6,8 +6,8 @@ import Button from '@mui/material/Button'
 import Typography from '@mui/material/Typography'
 
 /**
- * Универсальный confirm на DraggableDialog.
- * Обычно не вызывается напрямую — через ConfirmProvider / useConfirm.
+ * Универсальный confirm/предупреждение на DraggableDialog.
+ * Обычно не вызывается напрямую — через ConfirmProvider / useConfirm / useAlert.
  */
 function ConfirmDialog({
   open,
@@ -15,9 +15,11 @@ function ConfirmDialog({
   message,
   confirmLabel = 'Удалить',
   cancelLabel = 'Отмена',
+  confirmColor = 'error',
   onConfirm,
   onCancel,
 }) {
+  const hasCancel = Boolean(cancelLabel)
   return (
     <DraggableDialog open={open} onClose={onCancel} maxWidth="xs" fullWidth>
       <DialogTitle>{title}</DialogTitle>
@@ -25,10 +27,12 @@ function ConfirmDialog({
         <Typography variant="body1">{message}</Typography>
       </DialogContent>
       <DialogActions sx={{ px: 3, py: 2 }}>
-        <Button variant="outlined" color="inherit" onClick={onCancel}>
-          {cancelLabel}
-        </Button>
-        <Button variant="contained" color="error" onClick={onConfirm} autoFocus>
+        {hasCancel ? (
+          <Button variant="outlined" color="inherit" onClick={onCancel}>
+            {cancelLabel}
+          </Button>
+        ) : null}
+        <Button variant="contained" color={confirmColor} onClick={onConfirm} autoFocus>
           {confirmLabel}
         </Button>
       </DialogActions>

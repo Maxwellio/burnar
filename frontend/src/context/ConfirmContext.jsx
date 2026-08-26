@@ -5,8 +5,15 @@ const ConfirmContext = createContext(null)
 
 const DEFAULT_ACTION = 'удаление'
 
+const CONFIRM_DEFAULTS = {
+  confirmLabel: 'Удалить',
+  cancelLabel: 'Отмена',
+  confirmColor: 'error',
+}
+
 /**
- * Глобальные подтверждения (удаление и т.п.): await confirm(message, options) → boolean.
+ * Глобальные подтверждения и предупреждения: await confirm(...) → boolean,
+ * await alert(message) — диалог без кнопки «Удалить».
  * Подключать в App вокруг маршрутов; UI — ConfirmDialog на DraggableDialog.
  */
 export function ConfirmProvider({ children }) {
@@ -14,8 +21,9 @@ export function ConfirmProvider({ children }) {
     open: false,
     title: '',
     message: '',
-    confirmLabel: 'Удалить',
-    cancelLabel: 'Отмена',
+    confirmLabel: CONFIRM_DEFAULTS.confirmLabel,
+    cancelLabel: CONFIRM_DEFAULTS.cancelLabel,
+    confirmColor: CONFIRM_DEFAULTS.confirmColor,
   })
   const resolveRef = useRef(null)
 
@@ -29,8 +37,8 @@ export function ConfirmProvider({ children }) {
   const confirm = useCallback((message, options = {}) => {
     const {
       action = DEFAULT_ACTION,
-      confirmLabel = 'Удалить',
-      cancelLabel = 'Отмена',
+      confirmLabel = CONFIRM_DEFAULTS.confirmLabel,
+      cancelLabel = CONFIRM_DEFAULTS.cancelLabel,
     } = options
 
     return new Promise((resolve) => {
@@ -41,12 +49,28 @@ export function ConfirmProvider({ children }) {
         message,
         confirmLabel,
         cancelLabel,
+        confirmColor: CONFIRM_DEFAULTS.confirmColor,
+      })
+    })
+  }, [])
+
+  const alert = useCallback((message, options = {}) => {
+    const { title = 'Внимание', confirmLabel = 'ОК' } = options
+    return new Promise((resolve) => {
+      resolveRef.current = resolve
+      setState({
+        open: true,
+        title,
+        message,
+        confirmLabel,
+        cancelLabel: null,
+        confirmColor: 'primary',
       })
     })
   }, [])
 
   return (
-    <ConfirmContext.Provider value={confirm}>
+    <ConfirmContext.Provider value={{ confirm, alert }}>
       {children}
       <ConfirmDialog
         open={state.open}
@@ -54,6 +78,7 @@ export function ConfirmProvider({ children }) {
         message={state.message}
         confirmLabel={state.confirmLabel}
         cancelLabel={state.cancelLabel}
+        confirmColor={state.confirmColor}
         onConfirm={() => close(true)}
         onCancel={() => close(false)}
       />
@@ -61,10 +86,18 @@ export function ConfirmProvider({ children }) {
   )
 }
 
-export function useConfirm() {
-  const confirm = useContext(ConfirmContext)
-  if (!confirm) {
+function useConfirmContext() {
+  const ctx = useContext(ConfirmContext)
+  if (!ctx) {
     throw new Error('useConfirm must be used within ConfirmProvider')
   }
-  return confirm
+  return ctx
+}
+
+export function useConfirm() {
+  return useConfirmContext().confirm
+}
+
+export function useAlert() {
+  return useConfirmContext().alert
 }

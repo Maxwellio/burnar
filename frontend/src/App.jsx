@@ -15,7 +15,7 @@ import Admin from './pages/Admin.jsx'
 
 /**
  * Тема + маршруты: /login публичный, остальное под ProtectedLayout (сессия + AppBar/Drawer).
- * ConfirmProvider — общий confirm (удаление и т.п.) для всех страниц.
+ * ConfirmProvider — общий confirm/предупреждение для всех страниц.
  */
 export default function App() {
   return (
