@@ -1,6 +1,21 @@
 // API страницы «Ответственные лица»: справочники, карточка, CRUD people.
 import { request, requestJson } from './http.js'
 
+/** Текст Spring `message` (409 занятости мастером) важнее голого статуса. */
+async function throwIfNotOk(res) {
+  if (res.ok) return
+  let message = `Request failed: ${res.status}`
+  try {
+    const data = await res.json()
+    if (typeof data?.message === 'string' && data.message.trim()) {
+      message = data.message
+    }
+  } catch {
+    // не JSON — оставляем статус
+  }
+  throw new Error(message)
+}
+
 /** @returns {Promise<Array<{ id: number, name: string }>>} */
 export function fetchResponsiblePersonOrgUnits() {
   return requestJson('/responsible-persons/org-units')
@@ -49,9 +64,12 @@ export async function deleteResponsiblePerson(peopleId) {
     method: 'DELETE',
     headers: { Accept: 'application/json' },
   })
-  if (!res.ok) {
-    throw new Error(`Request failed: ${res.status}`)
-  }
+  await throwIfNotOk(res)
+}
+
+/** Предпроверка удаления человека: { blocked, message }. */
+export function fetchPersonDeleteBlock(peopleId) {
+  return requestJson(`/responsible-persons/${peopleId}/delete-block`)
 }
 
 /** Карточка карьеры для prefill формы. */
@@ -98,7 +116,12 @@ export async function deleteCareer(peopleId, careerKey) {
     method: 'DELETE',
     headers: { Accept: 'application/json' },
   })
-  if (!res.ok) {
-    throw new Error(`Request failed: ${res.status}`)
-  }
+  await throwIfNotOk(res)
+}
+
+/** Предпроверка удаления карьеры: { blocked, message }. */
+export function fetchCareerDeleteBlock(peopleId, careerKey) {
+  return requestJson(
+    `/responsible-persons/${peopleId}/careers/${careerKey}/delete-block`,
+  )
 }

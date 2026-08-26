@@ -15,10 +15,13 @@ import { AxiosProvider, BaseTable } from 'mainComponent'
 import {
   deleteCareer,
   deleteResponsiblePerson,
+  fetchCareerDeleteBlock,
   fetchCareerTotal,
+  fetchPersonDeleteBlock,
   fetchResponsiblePersonOrgUnits,
 } from '../api/responsiblePersonsApi.js'
-import { useConfirm } from '../context/ConfirmContext.jsx'
+import { useAlert, useConfirm } from '../context/ConfirmContext.jsx'
+import { runCareerDelete, runPersonDelete } from '../utils/deleteWithMasterGuard.js'
 import AdminUserFormPanel from './AdminUserFormPanel.jsx'
 import CareerFormDialog from './CareerFormDialog.jsx'
 import PositionsDictionaryDialog from './PositionsDictionaryDialog.jsx'
@@ -46,6 +49,7 @@ const FILTER_IDS = ['accountKind', 'activeKind', 'orgUnitId']
  */
 export default function Admin() {
   const confirm = useConfirm()
+  const showAlert = useAlert()
 
   const [selectedPeopleId, setSelectedPeopleId] = useState(null)
   const [selectedCareerId, setSelectedCareerId] = useState(null)
@@ -161,17 +165,18 @@ export default function Admin() {
   // Каскад через burnar.deleteUser — тот же API, что на «Ответственных лицах».
   const handleDeletePerson = async () => {
     if (!hasPerson) return
-    const ok = await confirm('Удалить пользователя?', { action: 'удаление' })
-    if (!ok) return
-    try {
-      await deleteResponsiblePerson(selectedPeopleId)
-      setSelectedPeopleId(null)
-      setSelectedCareerId(null)
-      setIsAddingUser(false)
-      setUsersRenderSignal((n) => n + 1)
-    } catch (e) {
-      console.error(e)
-    }
+    const deleted = await runPersonDelete({
+      peopleId: selectedPeopleId,
+      fetchBlock: fetchPersonDeleteBlock,
+      confirm,
+      alert: showAlert,
+      deletePerson: deleteResponsiblePerson,
+    })
+    if (!deleted) return
+    setSelectedPeopleId(null)
+    setSelectedCareerId(null)
+    setIsAddingUser(false)
+    setUsersRenderSignal((n) => n + 1)
   }
 
   const handleAddCareer = () => {
@@ -193,31 +198,21 @@ export default function Admin() {
   // Удаление карьеры: предупреждение про каскад people, если это последняя в БД
   const handleDeleteCareer = async () => {
     if (!hasPerson || !hasCareer) return
-    let careerTotal
-    try {
-      // Без orgUnitId: триггер срабатывает по последней карьере в БД, не по видимым в фильтре
-      careerTotal = await fetchCareerTotal(selectedPeopleId)
-    } catch (e) {
-      console.error(e)
-      return
-    }
-    const isOnlyCareer = careerTotal === 1
-    const message = isOnlyCareer
-      ? 'Удалить выбранную карьеру пользователя? Вместе с ней будет удалён и сам пользователь.'
-      : 'Удалить выбранную карьеру пользователя?'
-    const ok = await confirm(message, { action: 'удаление' })
-    if (!ok) return
-    try {
-      await deleteCareer(selectedPeopleId, selectedCareerId)
-      setSelectedCareerId(null)
-      setCareerRenderSignal((n) => n + 1)
-      // Последняя карьера → пользователь исчезнет из JOIN-списка /admin/users
-      if (isOnlyCareer) {
-        setSelectedPeopleId(null)
-        setUsersRenderSignal((n) => n + 1)
-      }
-    } catch (e) {
-      console.error(e)
+    const result = await runCareerDelete({
+      peopleId: selectedPeopleId,
+      careerId: selectedCareerId,
+      fetchBlock: fetchCareerDeleteBlock,
+      fetchCareerTotal,
+      confirm,
+      alert: showAlert,
+      deleteCareer,
+    })
+    if (!result.deleted) return
+    setSelectedCareerId(null)
+    setCareerRenderSignal((n) => n + 1)
+    if (result.isOnlyCareer) {
+      setSelectedPeopleId(null)
+      setUsersRenderSignal((n) => n + 1)
     }
   }
 

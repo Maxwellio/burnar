@@ -2,6 +2,7 @@ package burnar.service;
 
 import burnar.dto.CareerDto;
 import burnar.dto.CareerWriteRequest;
+import burnar.dto.DeleteBlockDto;
 import burnar.dto.IdResponse;
 import burnar.dto.OrgUnitDto;
 import burnar.dto.ResponsiblePersonCreateRequest;
@@ -92,10 +93,15 @@ public class ResponsiblePersonService {
 
     private final NamedParameterJdbcTemplate jdbc;
     private final OrgAccessService orgAccessService;
+    private final NaryadMasterGuard naryadMasterGuard;
 
-    public ResponsiblePersonService(NamedParameterJdbcTemplate jdbc, OrgAccessService orgAccessService) {
+    public ResponsiblePersonService(
+            NamedParameterJdbcTemplate jdbc,
+            OrgAccessService orgAccessService,
+            NaryadMasterGuard naryadMasterGuard) {
         this.jdbc = jdbc;
         this.orgAccessService = orgAccessService;
+        this.naryadMasterGuard = naryadMasterGuard;
     }
 
     /** Справочник СП для админского Select на этой странице (константные id, не org-filter-ids). */
@@ -303,9 +309,18 @@ public class ResponsiblePersonService {
         });
     }
 
+    /** Предпроверка удаления карьеры: предупреждение без кнопки «Удалить», если держит мастера. */
+    public DeleteBlockDto careerDeleteBlock(int peopleId, int careerKey) {
+        requirePersonVisible(peopleId);
+        requireCareerBelongsToPerson(peopleId, careerKey);
+        return naryadMasterGuard.careerDeleteBlock(peopleId, careerKey);
+    }
+
     /** Удаление выбранной карьеры — как Delphi ToolButton12 (key текущей строки). */
     public void deleteCareer(int peopleId, int careerKey) {
         requirePersonVisible(peopleId);
+        requireCareerBelongsToPerson(peopleId, careerKey);
+        naryadMasterGuard.rejectIfCareerHoldsMaster(peopleId, careerKey);
         int deleted = jdbc.update(
                 "DELETE FROM burnar.karjera WHERE key = :key AND idpeople = :peopleId",
                 new MapSqlParameterSource()
@@ -393,6 +408,12 @@ public class ResponsiblePersonService {
         }
     }
 
+    /** Предпроверка удаления человека: предупреждение, если он мастер хотя бы одного наряда. */
+    public DeleteBlockDto personDeleteBlock(int peopleId) {
+        requirePersonVisible(peopleId);
+        return naryadMasterGuard.personDeleteBlock(peopleId);
+    }
+
     /** Каскадное удаление через burnar.deleteUser — только ROLE_ADMIN. */
     public void deletePerson(int peopleId) {
         String username = currentUsername();
@@ -400,6 +421,7 @@ public class ResponsiblePersonService {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Admin only");
         }
         requirePersonVisible(peopleId);
+        naryadMasterGuard.rejectIfPersonIsMaster(peopleId);
         jdbc.getJdbcTemplate().execute((Connection con) -> {
             try (CallableStatement cs = con.prepareCall("CALL burnar.deleteUser(?)")) {
                 cs.setBigDecimal(1, BigDecimal.valueOf(peopleId));
