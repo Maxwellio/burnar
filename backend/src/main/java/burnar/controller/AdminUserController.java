@@ -48,7 +48,8 @@ public class AdminUserController {
             @RequestParam(required = false) String oraName,
             @RequestParam(required = false) String note,
             @RequestParam(required = false) String accountKind,
-            @RequestParam(required = false) String activeKind) {
+            @RequestParam(required = false) String activeKind,
+            @RequestParam(required = false) Integer orgUnitId) {
         return adminUserService.findUsers(
                 PageRequest.of(page, size),
                 id,
@@ -56,7 +57,8 @@ public class AdminUserController {
                 oraName,
                 note,
                 accountKind,
-                activeKind);
+                activeKind,
+                orgUnitId);
     }
 
     @GetMapping("/{peopleId}")

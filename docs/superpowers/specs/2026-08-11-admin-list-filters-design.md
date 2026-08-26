@@ -8,7 +8,11 @@ Approved approach: BaseTable `filters` → query params → SQL (как `orgUnit
 - Добавить две пары чекбоксов: «Ответственные лица» / «Пользователи», «Активные» / «Неактивные».
 - По умолчанию все выключены → без фильтра (весь список).
 - Внутри пары взаимоисключение; повторный клик снимает выбор.
-- Пары между собой и с колоночным поиском — AND.
+- Пары между собой, с Select «структура» и с колоночным поиском — AND.
+- Select «структура» справа в тулбаре (`ml: auto`), как на «Ответственных лицах»:
+  справочник `GET /responsible-persons/org-units`, пункт «Все» по умолчанию.
+  Фильтрует только левую таблицу; карьеры справа без `orgUnitId`.
+  Смена значения сбрасывает выбранного человека и карьеру, режим «Добавить» не трогает.
 
 ## Семантика
 
@@ -19,17 +23,19 @@ Approved approach: BaseTable `filters` → query params → SQL (как `orgUnit
 | Активные | `u.active = 1` |
 | Неактивные | `u.active = 0` |
 
-Query params: `accountKind=responsible|users`, `activeKind=active|inactive`.
+Query params: `accountKind=responsible|users`, `activeKind=active|inactive`,
+опционально `orgUnitId` (parent-поддерево, как у ответственных лиц).
 
 «Ответственные лица» и «Активные/Неактивные» взаимно сбрасывают друг друга в UI
 (без учётки нет `active`; пересечение иначе было бы пустым).
 
 ## Frontend
 
-- State: `accountKind`, `activeKind` (`null` или значение).
-- Инжект в `usersFilters` + safe `setFilters`, чтобы колоночный поиск не затирал чекбоксы.
+- State: `accountKind`, `activeKind` (`null` или значение), `orgUnitId` (`'all'` или id).
+- Инжект в `usersFilters` + safe `setFilters`, чтобы колоночный поиск не затирал чекбоксы и структуру.
 
 ## Backend
 
-- `AdminUserController` / `AdminUserService.findUsers` принимают и применяют params.
+- `AdminUserController` / `AdminUserService.findUsers` принимают и применяют params
+  (`orgUnitId` → `appendOrgParentSubtreeFilter`).
 - Колоночные фильтры `id`/`fio`/`oraName`/`note` без изменений.
