@@ -18,7 +18,7 @@ export const menuItems = [
     roles: ['ROLE_USER', 'ROLE_ADMIN'],
   },
   {
-    text: 'Справочники',
+    text: 'Тематические разделы',
     icon: <MenuBook />,
     path: '/catalog',
     roles: ['ROLE_USER', 'ROLE_ADMIN'],

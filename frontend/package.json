@@ -40,7 +40,7 @@
 
     "formik": "^2.4.9",
 
-    "mainComponent": "file:../../table_comp/mainComponent",
+    "mainComponent": "file:../../table_comp/src/mainComponent",
 
     "react": "^18.2.0",
 
