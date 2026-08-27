@@ -12,6 +12,7 @@
 | Ленивые дети `GET .../{id}/children` | **сделано** |
 | ACL: не-админ — `org_stru_tem_cat` + sysboss, обрезано до поддерева id=2; админ — корень id=2 | **сделано** |
 | Выбор строки (`selectedId`) | **сделано** (кнопок нет) |
+| Поиск по колонкам (id/oper префикс, name подстрока, AND) | **сделано** |
 | Тулбар: заглушки «Раскрыть все» / «Свернуть все» | **сделано** (без действия) |
 | Тулбар: поиск, автоширина, рабочий expand/collapse | отложено |
 | Дата операции | отложено |
@@ -42,14 +43,21 @@ Delphi LoadTree скрывает `parent_id`, `ord`, `nartype`. В JSON они �
 
 ## 2. API
 
-`BaseTreeTable` ждёт **массив**, не Spring `Page`. Поле `children` с сервера **не отдаём**.
+`BaseTreeTable` ждёт **массив**, не Spring `Page`. Без фильтров поле `children` с сервера **не отдаём**. При поиске корни приходят уже с вложенными `children`.
 
 | Метод | Назначение |
 |-------|------------|
-| `GET /api/tematic-razdels` | Корни: `{ id, name, oper, parentId, ord, nartype, hasChildren }` |
+| `GET /api/tematic-razdels` | Корни: `{ id, name, oper, parentId, ord, nartype, hasChildren }`. Query: `id`, `name`, `oper` (AND). |
 | `GET /api/tematic-razdels/{id}/children` | Дети того же shape; чужой id у USER → `[]` |
 
 Порядок: `ord NULLS FIRST, id`.
+
+**Поиск** (все непустые параметры сразу):
+
+- `id` — префикс `CAST(id AS text)` (в коде `startsWith`): `67` не находит `167`.
+- `oper` — префикс кода операции; у раздела без операции совпадения нет.
+- `name` — подстрока без регистра по отображаемому имени (`t.nm` или `spr_oper.nm`).
+- Совпадения возвращаются **вложенным лесом** с предками до видимого корня.
 
 **ACL**
 
@@ -61,8 +69,8 @@ Delphi LoadTree скрывает `parent_id`, `ord`, `nartype`. В JSON они �
 
 ## 3. Frontend
 
-- [frontend/src/pages/Catalog.jsx](../frontend/src/pages/Catalog.jsx) — тулбар-заглушки + `AxiosProvider` + `BaseTreeTable url="/tematic-razdels"` (заголовка над таблицей нет)
-- [frontend/src/pages/tematicRazdelColumns.jsx](../frontend/src/pages/tematicRazdelColumns.jsx) — три колонки; expander в «Наименование» (`hasChildren` / `row.depth`)
+- [frontend/src/pages/Catalog.jsx](../frontend/src/pages/Catalog.jsx) — тулбар-заглушки + фильтры колонок + `BaseTreeTable url="/tematic-razdels"`
+- [frontend/src/pages/tematicRazdelColumns.jsx](../frontend/src/pages/tematicRazdelColumns.jsx) — три колонки с поиском в шапке; expander в «Наименование»
 - [frontend/src/config/menuItems.jsx](../frontend/src/config/menuItems.jsx) — пункт «Тематические разделы»
 
 Контракт `BaseTreeTable` (пакет не править):
@@ -77,7 +85,7 @@ Delphi LoadTree скрывает `parent_id`, `ord`, `nartype`. В JSON они �
 
 | Delphi | Назначение |
 |--------|------------|
-| Поиск + Locate | `Edit1` / ToolButton1 |
+| Поиск + Locate | ToolButton1 — в вебе три поля в шапке колонок, не Locate |
 | Collapse/expand | ToolButton2 — в UI заглушки «Раскрыть все» / «Свернуть все», без действия |
 | Автоширина | ToolButton3 |
 | «Задание» N1/N2/N5 | `Zadanie_Add_Razdel` / `Zadanie_Add_Emp_Razdel` |

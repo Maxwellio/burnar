@@ -17,10 +17,11 @@ const buttonOutlinedSx = {
  * Каталог тематических разделов (Delphi TfrmStructNar, read-only).
  * Дерево от id=2: GET /api/tematic-razdels и /{id}/children через BaseTreeTable.
  * selectedId держим для будущих кнопок вставки в наряд.
- * Тулбар: заглушки «Раскрыть все» / «Свернуть все» (как Add/Edit/Delete на нарядах).
+ * Поиск — фильтры шапки трёх колонок; раскрыть/свернуть все пока заглушки.
  */
 export default function Catalog() {
   const [selectedId, setSelectedId] = useState(null)
+  const [filters, setFilters] = useState([])
 
   return (
     <Box
@@ -56,7 +57,10 @@ export default function Catalog() {
           <BaseTreeTable
             url="/tematic-razdels"
             columns={tematicRazdelColumns}
+            filters={filters}
+            setFilters={setFilters}
             setSelectedId={setSelectedId}
+            initialState={{ pagination: { pageIndex: 0, pageSize: 10000 } }}
           />
         </AxiosProvider>
       </Box>

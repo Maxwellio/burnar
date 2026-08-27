@@ -11,9 +11,15 @@ import org.springframework.util.StringUtils;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Locale;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -85,6 +91,18 @@ public class TematicRazdelService {
                     + "  INNER JOIN sub s ON c.parent_id = s.id"
                     + ") SELECT sub.id FROM sub";
 
+    private static final String FOREST_FROM_ROOTS_SQL =
+            "WITH RECURSIVE forest AS ("
+                    + "  SELECT tr.id FROM public.tematic_razdel tr WHERE tr.id IN (:rootIds) "
+                    + "  UNION ALL "
+                    + "  SELECT c.id FROM public.tematic_razdel c "
+                    + "  INNER JOIN forest f ON c.parent_id = f.id"
+                    + ") ";
+
+    private static final Comparator<TematicRazdelNodeDto> NODE_ORDER_CMP =
+            Comparator.comparing(TematicRazdelNodeDto::getOrd, Comparator.nullsFirst(Integer::compareTo))
+                    .thenComparing(TematicRazdelNodeDto::getId, Comparator.nullsLast(Integer::compareTo));
+
     private static final RowMapper<TematicRazdelNodeDto> MAPPER = (rs, rowNum) -> {
         TematicRazdelNodeDto dto = new TematicRazdelNodeDto();
         dto.setId(getInteger(rs, "id"));
@@ -105,27 +123,22 @@ public class TematicRazdelService {
         this.orgAccessService = orgAccessService;
     }
 
-    /** Корни дерева: админ — id=2 / null-parent; иначе org_stru_tem_cat, обрезанные до id=2. */
-    public List<TematicRazdelNodeDto> findRoots() {
+    /** Корни дерева: админ — id=2 / null-parent; иначе org_stru_tem_cat, обрезанные до id=2.
+     *  При непустых фильтрах — вложенный лес совпадений (предки сохранены). */
+    public List<TematicRazdelNodeDto> findRoots(String idPrefix, String nameSubstr, String operPrefix) {
         String username = currentUsername();
         if (!StringUtils.hasText(username)) {
             return Collections.emptyList();
         }
-        if (orgAccessService.isAdmin(username)) {
-            MapSqlParameterSource rootParams =
-                    new MapSqlParameterSource("rootId", CATALOG_ROOT_ID);
-            List<TematicRazdelNodeDto> fromCatalogRoot = queryNodes("WHERE t.id = :rootId ", rootParams);
-            if (!fromCatalogRoot.isEmpty()) {
-                return fromCatalogRoot;
-            }
-            return queryNodes("WHERE t.parent_id IS NULL ", new MapSqlParameterSource());
-        }
-        List<Integer> rootIds = clipUserRootIds(username);
+        List<Integer> rootIds = resolveRootIds(username);
         if (rootIds.isEmpty()) {
             return Collections.emptyList();
         }
-        MapSqlParameterSource params = new MapSqlParameterSource("rootIds", rootIds);
-        return queryNodes("WHERE t.id IN (:rootIds) ", params);
+        if (!hasFilters(idPrefix, nameSubstr, operPrefix)) {
+            MapSqlParameterSource params = new MapSqlParameterSource("rootIds", rootIds);
+            return queryNodes("WHERE t.id IN (:rootIds) ", params);
+        }
+        return nestFiltered(queryForest(rootIds), rootIds, idPrefix, nameSubstr, operPrefix);
     }
 
     /**
@@ -146,6 +159,122 @@ public class TematicRazdelService {
 
     private List<TematicRazdelNodeDto> queryNodes(String where, MapSqlParameterSource params) {
         return jdbc.query(NODE_SELECT + where + NODE_ORDER, params, MAPPER);
+    }
+
+    private List<Integer> resolveRootIds(String username) {
+        if (orgAccessService.isAdmin(username)) {
+            MapSqlParameterSource rootParams =
+                    new MapSqlParameterSource("rootId", CATALOG_ROOT_ID);
+            List<TematicRazdelNodeDto> fromCatalogRoot = queryNodes("WHERE t.id = :rootId ", rootParams);
+            if (!fromCatalogRoot.isEmpty()) {
+                return List.of(CATALOG_ROOT_ID);
+            }
+            return queryNodes("WHERE t.parent_id IS NULL ", new MapSqlParameterSource()).stream()
+                    .map(TematicRazdelNodeDto::getId)
+                    .filter(Objects::nonNull)
+                    .toList();
+        }
+        return clipUserRootIds(username);
+    }
+
+    private List<TematicRazdelNodeDto> queryForest(List<Integer> rootIds) {
+        MapSqlParameterSource params = new MapSqlParameterSource("rootIds", rootIds);
+        return jdbc.query(
+                FOREST_FROM_ROOTS_SQL + NODE_SELECT + "WHERE t.id IN (SELECT forest.id FROM forest) " + NODE_ORDER,
+                params,
+                MAPPER);
+    }
+
+    private static boolean hasFilters(String idPrefix, String nameSubstr, String operPrefix) {
+        return StringUtils.hasText(idPrefix) || StringUtils.hasText(nameSubstr) || StringUtils.hasText(operPrefix);
+    }
+
+    static boolean matches(
+            TematicRazdelNodeDto node, String idPrefix, String nameSubstr, String operPrefix) {
+        if (StringUtils.hasText(idPrefix)) {
+            String idText = node.getId() == null ? "" : String.valueOf(node.getId());
+            if (!idText.startsWith(idPrefix.trim())) {
+                return false;
+            }
+        }
+        if (StringUtils.hasText(nameSubstr)) {
+            String name = node.getName() == null ? "" : node.getName();
+            if (!name.toLowerCase(Locale.ROOT).contains(nameSubstr.trim().toLowerCase(Locale.ROOT))) {
+                return false;
+            }
+        }
+        if (StringUtils.hasText(operPrefix)) {
+            if (node.getOper() == null) {
+                return false;
+            }
+            if (!String.valueOf(node.getOper()).startsWith(operPrefix.trim())) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
+     * Оставляет совпадения и их предков, собирает вложенный лес от rootIds.
+     * Дети сортируются как в SQL: ord NULLS FIRST, id.
+     */
+    static List<TematicRazdelNodeDto> nestFiltered(
+            List<TematicRazdelNodeDto> all,
+            List<Integer> rootIds,
+            String idPrefix,
+            String nameSubstr,
+            String operPrefix) {
+        if (all == null || all.isEmpty() || rootIds == null || rootIds.isEmpty()) {
+            return List.of();
+        }
+        Map<Integer, TematicRazdelNodeDto> byId = new HashMap<>();
+        for (TematicRazdelNodeDto node : all) {
+            if (node.getId() != null) {
+                byId.put(node.getId(), node);
+                node.setChildren(new ArrayList<>());
+            }
+        }
+        Set<Integer> keep = new HashSet<>();
+        for (TematicRazdelNodeDto node : all) {
+            if (!matches(node, idPrefix, nameSubstr, operPrefix) || node.getId() == null) {
+                continue;
+            }
+            Integer walk = node.getId();
+            while (walk != null && keep.add(walk)) {
+                TematicRazdelNodeDto current = byId.get(walk);
+                if (current == null) {
+                    break;
+                }
+                walk = current.getParentId();
+            }
+        }
+        for (TematicRazdelNodeDto node : all) {
+            if (node.getId() == null || !keep.contains(node.getId())) {
+                continue;
+            }
+            Integer parentId = node.getParentId();
+            if (parentId != null && keep.contains(parentId) && byId.containsKey(parentId)) {
+                byId.get(parentId).getChildren().add(node);
+            }
+        }
+        for (TematicRazdelNodeDto node : all) {
+            if (node.getChildren() == null) {
+                continue;
+            }
+            node.getChildren().sort(NODE_ORDER_CMP);
+            node.setHasChildren(!node.getChildren().isEmpty());
+            if (node.getChildren().isEmpty()) {
+                node.setChildren(null);
+            }
+        }
+        List<TematicRazdelNodeDto> roots = new ArrayList<>();
+        for (Integer rootId : rootIds) {
+            if (rootId != null && keep.contains(rootId) && byId.containsKey(rootId)) {
+                roots.add(byId.get(rootId));
+            }
+        }
+        roots.sort(NODE_ORDER_CMP);
+        return roots;
     }
 
     private List<Integer> findAllowedRootIds(String username) {

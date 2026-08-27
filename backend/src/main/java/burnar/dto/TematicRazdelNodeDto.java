@@ -1,11 +1,13 @@
 package burnar.dto;
 
+import java.util.List;
+
 /**
  * Узел дерева тематических разделов для BaseTreeTable.
  * id = tematic_razdel.id (код раздела); name — t.nm либо spr_oper.nm;
  * oper — код операции (null = раздел). parentId/ord/nartype скрыты в UI,
- * нужны для кнопок вставки в наряд позже. children с сервера не отдаём —
- * BaseTreeTable сам грузит GET .../{id}/children.
+ * нужны для кнопок вставки в наряд позже. children с сервера не отдаём
+ * при ленивой загрузке; при поиске — вложенный лес совпадений с предками.
  */
 public class TematicRazdelNodeDto {
 
@@ -16,6 +18,7 @@ public class TematicRazdelNodeDto {
     private Integer ord;
     private Integer nartype;
     private boolean hasChildren;
+    private List<TematicRazdelNodeDto> children;
 
     public Integer getId() {
         return id;
@@ -71,5 +74,13 @@ public class TematicRazdelNodeDto {
 
     public void setHasChildren(boolean hasChildren) {
         this.hasChildren = hasChildren;
+    }
+
+    public List<TematicRazdelNodeDto> getChildren() {
+        return children;
+    }
+
+    public void setChildren(List<TematicRazdelNodeDto> children) {
+        this.children = children;
     }
 }
