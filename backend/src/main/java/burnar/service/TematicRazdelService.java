@@ -12,6 +12,7 @@ import org.springframework.util.StringUtils;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Collections;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
@@ -26,6 +27,9 @@ import java.util.stream.Collectors;
  */
 @Service
 public class TematicRazdelService {
+
+    /** Видимый корень каталога (не id=1 «всё дерево»). */
+    static final int CATALOG_ROOT_ID = 2;
 
     /** Поля узла: имя раздела или spr_oper.nm, если это операция. */
     private static final String NODE_SELECT =
@@ -109,7 +113,7 @@ public class TematicRazdelService {
         }
         if (orgAccessService.isAdmin(username)) {
             MapSqlParameterSource rootParams =
-                    new MapSqlParameterSource("rootId", TematicRazdelRoots.CATALOG_ROOT_ID);
+                    new MapSqlParameterSource("rootId", CATALOG_ROOT_ID);
             List<TematicRazdelNodeDto> fromCatalogRoot = queryNodes("WHERE t.id = :rootId ", rootParams);
             if (!fromCatalogRoot.isEmpty()) {
                 return fromCatalogRoot;
@@ -159,9 +163,10 @@ public class TematicRazdelService {
         if (aclRoots.isEmpty()) {
             return List.of();
         }
-        int catalogRoot = TematicRazdelRoots.CATALOG_ROOT_ID;
-        return TematicRazdelRoots.clipAclRoots(
-                aclRoots, queryIdSet(ANCESTOR_IDS_SQL, catalogRoot), queryIdSet(SUBTREE_IDS_SQL, catalogRoot));
+        return clipAclRoots(
+                aclRoots,
+                queryIdSet(ANCESTOR_IDS_SQL, CATALOG_ROOT_ID),
+                queryIdSet(SUBTREE_IDS_SQL, CATALOG_ROOT_ID));
     }
 
     private Set<Integer> queryIdSet(String sql, int rootId) {
@@ -176,8 +181,7 @@ public class TematicRazdelService {
 
     private boolean isParentVisible(String username, int parentId) {
         if (orgAccessService.isAdmin(username)) {
-            return TematicRazdelRoots.isInCatalogSubtree(
-                    parentId, queryIdSet(SUBTREE_IDS_SQL, TematicRazdelRoots.CATALOG_ROOT_ID));
+            return queryIdSet(SUBTREE_IDS_SQL, CATALOG_ROOT_ID).contains(parentId);
         }
         List<Integer> rootIds = clipUserRootIds(username);
         if (rootIds.isEmpty()) {
@@ -196,6 +200,35 @@ public class TematicRazdelService {
                 params,
                 Integer.class);
         return count != null && count > 0;
+    }
+
+    /**
+     * Предок или сам корень → один корень {@link #CATALOG_ROOT_ID}.
+     * Потомки сохраняются (порядок и уникальность). Узлы вне поддерева отбрасываются.
+     */
+    static List<Integer> clipAclRoots(
+            List<Integer> aclRoots, Set<Integer> ancestorsOfRoot, Set<Integer> subtreeOfRoot) {
+        if (aclRoots == null || aclRoots.isEmpty()) {
+            return List.of();
+        }
+        Set<Integer> ancestors = ancestorsOfRoot == null ? Set.of() : ancestorsOfRoot;
+        Set<Integer> subtree = subtreeOfRoot == null ? Set.of() : subtreeOfRoot;
+        LinkedHashSet<Integer> descendants = new LinkedHashSet<>();
+        boolean seesWholeSubtree = false;
+        for (Integer id : aclRoots) {
+            if (id == null) {
+                continue;
+            }
+            if (ancestors.contains(id)) {
+                seesWholeSubtree = true;
+            } else if (subtree.contains(id)) {
+                descendants.add(id);
+            }
+        }
+        if (seesWholeSubtree) {
+            return List.of(CATALOG_ROOT_ID);
+        }
+        return List.copyOf(descendants);
     }
 
     private static String currentUsername() {

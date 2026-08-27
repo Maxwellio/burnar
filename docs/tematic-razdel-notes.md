@@ -94,8 +94,7 @@ Delphi LoadTree скрывает `parent_id`, `ord`, `nartype`. В JSON они �
 | Файл | Роль |
 |------|------|
 | `TematicRazdelNodeDto` | узел дерева |
-| `TematicRazdelRoots` | константа корня id=2 и обрезка ACL |
-| `TematicRazdelService` | JDBC + ACL |
+| `TematicRazdelService` | JDBC + ACL; корень id=2 и обрезка ACL |
 | `TematicRazdelController` | `/api/tematic-razdels` |
 
 `SecurityConfig` не менялся: `/api/**` authenticated.
