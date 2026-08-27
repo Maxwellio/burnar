@@ -1,13 +1,23 @@
 import { useState } from 'react'
 import Box from '@mui/material/Box'
-import Typography from '@mui/material/Typography'
+import Button from '@mui/material/Button'
+import UnfoldLess from '@mui/icons-material/UnfoldLess'
+import UnfoldMore from '@mui/icons-material/UnfoldMore'
 import { AxiosProvider, BaseTreeTable } from 'mainComponent'
 import { tematicRazdelColumns } from './tematicRazdelColumns.jsx'
 
+const buttonOutlinedSx = {
+  textTransform: 'none',
+  bgcolor: 'background.paper',
+  borderColor: 'divider',
+  color: 'text.secondary',
+}
+
 /**
  * Каталог тематических разделов (Delphi TfrmStructNar, read-only).
- * Дерево: GET /api/tematic-razdels и /{id}/children через BaseTreeTable.
- * selectedId держим для будущих кнопок вставки в наряд; тулбара пока нет.
+ * Дерево от id=2: GET /api/tematic-razdels и /{id}/children через BaseTreeTable.
+ * selectedId держим для будущих кнопок вставки в наряд.
+ * Тулбар: заглушки «Раскрыть все» / «Свернуть все» (как Add/Edit/Delete на нарядах).
  */
 export default function Catalog() {
   const [selectedId, setSelectedId] = useState(null)
@@ -22,11 +32,25 @@ export default function Catalog() {
         overflow: 'hidden',
         p: 2.5,
         boxSizing: 'border-box',
+        gap: 2,
       }}
     >
-      <Typography variant="h6" sx={{ flexShrink: 0, mb: 2 }}>
-        Тематические разделы
-      </Typography>
+      <Box
+        sx={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 1,
+          flexWrap: 'wrap',
+          flexShrink: 0,
+        }}
+      >
+        <Button variant="outlined" startIcon={<UnfoldMore />} sx={buttonOutlinedSx}>
+          Раскрыть все
+        </Button>
+        <Button variant="outlined" startIcon={<UnfoldLess />} sx={buttonOutlinedSx}>
+          Свернуть все
+        </Button>
+      </Box>
       <Box sx={{ flex: 1, minHeight: 0 }}>
         <AxiosProvider baseapi="/api">
           <BaseTreeTable

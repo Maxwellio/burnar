@@ -10,9 +10,10 @@
 |-------|--------|
 | Дерево: код раздела / наименование / код операции | **сделано** (read-only) |
 | Ленивые дети `GET .../{id}/children` | **сделано** |
-| ACL: не-админ — `org_stru_tem_cat` + sysboss; админ — всё дерево (id=1) | **сделано** |
+| ACL: не-админ — `org_stru_tem_cat` + sysboss, обрезано до поддерева id=2; админ — корень id=2 | **сделано** |
 | Выбор строки (`selectedId`) | **сделано** (кнопок нет) |
-| Тулбар: поиск, collapse/expand, автоширина | отложено |
+| Тулбар: заглушки «Раскрыть все» / «Свернуть все» | **сделано** (без действия) |
+| Тулбар: поиск, автоширина, рабочий expand/collapse | отложено |
 | Дата операции | отложено |
 | Вставка в задание / выполнение (`*_Add_Razdel`, `*_Add_Emp_Razdel`) | отложено |
 | Модальный `GetHierarchyItem` | отложено |
@@ -52,15 +53,15 @@ Delphi LoadTree скрывает `parent_id`, `ord`, `nartype`. В JSON они �
 
 **ACL**
 
-- Не-админ: корни = `tem_cat_id` из `org_stru_tem_cat`, где `org_id` в sysboss-поддереве орг. текущей карьеры (`karjera` + `doljtostruct` + `users`, `dtenter/dtout` vs now). Нет карьеры / нет строк каталога → пустой список.
-- Админ: без `org_stru_tem_cat`. Корень `id = 1` (Delphi `parId='1'` «все»); если нет — `parent_id IS NULL`.
-- Дети: все `parent_id = :id` без повторного фильтра каталога. USER: `:id` должен быть в лесу от своих корней, иначе `[]`.
+- Не-админ: корни = `tem_cat_id` из `org_stru_tem_cat`, где `org_id` в sysboss-поддереве орг. текущей карьеры (`karjera` + `doljtostruct` + `users`, `dtenter/dtout` vs now). Затем обрезка до поддерева `id = 2`: предок/сам 2 → один корень 2; потомки 2 сохраняются; узлы вне поддерева отбрасываются. Нет карьеры / нет строк каталога / после обрезки пусто → пустой список.
+- Админ: без `org_stru_tem_cat`. Корень `id = 2`; если нет — `parent_id IS NULL`.
+- Дети: все `parent_id = :id` без повторного фильтра каталога. USER: `:id` должен быть в лесу от обрезанных корней, иначе `[]`. Админ: `:id` только в поддереве 2, иначе `[]`.
 
 ---
 
 ## 3. Frontend
 
-- [frontend/src/pages/Catalog.jsx](../frontend/src/pages/Catalog.jsx) — `AxiosProvider` + `BaseTreeTable url="/tematic-razdels"`
+- [frontend/src/pages/Catalog.jsx](../frontend/src/pages/Catalog.jsx) — тулбар-заглушки + `AxiosProvider` + `BaseTreeTable url="/tematic-razdels"` (заголовка над таблицей нет)
 - [frontend/src/pages/tematicRazdelColumns.jsx](../frontend/src/pages/tematicRazdelColumns.jsx) — три колонки; expander в «Наименование» (`hasChildren` / `row.depth`)
 - [frontend/src/config/menuItems.jsx](../frontend/src/config/menuItems.jsx) — пункт «Тематические разделы»
 
@@ -77,7 +78,7 @@ Delphi LoadTree скрывает `parent_id`, `ord`, `nartype`. В JSON они �
 | Delphi | Назначение |
 |--------|------------|
 | Поиск + Locate | `Edit1` / ToolButton1 |
-| Collapse/expand | ToolButton2 |
+| Collapse/expand | ToolButton2 — в UI заглушки «Раскрыть все» / «Свернуть все», без действия |
 | Автоширина | ToolButton3 |
 | «Задание» N1/N2/N5 | `Zadanie_Add_Razdel` / `Zadanie_Add_Emp_Razdel` |
 | «Выполнение» N3/N4/N6 | `vipolnenie_Add_Razdel` / `Vipolnenie_Add_Emp_Razdel` |
@@ -93,6 +94,7 @@ Delphi LoadTree скрывает `parent_id`, `ord`, `nartype`. В JSON они �
 | Файл | Роль |
 |------|------|
 | `TematicRazdelNodeDto` | узел дерева |
+| `TematicRazdelRoots` | константа корня id=2 и обрезка ACL |
 | `TematicRazdelService` | JDBC + ACL |
 | `TematicRazdelController` | `/api/tematic-razdels` |
 

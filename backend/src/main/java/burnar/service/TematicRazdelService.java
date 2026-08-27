@@ -14,12 +14,15 @@ import java.sql.SQLException;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * Дерево public.tematic_razdel для BaseTreeTable (Delphi formStructNur / tbtnStructNarsClick).
- * Корни не-админа — org_stru_tem_cat по sysboss-поддереву карьеры (qrShowTemRazdel);
- * админ — узел id=1 («все»), иначе parent_id IS NULL. Дети без повторного ACL по каталогу,
- * но parent должен лежать в видимом лесу (иначе пустой список).
+ * Корни не-админа — org_stru_tem_cat по sysboss-поддереву карьеры (qrShowTemRazdel),
+ * обрезанные до поддерева id=2; админ — узел id=2, иначе parent_id IS NULL.
+ * Дети без повторного фильтра каталога, но parent должен лежать в видимом лесу
+ * (для админа — только поддерево id=2).
  */
 @Service
 public class TematicRazdelService {
@@ -60,6 +63,24 @@ public class TematicRazdelService {
                     + "  SELECT tmp.id FROM tmp"
                     + ")";
 
+    /** Предки catalog root включая его самого (1 → 2). */
+    private static final String ANCESTOR_IDS_SQL =
+            "WITH RECURSIVE anc AS ("
+                    + "  SELECT t.id, t.parent_id FROM public.tematic_razdel t WHERE t.id = :rootId "
+                    + "  UNION ALL "
+                    + "  SELECT p.id, p.parent_id FROM public.tematic_razdel p "
+                    + "  INNER JOIN anc a ON a.parent_id = p.id"
+                    + ") SELECT anc.id FROM anc";
+
+    /** Поддерево catalog root включая его самого. */
+    private static final String SUBTREE_IDS_SQL =
+            "WITH RECURSIVE sub AS ("
+                    + "  SELECT t.id FROM public.tematic_razdel t WHERE t.id = :rootId "
+                    + "  UNION ALL "
+                    + "  SELECT c.id FROM public.tematic_razdel c "
+                    + "  INNER JOIN sub s ON c.parent_id = s.id"
+                    + ") SELECT sub.id FROM sub";
+
     private static final RowMapper<TematicRazdelNodeDto> MAPPER = (rs, rowNum) -> {
         TematicRazdelNodeDto dto = new TematicRazdelNodeDto();
         dto.setId(getInteger(rs, "id"));
@@ -80,20 +101,22 @@ public class TematicRazdelService {
         this.orgAccessService = orgAccessService;
     }
 
-    /** Корни дерева: админ — id=1 / null-parent; иначе org_stru_tem_cat. */
+    /** Корни дерева: админ — id=2 / null-parent; иначе org_stru_tem_cat, обрезанные до id=2. */
     public List<TematicRazdelNodeDto> findRoots() {
         String username = currentUsername();
         if (!StringUtils.hasText(username)) {
             return Collections.emptyList();
         }
         if (orgAccessService.isAdmin(username)) {
-            List<TematicRazdelNodeDto> fromAll = queryNodes("WHERE t.id = 1 ", new MapSqlParameterSource());
-            if (!fromAll.isEmpty()) {
-                return fromAll;
+            MapSqlParameterSource rootParams =
+                    new MapSqlParameterSource("rootId", TematicRazdelRoots.CATALOG_ROOT_ID);
+            List<TematicRazdelNodeDto> fromCatalogRoot = queryNodes("WHERE t.id = :rootId ", rootParams);
+            if (!fromCatalogRoot.isEmpty()) {
+                return fromCatalogRoot;
             }
             return queryNodes("WHERE t.parent_id IS NULL ", new MapSqlParameterSource());
         }
-        List<Integer> rootIds = findAllowedRootIds(username);
+        List<Integer> rootIds = clipUserRootIds(username);
         if (rootIds.isEmpty()) {
             return Collections.emptyList();
         }
@@ -102,8 +125,8 @@ public class TematicRazdelService {
     }
 
     /**
-     * Дети parentId. Не-админу — только если parent в лесу от разрешённых корней
-     * (прямым URL чужую ветку не отдаём).
+     * Дети parentId. Не-админу — только если parent в лесу от обрезанных корней
+     * (прямым URL чужую ветку не отдаём). Админу — только поддерево id=2.
      */
     public List<TematicRazdelNodeDto> findChildren(int parentId) {
         String username = currentUsername();
@@ -131,11 +154,32 @@ public class TematicRazdelService {
                 .toList();
     }
 
+    private List<Integer> clipUserRootIds(String username) {
+        List<Integer> aclRoots = findAllowedRootIds(username);
+        if (aclRoots.isEmpty()) {
+            return List.of();
+        }
+        int catalogRoot = TematicRazdelRoots.CATALOG_ROOT_ID;
+        return TematicRazdelRoots.clipAclRoots(
+                aclRoots, queryIdSet(ANCESTOR_IDS_SQL, catalogRoot), queryIdSet(SUBTREE_IDS_SQL, catalogRoot));
+    }
+
+    private Set<Integer> queryIdSet(String sql, int rootId) {
+        return jdbc.query(
+                        sql,
+                        new MapSqlParameterSource("rootId", rootId),
+                        (rs, rowNum) -> getInteger(rs, "id"))
+                .stream()
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+    }
+
     private boolean isParentVisible(String username, int parentId) {
         if (orgAccessService.isAdmin(username)) {
-            return true;
+            return TematicRazdelRoots.isInCatalogSubtree(
+                    parentId, queryIdSet(SUBTREE_IDS_SQL, TematicRazdelRoots.CATALOG_ROOT_ID));
         }
-        List<Integer> rootIds = findAllowedRootIds(username);
+        List<Integer> rootIds = clipUserRootIds(username);
         if (rootIds.isEmpty()) {
             return false;
         }
