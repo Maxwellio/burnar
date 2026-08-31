@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
 import FormControl from '@mui/material/FormControl'
@@ -17,7 +17,7 @@ import { fetchNaryadyPeriods } from '../api/naryadyApi.js'
 import { fetchOrgUnits } from '../api/orgUnitsApi.js'
 import { useAuth } from '../context/AuthContext.jsx'
 import { isAdmin } from '../utils/roles.js'
-import { naryadColumns } from './naryadColumns.jsx'
+import { getNaryadColumns } from './naryadColumns.jsx'
 
 /** Режимы отбора по датам — как rgDate в Delphi NarListUnit. */
 const DATE_MODE_OPTIONS = [
@@ -77,6 +77,7 @@ const pickPeriod = (dates, preferred) => {
 export default function Home() {
   const { user } = useAuth()
   const admin = isAdmin(user)
+  const columns = useMemo(() => getNaryadColumns(admin), [admin])
 
   const [dateMode, setDateMode] = useState(0)
   const [selectedDate, setSelectedDate] = useState(currentMonthStart)
@@ -383,7 +384,7 @@ export default function Home() {
             <AxiosProvider baseapi="/api">
               <BaseTable
                 url="/naryady"
-                columns={naryadColumns}
+                columns={columns}
                 filters={filters}
                 setFilters={setFilters}
                 org={orgParam}

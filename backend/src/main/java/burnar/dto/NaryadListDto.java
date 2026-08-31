@@ -1,8 +1,12 @@
 package burnar.dto;
 
+import java.util.Collections;
+import java.util.List;
+
 /**
  * Строка списка нарядов бурения — поля как в Delphi NarListUnit (grdDefNarList).
  * id дублирует codNar: BaseTable берёт row.original.id при выборе/даблклике.
+ * masters — people.id + ФИО для админской приписки; поиск колонки идёт по masterNar.
  */
 public class NaryadListDto {
 
@@ -11,6 +15,7 @@ public class NaryadListDto {
     private String nameNar;
     private String ownerNar;
     private String masterNar;
+    private List<NaryadMasterDto> masters = Collections.emptyList();
     /** 1 — задание закрыто, 0 — открыто, null — нет записи defnarzad */
     private String zadClose;
     /** 1 — выполнение закрыто, 0 — открыто, null — нет записи defnarvip */
@@ -62,6 +67,14 @@ public class NaryadListDto {
 
     public void setMasterNar(String masterNar) {
         this.masterNar = masterNar;
+    }
+
+    public List<NaryadMasterDto> getMasters() {
+        return masters;
+    }
+
+    public void setMasters(List<NaryadMasterDto> masters) {
+        this.masters = masters != null ? masters : Collections.emptyList();
     }
 
     public String getZadClose() {
