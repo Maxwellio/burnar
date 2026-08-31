@@ -3,7 +3,11 @@ package burnar.service;
 import burnar.dto.BrigadeDto;
 import burnar.dto.NaryadListDto;
 import burnar.dto.NaryadListFilter;
+import burnar.dto.NaryadMasterDto;
 import burnar.dto.YearMonthsDto;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
@@ -16,6 +20,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -52,6 +57,32 @@ public class NaryadListService {
                     + " FROM burnar.znparams z WHERE z.defnar = d.key AND z.parcode = %d)";
 
     /**
+     * Мастера наряда: те же JOIN, что у getmasters / NaryadMasterGuard.
+     * Подпись — fioreports («инициалы, фамилия»), как getmasters; fallback на полное fio.
+     */
+    static final String MASTERS_JSON_SQL =
+            "(SELECT COALESCE(json_agg(json_build_object('id', x.id, 'fio', x.fio) ORDER BY x.fio), "
+                    + "'[]'::json) "
+                    + " FROM ( "
+                    + "   SELECT DISTINCT p.id, "
+                    + "          COALESCE(NULLIF(BTRIM(p.fioreports), ''), p.fio) AS fio "
+                    + "   FROM burnar.spr_workers w "
+                    + "   INNER JOIN burnar.doljtostruct ds ON ds.org = w.org AND w.boss = ds.doljnost "
+                    + "   INNER JOIN burnar.karjera k ON k.doljinstru = ds.key "
+                    + "     AND k.dtenter <= d.createdate AND k.dtout >= d.createdate "
+                    + "   INNER JOIN burnar.people p ON p.id = k.idpeople "
+                    + "   WHERE w.key = d.ownernar "
+                    + " ) x)";
+
+    /** Фильтр колонки «Мастер» — только ФИО из getmasters, без people.id. */
+    static final String MASTER_NAME_FILTER_SQL =
+            "burnar.getmasters(d.key) ILIKE CONCAT('%', :masterNar, '%')";
+
+    private static final ObjectMapper JSON = new ObjectMapper();
+    private static final TypeReference<List<NaryadMasterDto>> MASTERS_TYPE =
+            new TypeReference<List<NaryadMasterDto>>() { };
+
+    /**
      * Общий FROM/JOIN для COUNT и LIST — иначе фильтры по датам/бригаде/автору не совпадут с выборкой.
      * ACL автора — EXISTS в WHERE (OrgAccessService), не JOIN karjera.
      */
@@ -73,6 +104,7 @@ public class NaryadListService {
                     + "  d.nm AS name_nar, "
                     + "  " + OWNER_PATH_SQL + " AS owner_nar, "
                     + "  burnar.getmasters(d.key) AS master_nar, "
+                    + "  " + MASTERS_JSON_SQL + " AS masters, "
                     + "  CASE "
                     + "    WHEN (SELECT z.closed FROM burnar.defnarzad z WHERE d.key = z.narkey) = 1 THEN '1' "
                     + "    WHEN (SELECT z.closed FROM burnar.defnarzad z WHERE d.key = z.narkey) = 0 THEN '0' "
@@ -97,6 +129,7 @@ public class NaryadListService {
         dto.setNameNar(rs.getString("name_nar"));
         dto.setOwnerNar(rs.getString("owner_nar"));
         dto.setMasterNar(rs.getString("master_nar"));
+        dto.setMasters(parseMastersJson(rs.getString("masters")));
         dto.setZadClose(rs.getString("zad_close"));
         dto.setVipClose(rs.getString("vip_close"));
         dto.setVipBegDate(rs.getString("vip_beg_date"));
@@ -205,7 +238,7 @@ public class NaryadListService {
                 "d.nm ILIKE CONCAT('%', :nameNar, '%')");
         appendOwnerFilter(where, params, filter.getOwnerNar());
         appendTextFilter(where, params, "masterNar", filter.getMasterNar(),
-                "burnar.getmasters(d.key) ILIKE CONCAT('%', :masterNar, '%')");
+                MASTER_NAME_FILTER_SQL);
         appendDateFilter(where, params, "zadClose", filter.getZadClose(),
                 "dfz.begdate::date = CAST(:zadClose AS timestamp)::date");
         appendTextFilter(where, params, "vipClose", filter.getVipClose(),
@@ -369,6 +402,23 @@ public class NaryadListService {
         params.addValue("ownerNar", trimmed);
         where.append("AND ").append(OWNER_PATH_SQL)
                 .append(" ILIKE CONCAT('%', :ownerNar, '%') ");
+    }
+
+    /** json_agg мастеров → список; пустой/битый JSON даёт пустой список (ячейка падает на masterNar). */
+    static List<NaryadMasterDto> parseMastersJson(String json) {
+        if (!StringUtils.hasText(json)) {
+            return Collections.emptyList();
+        }
+        String trimmed = json.trim();
+        if ("[]".equals(trimmed) || "null".equalsIgnoreCase(trimmed)) {
+            return Collections.emptyList();
+        }
+        try {
+            List<NaryadMasterDto> parsed = JSON.readValue(trimmed, MASTERS_TYPE);
+            return parsed != null ? parsed : Collections.emptyList();
+        } catch (JsonProcessingException ex) {
+            return Collections.emptyList();
+        }
     }
 
     private static Integer parseOrgId(String value) {
