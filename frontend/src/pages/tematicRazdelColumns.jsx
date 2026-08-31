@@ -6,20 +6,20 @@ import KeyboardArrowRight from '@mui/icons-material/KeyboardArrowRight'
 /**
  * Колонки дерева тематических разделов (Delphi formStructNur: код / имя / oper).
  * Шеврона в BaseTreeTable нет — expander и отступ по row.depth только здесь.
- * Фильтры колонок выключены: в этом срезе только вывод.
+ * Поиск: текстовые фильтры шапки (id/oper — префикс, name — подстрока).
  */
 export const tematicRazdelColumns = [
   {
     accessorKey: 'id',
     header: 'Код раздела',
     size: 80,
-    enableColumnFilter: false,
+    enableColumnFilter: true,
   },
   {
     accessorKey: 'name',
     header: 'Наименование',
     size: 400,
-    enableColumnFilter: false,
+    enableColumnFilter: true,
     cell: ({ row, getValue }) => (
       <Box sx={{ display: 'flex', alignItems: 'center', minWidth: 0, pl: row.depth * 1.5 }}>
         {row.getCanExpand() ? (
@@ -51,7 +51,7 @@ export const tematicRazdelColumns = [
     accessorKey: 'oper',
     header: 'Код операции',
     size: 80,
-    enableColumnFilter: false,
+    enableColumnFilter: true,
     cell: ({ getValue }) => getValue() ?? '',
   },
 ]
