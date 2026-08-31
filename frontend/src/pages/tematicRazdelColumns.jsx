@@ -1,8 +1,11 @@
 import Box from '@mui/material/Box'
 import IconButton from '@mui/material/IconButton'
 
-/** Отступ одного уровня (~22px): больше, чем прежние 1.5 (12px), плюс направляющая. */
-const LEVEL_INDENT = 2.75
+/** Отступ одного уровня (~32px) + направляющая. */
+const LEVEL_INDENT = 4
+const EXPANDER_SIZE = 30
+/** Направляющая заметнее divider: толще и ближе к text.secondary. */
+const GUIDE_COLOR = '#64748B'
 
 /**
  * Колонки дерева тематических разделов (Delphi formStructNur: код / имя / oper).
@@ -22,7 +25,7 @@ export const tematicRazdelColumns = [
     size: 400,
     enableColumnFilter: true,
     cell: ({ row, getValue }) => (
-      <Box sx={{ display: 'flex', alignItems: 'stretch', minWidth: 0, minHeight: 28 }}>
+      <Box sx={{ display: 'flex', alignItems: 'stretch', minWidth: 0, minHeight: EXPANDER_SIZE }}>
         {Array.from({ length: row.depth }, (_, i) => (
           <Box
             key={i}
@@ -30,8 +33,9 @@ export const tematicRazdelColumns = [
             sx={{
               width: (theme) => theme.spacing(LEVEL_INDENT),
               flexShrink: 0,
-              borderLeft: '1px solid',
-              borderColor: 'divider',
+              borderLeft: '2px solid',
+              borderColor: GUIDE_COLOR,
+              ml: 0.5,
             }}
           />
         ))}
@@ -46,20 +50,20 @@ export const tematicRazdelColumns = [
               }}
               sx={{
                 p: 0,
-                mr: 0.5,
-                width: 22,
-                height: 22,
-                fontSize: 16,
+                mr: 0.75,
+                width: EXPANDER_SIZE,
+                height: EXPANDER_SIZE,
+                fontSize: 24,
                 fontWeight: 700,
                 lineHeight: 1,
-                color: 'text.secondary',
+                color: 'text.primary',
                 borderRadius: 0.5,
               }}
             >
               {row.getIsExpanded() ? '−' : '+'}
             </IconButton>
           ) : (
-            <Box sx={{ width: 22, flexShrink: 0, mr: 0.5 }} />
+            <Box sx={{ width: EXPANDER_SIZE, flexShrink: 0, mr: 0.75 }} />
           )}
           <Box
             component="span"
