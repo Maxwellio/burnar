@@ -25,21 +25,21 @@ class NaryadMastersJsonTest {
     @Test
     void singleMaster() {
         List<NaryadMasterDto> list = NaryadListService.parseMastersJson(
-                "[{\"id\":1042,\"fio\":\"Иванов Иван Иванович\"}]");
+                "[{\"id\":1042,\"fio\":\"Иванов И.И.\"}]");
         assertEquals(1, list.size());
         assertEquals(1042, list.get(0).getId());
-        assertEquals("Иванов Иван Иванович", list.get(0).getFio());
+        assertEquals("Иванов И.И.", list.get(0).getFio());
     }
 
     @Test
     void severalMastersKeepOrder() {
         List<NaryadMasterDto> list = NaryadListService.parseMastersJson(
-                "[{\"id\":1042,\"fio\":\"Иванов Иван\"},{\"id\":218,\"fio\":\"Петров Пётр\"}]");
+                "[{\"id\":1042,\"fio\":\"Иванов И.И.\"},{\"id\":218,\"fio\":\"Петров П.П.\"}]");
         assertEquals(2, list.size());
         assertEquals(1042, list.get(0).getId());
-        assertEquals("Иванов Иван", list.get(0).getFio());
+        assertEquals("Иванов И.И.", list.get(0).getFio());
         assertEquals(218, list.get(1).getId());
-        assertEquals("Петров Пётр", list.get(1).getFio());
+        assertEquals("Петров П.П.", list.get(1).getFio());
     }
 
     @Test
@@ -55,10 +55,10 @@ class NaryadMastersJsonTest {
 class NaryadMasterSqlContractTest {
 
     @Test
-    void selectAggregatesPeopleIdAndFio() {
+    void selectAggregatesPeopleIdAndFioreports() {
         String sql = NaryadListService.MASTERS_JSON_SQL;
         assertTrue(sql.contains("p.id"), sql);
-        assertTrue(sql.contains("p.fio"), sql);
+        assertTrue(sql.contains("p.fioreports"), sql);
         assertTrue(sql.contains("json_agg"), sql);
         assertTrue(sql.contains("json_build_object"), sql);
     }

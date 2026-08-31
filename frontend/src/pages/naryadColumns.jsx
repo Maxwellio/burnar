@@ -14,7 +14,7 @@ function CloseLockMark({ closed }) {
   return null
 }
 
-/** Админ: ФИО и приглушённый (people.id) на каждого мастера; иначе строка getmasters. */
+/** Админ: инициалы+фамилия (как getmasters) и приглушённый (people.id). */
 function MasterNarCell({ isAdmin, row }) {
   const masters = row.original.masters
   if (isAdmin && Array.isArray(masters) && masters.length > 0) {

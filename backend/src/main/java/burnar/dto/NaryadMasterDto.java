@@ -1,8 +1,8 @@
 package burnar.dto;
 
 /**
- * Мастер наряда: people.id + ФИО. Для админской приписки в колонке «Мастер»;
- * поиск колонки идёт по getmasters (только имена), не по этому id.
+ * Мастер наряда: people.id + подпись как в getmasters (fioreports: инициалы, фамилия).
+ * Для админской приписки в колонке «Мастер»; поиск колонки идёт по getmasters, не по id.
  */
 public class NaryadMasterDto {
 

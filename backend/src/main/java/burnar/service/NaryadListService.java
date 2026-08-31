@@ -57,14 +57,15 @@ public class NaryadListService {
                     + " FROM burnar.znparams z WHERE z.defnar = d.key AND z.parcode = %d)";
 
     /**
-     * Мастера наряда: те же JOIN, что у getmasters / NaryadMasterGuard,
-     * DISTINCT people.id + fio → json для админской приписки.
+     * Мастера наряда: те же JOIN, что у getmasters / NaryadMasterGuard.
+     * Подпись — fioreports («инициалы, фамилия»), как getmasters; fallback на полное fio.
      */
     static final String MASTERS_JSON_SQL =
             "(SELECT COALESCE(json_agg(json_build_object('id', x.id, 'fio', x.fio) ORDER BY x.fio), "
                     + "'[]'::json) "
                     + " FROM ( "
-                    + "   SELECT DISTINCT p.id, p.fio "
+                    + "   SELECT DISTINCT p.id, "
+                    + "          COALESCE(NULLIF(BTRIM(p.fioreports), ''), p.fio) AS fio "
                     + "   FROM burnar.spr_workers w "
                     + "   INNER JOIN burnar.doljtostruct ds ON ds.org = w.org AND w.boss = ds.doljnost "
                     + "   INNER JOIN burnar.karjera k ON k.doljinstru = ds.key "
