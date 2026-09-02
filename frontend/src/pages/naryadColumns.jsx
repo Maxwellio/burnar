@@ -1,12 +1,12 @@
 import Box from '@mui/material/Box'
-import LockOutlinedIcon from '@mui/icons-material/LockOutlined'
+import LockIcon from '@mui/icons-material/Lock'
 import LockOpenOutlinedIcon from '@mui/icons-material/LockOpenOutlined'
 import { FILTER_TYPES } from 'mainComponent'
 
 /** Иконка закрытия: '1' — закрыт, '0' — открыт, иначе без иконки. */
 function CloseLockMark({ closed }) {
   if (closed === '1') {
-    return <LockOutlinedIcon fontSize="small" color="action" sx={{ flexShrink: 0 }} />
+    return <LockIcon fontSize="small" color="action" sx={{ flexShrink: 0 }} />
   }
   if (closed === '0') {
     return <LockOpenOutlinedIcon fontSize="small" color="action" sx={{ flexShrink: 0 }} />
