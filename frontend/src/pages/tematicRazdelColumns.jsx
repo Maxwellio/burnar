@@ -38,6 +38,7 @@ export const tematicRazdelColumns = [
         {row.getCanExpand() ? (
           <IconButton
             size="small"
+            disableRipple
             aria-label={row.getIsExpanded() ? 'Свернуть' : 'Развернуть'}
             onClick={(e) => {
               e.stopPropagation()
@@ -49,7 +50,11 @@ export const tematicRazdelColumns = [
               width: EXPANDER_SIZE,
               height: EXPANDER_SIZE,
               color: 'text.primary',
-              borderRadius: 0.5,
+              borderRadius: 0,
+              backgroundColor: 'transparent',
+              '&:hover': { backgroundColor: 'transparent' },
+              '&:focus': { backgroundColor: 'transparent' },
+              '&:active': { backgroundColor: 'transparent' },
             }}
           >
             {row.getIsExpanded() ? (
