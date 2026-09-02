@@ -48,16 +48,20 @@ const HIDDEN_SCROLLBAR_SX = {
 
 const currentMonthStart = () => format(startOfMonth(new Date()), 'yyyy-MM-dd')
 
-/** Есть ли yyyy-MM-dd в дереве { year, month[] }. */
-const periodExistsInTree = (dates, yyyyMmDd) => {
-  if (!yyyyMmDd || yyyyMmDd.length < 7) return false
-  const year = Number(yyyyMmDd.slice(0, 4))
-  const month = String(Number(yyyyMmDd.slice(5, 7)))
+/** Есть ли период в дереве { year, month[] }: yyyy-MM-dd (месяц) или yyyy (весь год). */
+const periodExistsInTree = (dates, period) => {
+  if (!period) return false
+  if (/^\d{4}$/.test(period)) {
+    return dates.some((d) => d.year === Number(period))
+  }
+  if (period.length < 7) return false
+  const year = Number(period.slice(0, 4))
+  const month = String(Number(period.slice(5, 7)))
   const node = dates.find((d) => d.year === year)
   return Boolean(node?.month?.map(String).includes(month))
 }
 
-/** Fallback как в Delphi: текущий месяц, иначе последний в дереве. */
+/** Fallback как в Delphi: выбранный период (месяц/год), иначе текущий месяц, иначе последний в дереве. */
 const pickPeriod = (dates, preferred) => {
   if (periodExistsInTree(dates, preferred)) return preferred
   const now = currentMonthStart()
@@ -69,7 +73,7 @@ const pickPeriod = (dates, preferred) => {
 }
 
 /**
- * Список нарядов: слева отбор по месяцу (DynamicDateList), справа тулбар + BaseTable.
+ * Список нарядов: слева отбор по месяцу или году (DynamicDateList), справа тулбар + BaseTable.
  * dateMode/period/orgUnitId уходят в query через filters; колоночные фильтры — из таблицы.
  * Select «структура» — только ROLE_ADMIN.
  * Layout: боковая панель вплотную слева на всю высоту main (без заголовка «Наряды»).
@@ -293,10 +297,12 @@ export default function Home() {
             ...HIDDEN_SCROLLBAR_SX,
           }}
         >
+          {/* yearSelectable: клик по году выбирает весь год (period = yyyy) */}
           <DynamicDateList
             dates={dates}
             selectedDate={selectedDate}
             setSelectedDate={setSelectedDate}
+            yearSelectable
           />
         </Box>
       </Box>
