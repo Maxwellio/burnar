@@ -59,7 +59,7 @@ Delphi LoadTree скрывает `parent_id`, `ord`, `nartype`. В JSON они �
 - `oper` — префикс кода операции; у раздела без операции совпадения нет.
 - `name` — подстрока без регистра по отображаемому имени (`t.nm` или `spr_oper.nm`).
 - Совпадения возвращаются **вложенным лесом** с предками до видимого корня.
-- `expandAll` при активном поиске **игнорируется** (остаётся лес совпадений). Без поиска — полный лес тех же `rootIds` через `queryForest` + `nestFiltered` без отбора.
+- `expandAll` при активном поиске **игнорируется** (остаётся лес совпадений). Без поиска — полный лес тех же `rootIds` через `queryForest` + `nestFiltered` без отбора. Сброс колоночных фильтров снимает `expandAll` на клиенте — снова только корни, свёрнуто.
 
 **ACL**
 
@@ -71,7 +71,7 @@ Delphi LoadTree скрывает `parent_id`, `ord`, `nartype`. В JSON они �
 
 ## 3. Frontend
 
-- [frontend/src/pages/Catalog.jsx](../frontend/src/pages/Catalog.jsx) — «Раскрыть все» / «Свернуть все» + фильтры колонок + `BaseTreeTable url="/tematic-razdels"`
+- [frontend/src/pages/Catalog.jsx](../frontend/src/pages/Catalog.jsx) — «Раскрыть все» / «Свернуть все» + фильтры колонок + `BaseTreeTable url="/tematic-razdels"`. Сброс поиска снимает `expandAll`, дерево снова ленивые свёрнутые корни.
 - [frontend/src/pages/tematicRazdelColumns.jsx](../frontend/src/pages/tematicRazdelColumns.jsx) — три колонки с поиском в шапке; expander в «Наименование»
 - [frontend/src/config/menuItems.jsx](../frontend/src/config/menuItems.jsx) — пункт «Тематические разделы»
 

@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
 import UnfoldLess from '@mui/icons-material/UnfoldLess'
@@ -16,18 +16,28 @@ const buttonOutlinedSx = {
 /** Скрытый filter: уходит в GET как expandAll, колонки с таким id нет. */
 const EXPAND_ALL_FILTER_ID = 'expandAll'
 
+const isActiveColumnFilter = (filter) =>
+  filter.id !== EXPAND_ALL_FILTER_ID &&
+  filter.value != null &&
+  String(filter.value).trim() !== ''
+
 /**
  * Каталог тематических разделов (Delphi TfrmStructNar, read-only).
  * Дерево от id=2: GET /api/tematic-razdels и /{id}/children через BaseTreeTable.
  * selectedId держим для будущих кнопок вставки в наряд.
  * «Раскрыть все» — GET с expandAll (полный лес) + auto-expand пакета.
  * «Свернуть все» — новая ссылка filters, без refetch; дети остаются в памяти.
+ * Сброс колоночных фильтров снимает expandAll, иначе пакет снова раскроет весь лес.
  */
 export default function Catalog() {
   const [selectedId, setSelectedId] = useState(null)
   const [filters, setFilters] = useState([])
   const [expandToken, setExpandToken] = useState(null)
   const [filterEpoch, setFilterEpoch] = useState(0)
+  const filtersRef = useRef(filters)
+  const expandTokenRef = useRef(expandToken)
+  filtersRef.current = filters
+  expandTokenRef.current = expandToken
 
   const tableFilters = useMemo(() => {
     return expandToken == null
@@ -36,14 +46,18 @@ export default function Catalog() {
   }, [filters, expandToken, filterEpoch])
 
   const handleSetFilters = (updater) => {
-    setFilters((prev) => {
-      const current =
-        expandToken == null
-          ? prev
-          : [...prev, { id: EXPAND_ALL_FILTER_ID, value: String(expandToken) }]
-      const raw = typeof updater === 'function' ? updater(current) : updater
-      return (raw ?? []).filter((f) => f.id !== EXPAND_ALL_FILTER_ID)
-    })
+    const prev = filtersRef.current
+    const token = expandTokenRef.current
+    const current =
+      token == null ? prev : [...prev, { id: EXPAND_ALL_FILTER_ID, value: String(token) }]
+    const raw = typeof updater === 'function' ? updater(current) : updater
+    const next = (raw ?? []).filter((f) => f.id !== EXPAND_ALL_FILTER_ID)
+    const hadColumnFilters = prev.some(isActiveColumnFilter)
+    const hasColumnFilters = next.some(isActiveColumnFilter)
+    if (hadColumnFilters && !hasColumnFilters) {
+      setExpandToken(null)
+    }
+    setFilters(next)
   }
 
   return (
