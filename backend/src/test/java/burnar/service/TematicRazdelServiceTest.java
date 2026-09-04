@@ -120,6 +120,32 @@ class TematicRazdelServiceTest {
         assertFalse(forest.get(0).getChildren().get(0).getChildren().get(0).getHasChildren());
     }
 
+    @Test
+    void nestWithoutFiltersKeepsEntireForest() {
+        TematicRazdelNodeDto root = node(2, 1, "Каталог", null, 0);
+        TematicRazdelNodeDto drilling = node(15, 2, "Бурение", null, 1);
+        TematicRazdelNodeDto descent = node(150, 15, "Спуск", 67, 2);
+        TematicRazdelNodeDto lift = node(151, 15, "Подъём", 167, 3);
+        TematicRazdelNodeDto casing = node(20, 2, "Крепление", null, 4);
+        TematicRazdelNodeDto cement = node(201, 20, "Цемент", 670, 5);
+
+        List<TematicRazdelNodeDto> forest = TematicRazdelService.nestFiltered(
+                List.of(root, drilling, descent, lift, casing, cement),
+                List.of(2),
+                null,
+                null,
+                null);
+
+        assertEquals(List.of(2), forest.stream().map(TematicRazdelNodeDto::getId).toList());
+        assertEquals(List.of(15, 20), ids(forest.get(0).getChildren()));
+        assertEquals(List.of(150, 151), ids(forest.get(0).getChildren().get(0).getChildren()));
+        assertEquals(List.of(201), ids(forest.get(0).getChildren().get(1).getChildren()));
+        assertTrue(forest.get(0).getHasChildren());
+        assertTrue(forest.get(0).getChildren().get(0).getHasChildren());
+        assertFalse(forest.get(0).getChildren().get(0).getChildren().get(0).getHasChildren());
+        assertFalse(forest.get(0).getChildren().get(1).getChildren().get(0).getHasChildren());
+    }
+
     private static List<Integer> ids(List<TematicRazdelNodeDto> nodes) {
         return nodes.stream().map(TematicRazdelNodeDto::getId).toList();
     }

@@ -7,7 +7,7 @@ import java.util.List;
  * id = tematic_razdel.id (код раздела); name — t.nm либо spr_oper.nm;
  * oper — код операции (null = раздел). parentId/ord/nartype скрыты в UI,
  * нужны для кнопок вставки в наряд позже. children с сервера не отдаём
- * при ленивой загрузке; при поиске — вложенный лес совпадений с предками.
+ * при ленивой загрузке; при поиске или expandAll — вложенный лес.
  */
 public class TematicRazdelNodeDto {
 
