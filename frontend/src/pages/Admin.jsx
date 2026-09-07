@@ -325,13 +325,13 @@ export default function Admin() {
           {orgSelectVisible && (
             <FormControl
               size="small"
-              sx={{ ml: 'auto', minWidth: 180, bgcolor: 'background.paper' }}
+              sx={{ ml: 'auto', minWidth: 210, bgcolor: 'background.paper' }}
             >
-              <InputLabel id="admin-org-structure-label">структура</InputLabel>
+              <InputLabel id="admin-org-structure-label"Структурное подразделение</InputLabel>
               <Select
                 labelId="admin-org-structure-label"
                 id="admin-org-structure-select"
-                label="структура"
+                label="Структурное подразделение"
                 value={orgUnitId}
                 onChange={(e) => setOrgUnitId(e.target.value)}
               >
@@ -416,7 +416,7 @@ export default function Admin() {
               }}
             >
               <Typography variant="subtitle2" color="text.secondary" sx={{ mr: 1 }}>
-                Карьеры
+                Должностные периоды
               </Typography>
               <Button
                 variant="contained"
@@ -471,7 +471,7 @@ export default function Admin() {
                   }}
                 >
                   <Typography variant="body2" color="text.secondary" textAlign="center">
-                    Выберите пользователя слева, чтобы увидеть карьеры
+                    Выберите пользователя, чтобы увидеть должностные периоды
                   </Typography>
                 </Box>
               )}
