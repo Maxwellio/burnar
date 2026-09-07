@@ -70,7 +70,7 @@ export default function ProtectedLayout() {
           <Toolbar disableGutters sx={{ minHeight: '48px !important', px: 1 }}>
             <Navigation />
             <Box sx={{ textAlign: 'left', flex: 1, pl: 2, fontWeight: 600 }}>
-              Burnar
+              Расчет наряда на производство буровых работ
             </Box>
             <Box sx={{ textAlign: 'right', flex: 1, pr: 2, color: 'text.secondary' }}>
               {user.username}
