@@ -22,9 +22,9 @@ import { getNaryadColumns } from './naryadColumns.jsx'
 /** Режимы отбора по датам — как rgDate в Delphi NarListUnit. */
 const DATE_MODE_OPTIONS = [
   { value: 0, label: 'Создание наряда' },
-  { value: 1, label: 'План. начало бурения' },
-  { value: 2, label: 'Начало бурения' },
-  { value: 3, label: 'Учетные периоды' },
+  { value: 1, label: 'Начало бурения (план)' },
+  { value: 2, label: 'Начало бурения (факт)' },
+  { value: 3, label: 'Учетный период' },
   { value: 4, label: 'Закрытие наряда' },
 ]
 
@@ -346,7 +346,7 @@ export default function Home() {
               color: 'text.secondary',
             }}
           >
-            Редактировать
+            Открыть
           </Button>
           <Button
             variant="outlined"
@@ -364,13 +364,13 @@ export default function Home() {
           {orgSelectVisible && (
             <FormControl
               size="small"
-              sx={{ ml: 'auto', minWidth: 180, bgcolor: 'background.paper' }}
+              sx={{ ml: 'auto', minWidth: 210, bgcolor: 'background.paper' }}
             >
-              <InputLabel id="org-structure-label">структура</InputLabel>
+              <InputLabel id="org-structure-label">Структурное подразделение</InputLabel>
               <Select
                 labelId="org-structure-label"
                 id="org-structure-select"
-                label="структура"
+                label="Структурное подразделение"
                 value={orgUnitId}
                 onChange={(e) => setOrgUnitId(e.target.value)}
               >
