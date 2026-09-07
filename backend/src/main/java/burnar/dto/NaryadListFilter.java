@@ -28,7 +28,10 @@ public class NaryadListFilter {
      * 0 createdate, 1 dfz.begdate, 2 dfp.begdate, 3 vipolnenie_period, 4 закрытие.
      */
     private Integer dateMode;
-    /** Первое число месяца yyyy-MM-dd из DynamicDateList; сравнение по YYYY-MM. */
+    /**
+     * Период из DynamicDateList: первое число месяца yyyy-MM-dd либо год yyyy
+     * (выбран заголовок года); сравнение по префиксу YYYY-MM / YYYY.
+     */
     private String period;
     /**
      * Обрезка ACL по оргединице (только для ROLE_ADMIN).

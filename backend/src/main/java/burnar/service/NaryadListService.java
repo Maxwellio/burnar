@@ -30,7 +30,7 @@ import java.util.Map;
  * с ACL автора через OrgAccessService (EXISTS, без JOIN karjera в FROM).
  * Параметры скв/куст/мест: znparams parcode 149 / 470 / 5.
  * Фильтры колонок BaseTable — см. buildWhere; составные: zadClose→dfz.begdate, vipClose→getallpervip.
- * Боковая панель месяцев: dateMode + period (см. appendPeriodFilter / findPeriodTree).
+ * Боковая панель месяцев/годов: dateMode + period (см. appendPeriodFilter / findPeriodTree).
  * orgUnitId — только админ: точное совпадение орг. автора (карьера без фильтра dtout);
  * без cut админ видит всё.
  */
@@ -277,7 +277,9 @@ public class NaryadListService {
     }
 
     /**
-     * Отбор по месяцу сайдбара (period = yyyy-MM-dd → ym = YYYY-MM).
+     * Отбор по периоду сайдбара: месяц (period = yyyy-MM-dd → префикс YYYY-MM)
+     * или весь год (period = yyyy → префикс YYYY); сравнение префиксное (LIKE),
+     * для месяца эквивалентно прежнему точному совпадению YYYY-MM.
      * Режимы 3/4 — EXISTS по vipolnenie_period, чтобы не менять общий FROM_SQL.
      */
     private void appendPeriodFilter(
@@ -287,30 +289,33 @@ public class NaryadListService {
         if (!StringUtils.hasText(filter.getPeriod())) {
             return;
         }
-        String ym = toYearMonth(filter.getPeriod());
-        if (ym == null) {
+        String prefix = toPeriodPrefix(filter.getPeriod());
+        if (prefix == null) {
             return;
         }
         int mode = filter.getDateMode() != null ? filter.getDateMode() : 0;
-        params.addValue("periodYm", ym);
+        params.addValue("periodPrefix", prefix);
 
         switch (mode) {
-            case 1 -> where.append("AND to_char(dfz.begdate, 'YYYY-MM') = :periodYm ");
-            case 2 -> where.append("AND to_char(dfp.begdate, 'YYYY-MM') = :periodYm ");
+            case 1 -> where.append(
+                    "AND to_char(dfz.begdate, 'YYYY-MM') LIKE :periodPrefix || '%' ");
+            case 2 -> where.append(
+                    "AND to_char(dfp.begdate, 'YYYY-MM') LIKE :periodPrefix || '%' ");
             case 3 -> where.append(
                     "AND EXISTS (SELECT 1 FROM burnar.vipolnenie_period vpd "
                             + "WHERE vpd.narkey = d.key "
-                            + "AND (to_char(vpd.begoperdate, 'YYYY-MM') = :periodYm "
-                            + "OR to_char(vpd.outoperdate, 'YYYY-MM') = :periodYm)) ");
+                            + "AND (to_char(vpd.begoperdate, 'YYYY-MM') LIKE :periodPrefix || '%' "
+                            + "OR to_char(vpd.outoperdate, 'YYYY-MM') LIKE :periodPrefix || '%')) ");
             case 4 -> where.append(
                     "AND EXISTS (SELECT 1 FROM burnar.vipolnenie_period vpd "
                             + "INNER JOIN burnar.defnarvip dv ON dv.narkey = d.key "
                             + "WHERE vpd.narkey = d.key "
                             + "AND dv.closed = 1 "
-                            + "AND to_char(vpd.outoperdate, 'YYYY-MM') = :periodYm "
+                            + "AND to_char(vpd.outoperdate, 'YYYY-MM') LIKE :periodPrefix || '%' "
                             + "AND vpd.outoperdate = (SELECT MAX(vp2.outoperdate) "
                             + "FROM burnar.vipolnenie_period vp2 WHERE vp2.narkey = d.key)) ");
-            default -> where.append("AND to_char(d.createdate, 'YYYY-MM') = :periodYm ");
+            default -> where.append(
+                    "AND to_char(d.createdate, 'YYYY-MM') LIKE :periodPrefix || '%' ");
         }
     }
 
@@ -372,11 +377,14 @@ public class NaryadListService {
         };
     }
 
-    /** period yyyy-MM-dd или yyyy-MM → YYYY-MM; иначе null. */
-    private static String toYearMonth(String period) {
+    /** period yyyy-MM-dd или yyyy-MM → YYYY-MM; yyyy (выбран год) → YYYY; иначе null. */
+    private static String toPeriodPrefix(String period) {
         String trimmed = period.trim();
         if (trimmed.length() >= 7 && trimmed.charAt(4) == '-') {
             return trimmed.substring(0, 7);
+        }
+        if (trimmed.length() == 4 && trimmed.chars().allMatch(Character::isDigit)) {
+            return trimmed;
         }
         return null;
     }
