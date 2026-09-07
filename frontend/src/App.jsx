@@ -6,6 +6,7 @@ import { ConfirmProvider } from './context/ConfirmContext.jsx'
 import ProtectedLayout from './components/ProtectedLayout.jsx'
 import AdminOnly from './components/AdminOnly.jsx'
 import Home from './pages/Home.jsx'
+import NaryadPage from './pages/NaryadPage.jsx'
 import Login from './pages/Login.jsx'
 import Catalog from './pages/Catalog.jsx'
 import Reports from './pages/Reports.jsx'
@@ -28,6 +29,7 @@ export default function App() {
             <Route path="/login" element={<Login />} />
             <Route element={<ProtectedLayout />}>
               <Route path="/" element={<Home />} />
+              <Route path="/naryad/:id" element={<NaryadPage />} />
               <Route path="/catalog" element={<Catalog />} />
               <Route path="/reports" element={<Reports />} />
               <Route path="/settings" element={<Settings />} />
