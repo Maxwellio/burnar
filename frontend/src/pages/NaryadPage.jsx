@@ -83,8 +83,13 @@ export default function NaryadPage() {
           bgcolor: 'background.paper',
           border: 1,
           borderColor: 'divider',
+          p: 2,
         }}
-      />
+      >
+        <Typography color="text.secondary">
+          {panel === 'zad' ? 'Задание' : 'Выполнение'}: содержимое появится позже
+        </Typography>
+      </Box>
     </Box>
   )
 }
