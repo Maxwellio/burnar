@@ -2,6 +2,7 @@ package burnar.controller;
 
 import burnar.dto.TematicRazdelNodeDto;
 import burnar.service.TematicRazdelService;
+import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -29,8 +30,9 @@ public class TematicRazdelController {
     public List<TematicRazdelNodeDto> roots(
             @RequestParam(required = false) String id,
             @RequestParam(required = false) String name,
-            @RequestParam(required = false) String oper) {
-        return tematicRazdelService.findRoots(id, name, oper);
+            @RequestParam(required = false) String oper,
+            @RequestParam(required = false) String expandAll) {
+        return tematicRazdelService.findRoots(id, name, oper, StringUtils.hasText(expandAll));
     }
 
     @GetMapping("/{id}/children")

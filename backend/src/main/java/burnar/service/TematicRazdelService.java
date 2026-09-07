@@ -124,8 +124,10 @@ public class TematicRazdelService {
     }
 
     /** Корни дерева: админ — id=2 / null-parent; иначе org_stru_tem_cat, обрезанные до id=2.
-     *  При непустых фильтрах — вложенный лес совпадений (предки сохранены). */
-    public List<TematicRazdelNodeDto> findRoots(String idPrefix, String nameSubstr, String operPrefix) {
+     *  При непустых фильтрах — вложенный лес совпадений (предки сохранены).
+     *  expandAll без колоночных фильтров — тот же лес целиком (кнопка «Раскрыть все»). */
+    public List<TematicRazdelNodeDto> findRoots(
+            String idPrefix, String nameSubstr, String operPrefix, boolean expandAll) {
         String username = currentUsername();
         if (!StringUtils.hasText(username)) {
             return Collections.emptyList();
@@ -134,11 +136,14 @@ public class TematicRazdelService {
         if (rootIds.isEmpty()) {
             return Collections.emptyList();
         }
-        if (!hasFilters(idPrefix, nameSubstr, operPrefix)) {
-            MapSqlParameterSource params = new MapSqlParameterSource("rootIds", rootIds);
-            return queryNodes("WHERE t.id IN (:rootIds) ", params);
+        if (hasFilters(idPrefix, nameSubstr, operPrefix)) {
+            return nestFiltered(queryForest(rootIds), rootIds, idPrefix, nameSubstr, operPrefix);
         }
-        return nestFiltered(queryForest(rootIds), rootIds, idPrefix, nameSubstr, operPrefix);
+        if (expandAll) {
+            return nestFiltered(queryForest(rootIds), rootIds, null, null, null);
+        }
+        MapSqlParameterSource params = new MapSqlParameterSource("rootIds", rootIds);
+        return queryNodes("WHERE t.id IN (:rootIds) ", params);
     }
 
     /**
