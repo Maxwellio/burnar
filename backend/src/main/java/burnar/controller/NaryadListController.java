@@ -1,6 +1,7 @@
 package burnar.controller;
 
 import burnar.dto.BrigadeDto;
+import burnar.dto.NaryadHeaderDto;
 import burnar.dto.NaryadListDto;
 import burnar.dto.NaryadListFilter;
 import burnar.dto.YearMonthsDto;
@@ -8,6 +9,7 @@ import burnar.service.NaryadListService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -84,5 +86,13 @@ public class NaryadListController {
             @RequestParam(defaultValue = "0") int dateMode,
             @RequestParam(required = false) Integer orgUnitId) {
         return naryadListService.findPeriodTree(dateMode, orgUnitId);
+    }
+
+    /**
+     * Заголовок карточки /naryad/:id. Только цифры, чтобы не перехватить /periods и /brigades.
+     */
+    @GetMapping("/{id:\\d+}")
+    public NaryadHeaderDto header(@PathVariable int id) {
+        return naryadListService.findHeader(id);
     }
 }

@@ -10,3 +10,9 @@ export function fetchNaryadyPeriods(dateMode = 0, orgUnitId) {
     })}`,
   )
 }
+
+/** Заголовок карточки: { id, nameNar }. */
+export function fetchNaryadHeader(id) {
+  return requestJson(`/naryady/${id}`)
+}
+

@@ -1,23 +1,94 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import Box from '@mui/material/Box'
+import IconButton from '@mui/material/IconButton'
 import ToggleButton from '@mui/material/ToggleButton'
 import ToggleButtonGroup from '@mui/material/ToggleButtonGroup'
+import Tooltip from '@mui/material/Tooltip'
 import Typography from '@mui/material/Typography'
+import MenuBook from '@mui/icons-material/MenuBook'
+import Tune from '@mui/icons-material/Tune'
+import { fetchNaryadHeader } from '../api/naryadyApi.js'
+import NaryadZadaniePanel from './NaryadZadaniePanel.jsx'
+import { ACTION_BAR_HEIGHT } from './naryadPageLayout.js'
 
-/** Вкладки карточки наряда — Delphi TfrmComNarZad / TfrmComNarVip. Наполнение позже. */
+/** Вкладки карточки наряда — Delphi TfrmComNarZad / TfrmComNarVip. */
 const PANELS = [
   { value: 'zad', label: 'Задание' },
   { value: 'vip', label: 'Выполнение' },
 ]
 
+const toggleGroupSx = {
+  alignSelf: 'stretch',
+  height: '100%',
+  '& .MuiToggleButtonGroup-grouped': {
+    margin: 0,
+    borderRadius: '0 !important',
+    height: '100%',
+    borderTop: 'none',
+    borderBottom: 'none',
+  },
+  '& .MuiToggleButtonGroup-grouped:not(:first-of-type)': {
+    marginLeft: 0,
+    borderLeft: '1px solid',
+    borderColor: 'divider',
+  },
+  '& .MuiToggleButton-root': {
+    height: '100%',
+    px: 2.5,
+    py: 0,
+    textTransform: 'none',
+    color: 'text.primary',
+    borderColor: 'divider',
+    borderRadius: 0,
+  },
+  '& .MuiToggleButton-root.Mui-selected': {
+    color: '#1976d2',
+    backgroundColor: '#D0EBFF',
+    '&:hover': {
+      backgroundColor: '#B1D7FF',
+    },
+  },
+}
+
+const stubIconSx = {
+  height: '100%',
+  width: ACTION_BAR_HEIGHT,
+  borderRadius: 0,
+  borderLeft: 1,
+  borderColor: 'divider',
+  color: 'text.secondary',
+}
+
 /**
  * Карточка наряда /naryad/:id.
- * ToggleButtonGroup — заглушка под будущие формы, которые развернутся вниз при выборе вкладки.
+ * Action bar под шапкой приложения: вкладки на всю высоту бара, подпись наряда,
+ * справа заглушки общих кнопок (параметры / каталог).
  */
 export default function NaryadPage() {
   const { id } = useParams()
   const [panel, setPanel] = useState('zad')
+  const [nameNar, setNameNar] = useState('')
+
+  useEffect(() => {
+    let cancelled = false
+    setNameNar('')
+    if (id == null || id === '') return undefined
+    fetchNaryadHeader(id)
+      .then((header) => {
+        if (!cancelled) setNameNar(header?.nameNar ?? '')
+      })
+      .catch(() => {
+        if (!cancelled) setNameNar('')
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [id])
+
+  const title = nameNar
+    ? `Наряд - ${id} ${nameNar}`
+    : `Наряд - ${id}`
 
   return (
     <Box
@@ -27,46 +98,27 @@ export default function NaryadPage() {
         flexDirection: 'column',
         minHeight: 0,
         overflow: 'hidden',
-        p: 2.5,
-        gap: 2,
         bgcolor: 'background.default',
-        boxSizing: 'border-box',
       }}
     >
       <Box
         sx={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 2,
-          flexWrap: 'wrap',
+          height: ACTION_BAR_HEIGHT,
           flexShrink: 0,
+          display: 'flex',
+          alignItems: 'stretch',
+          bgcolor: 'background.paper',
+          borderBottom: 1,
+          borderColor: 'divider',
         }}
       >
-        <Typography variant="h6" component="h1">
-          Наряд {id}
-        </Typography>
         <ToggleButtonGroup
           value={panel}
           exclusive
           onChange={(_e, next) => {
             if (next !== null) setPanel(next)
           }}
-          sx={{
-            '& .MuiToggleButton-root': {
-              textTransform: 'none',
-              px: 2,
-              py: 1,
-              color: 'black',
-              borderColor: 'divider',
-            },
-            '& .MuiToggleButton-root.Mui-selected': {
-              color: '#1976d2',
-              backgroundColor: '#D0EBFF',
-              '&:hover': {
-                backgroundColor: '#B1D7FF',
-              },
-            },
-          }}
+          sx={toggleGroupSx}
         >
           {PANELS.map((item) => (
             <ToggleButton key={item.value} value={item.value}>
@@ -74,22 +126,61 @@ export default function NaryadPage() {
             </ToggleButton>
           ))}
         </ToggleButtonGroup>
+
+        <Typography
+          component="h1"
+          noWrap
+          title={title}
+          sx={{
+            flex: 1,
+            minWidth: 0,
+            px: 2,
+            display: 'flex',
+            alignItems: 'center',
+            fontWeight: 600,
+            fontSize: '1rem',
+          }}
+        >
+          {title}
+        </Typography>
+
+        <Tooltip title="Общие параметры наряда">
+          <IconButton
+            aria-label="Общие параметры наряда"
+            sx={stubIconSx}
+          >
+            <Tune />
+          </IconButton>
+        </Tooltip>
+        <Tooltip title="Каталог">
+          <IconButton
+            aria-label="Каталог"
+            sx={stubIconSx}
+          >
+            <MenuBook />
+          </IconButton>
+        </Tooltip>
       </Box>
 
-      <Box
-        sx={{
-          flex: 1,
-          minHeight: 0,
-          bgcolor: 'background.paper',
-          border: 1,
-          borderColor: 'divider',
-          p: 2,
-        }}
-      >
-        <Typography color="text.secondary">
-          {panel === 'zad' ? 'Задание' : 'Выполнение'}: содержимое появится позже
-        </Typography>
-      </Box>
+      {panel === 'zad' ? (
+        <NaryadZadaniePanel naryadId={id} />
+      ) : (
+        <Box
+          sx={{
+            flex: 1,
+            minHeight: 0,
+            bgcolor: 'background.paper',
+            m: 2.5,
+            border: 1,
+            borderColor: 'divider',
+            p: 2,
+          }}
+        >
+          <Typography color="text.secondary">
+            Выполнение: содержимое появится позже
+          </Typography>
+        </Box>
+      )}
     </Box>
   )
 }
