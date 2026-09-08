@@ -1,6 +1,6 @@
 /**
- * Колонки параметров операции (Delphi GrdParams, ColCount=3).
- * Заголовки-заглушки: параметр / значение / единица (точные поля — когда появится API).
+ * Колонки параметров операции (Delphi GrdParams).
+ * Заголовки-заглушки: параметр / значение (точные поля — когда появится API).
  */
 export const naryadZadanieParamColumns = [
   {
@@ -13,12 +13,6 @@ export const naryadZadanieParamColumns = [
     accessorKey: 'val',
     header: 'Значение',
     size: 100,
-    enableColumnFilter: false,
-  },
-  {
-    accessorKey: 'edizm',
-    header: 'Ед. изм.',
-    size: 80,
     enableColumnFilter: false,
   },
 ]

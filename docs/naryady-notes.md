@@ -14,8 +14,9 @@
 | Вкладки «Задание» / «Выполнение» | **сделано** (ToggleButtonGroup в action bar) |
 | Action bar (подпись наряда, заглушки параметров/каталога) | **сделано** |
 | Вкладка «Задание»: дерево 75% / параметры + алгоритм 25% | **сделано** (таблицы пустые, без API) |
+| Вкладка «Выполнение»: тот же лейаут | **сделано** (таблицы пустые, без API; колонки плюс «Факт» и «Период») |
 | Добавить / Удалить | отложено («Удалить» уже `disabled` без выбора) |
-| Наполнение выполнения и данные задания | отложено |
+| Данные деревьев, параметры, расчёт | отложено |
 
 ---
 
@@ -61,15 +62,26 @@
 | Action bar задания (48px) | пустой, кнопки позже |
 | Слева 75% | `BaseTreeTable` `GET /api/naryady/{id}/zadanie` (пока 404 → пустое тело, шапка колонок видна) |
 | Справа сверху | `BaseTable` `GET /api/naryady/{id}/zadanie/params` (то же) |
-| Справа снизу ~120px | read-only поле «Алгоритм» (Delphi `algInfo`), пока пустое |
+| Справа снизу ~120px | read-only поле алгоритма (Delphi `algInfo`, без подписи), пока пустое |
 
 Доли фиксированные, без drag-сплиттера. Бэкенда дерева/параметров нет: фронт только монтирует таблицы.
 
 Колонки дерева (видимые Delphi `trGrdNar`): Код, № п/п, Название работы (expander), Время начала, Источник норм., от, до, Н.в. на ед., Н.в. на объём, ЭКС. Фильтров колонок нет.
 
-Колонки параметров (Delphi `GrdParams`): Параметр, Значение, Ед. изм. — заголовки-заглушки до контракта API.
+Колонки параметров (Delphi `GrdParams`): Параметр, Значение — заголовки-заглушки до контракта API.
 
-Вкладка «Выполнение» пока подпись «содержимое появится позже».
+### Вкладка «Выполнение»
+
+Тот же лейаут (`NaryadVipolneniePanel` / `NaryadWorkspacePanel`):
+
+| Элемент | Поведение |
+|---------|-----------|
+| Action bar выполнения (48px) | пустой, кнопки позже |
+| Слева 75% | `BaseTreeTable` `GET /api/naryady/{id}/vipolnenie` |
+| Справа сверху | `BaseTable` `GET /api/naryady/{id}/vipolnenie/params` |
+| Справа снизу ~120px | то же read-only поле алгоритма |
+
+Колонки дерева как у задания, плюс видимые Delphi-поля «Факт» и «Период». Итоги по периодам (нижняя панель Delphi) пока не делаем.
 
 ---
 
@@ -79,8 +91,11 @@
 |------|------|
 | `frontend/src/pages/Home.jsx` | список, выбор строки, открытие |
 | `frontend/src/pages/NaryadPage.jsx` | карточка: action bar + вкладки |
-| `frontend/src/pages/NaryadZadaniePanel.jsx` | раскладка задания |
-| `frontend/src/pages/naryadZadanieColumns.jsx` | колонки дерева работ |
+| `frontend/src/pages/NaryadWorkspacePanel.jsx` | общая раскладка задания/выполнения |
+| `frontend/src/pages/NaryadZadaniePanel.jsx` | вкладка задания |
+| `frontend/src/pages/NaryadVipolneniePanel.jsx` | вкладка выполнения |
+| `frontend/src/pages/naryadZadanieColumns.jsx` | колонки дерева задания |
+| `frontend/src/pages/naryadVipolnenieColumns.jsx` | колонки дерева выполнения |
 | `frontend/src/pages/naryadZadanieParamColumns.jsx` | колонки параметров |
 | `frontend/src/api/naryadyApi.js` | `fetchNaryadHeader` |
 | `frontend/src/App.jsx` | маршрут `/naryad/:id` |

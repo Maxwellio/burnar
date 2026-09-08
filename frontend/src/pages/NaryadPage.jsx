@@ -10,6 +10,7 @@ import MenuBook from '@mui/icons-material/MenuBook'
 import Tune from '@mui/icons-material/Tune'
 import { fetchNaryadHeader } from '../api/naryadyApi.js'
 import NaryadZadaniePanel from './NaryadZadaniePanel.jsx'
+import NaryadVipolneniePanel from './NaryadVipolneniePanel.jsx'
 import { ACTION_BAR_HEIGHT } from './naryadPageLayout.js'
 
 /** Вкладки карточки наряда — Delphi TfrmComNarZad / TfrmComNarVip. */
@@ -165,21 +166,7 @@ export default function NaryadPage() {
       {panel === 'zad' ? (
         <NaryadZadaniePanel naryadId={id} />
       ) : (
-        <Box
-          sx={{
-            flex: 1,
-            minHeight: 0,
-            bgcolor: 'background.paper',
-            m: 2.5,
-            border: 1,
-            borderColor: 'divider',
-            p: 2,
-          }}
-        >
-          <Typography color="text.secondary">
-            Выполнение: содержимое появится позже
-          </Typography>
-        </Box>
+        <NaryadVipolneniePanel naryadId={id} />
       )}
     </Box>
   )
