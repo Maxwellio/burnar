@@ -55,7 +55,7 @@
 
 ### Вкладка «Задание»
 
-`NaryadZadaniePanel` сразу под page action bar:
+`NaryadWorkspacePanel` сразу под page action bar (`kind=zad`):
 
 | Элемент | Поведение |
 |---------|-----------|
@@ -72,7 +72,7 @@
 
 ### Вкладка «Выполнение»
 
-Тот же лейаут (`NaryadVipolneniePanel` / `NaryadWorkspacePanel`):
+Тот же экземпляр `NaryadWorkspacePanel` (`kind=vip`), без размонтирования сплиттера:
 
 | Элемент | Поведение |
 |---------|-----------|
@@ -91,12 +91,8 @@
 |------|------|
 | `frontend/src/pages/Home.jsx` | список, выбор строки, открытие |
 | `frontend/src/pages/NaryadPage.jsx` | карточка: action bar + вкладки |
-| `frontend/src/pages/NaryadWorkspacePanel.jsx` | общая раскладка задания/выполнения |
-| `frontend/src/pages/NaryadZadaniePanel.jsx` | вкладка задания |
-| `frontend/src/pages/NaryadVipolneniePanel.jsx` | вкладка выполнения |
-| `frontend/src/pages/naryadZadanieColumns.jsx` | колонки дерева задания |
-| `frontend/src/pages/naryadVipolnenieColumns.jsx` | колонки дерева выполнения |
-| `frontend/src/pages/naryadZadanieParamColumns.jsx` | колонки параметров |
+| `frontend/src/pages/NaryadWorkspacePanel.jsx` | общая раскладка задания и выполнения |
+| `frontend/src/pages/naryadWorkspaceColumns.jsx` | колонки дерева (задание/выполнение) и параметров |
 | `frontend/src/api/naryadyApi.js` | `fetchNaryadHeader` |
 | `frontend/src/App.jsx` | маршрут `/naryad/:id` |
 | `frontend/src/components/Navigation.jsx` | active для `/naryad/...` |

@@ -10,8 +10,7 @@ import Close from '@mui/icons-material/Close'
 import MenuBook from '@mui/icons-material/MenuBook'
 import Tune from '@mui/icons-material/Tune'
 import { fetchNaryadHeader } from '../api/naryadyApi.js'
-import NaryadZadaniePanel from './NaryadZadaniePanel.jsx'
-import NaryadVipolneniePanel from './NaryadVipolneniePanel.jsx'
+import NaryadWorkspacePanel from './NaryadWorkspacePanel.jsx'
 import { ACTION_BAR_HEIGHT } from './naryadPageLayout.js'
 
 /** Вкладки карточки наряда — Delphi TfrmComNarZad / TfrmComNarVip. */
@@ -174,11 +173,7 @@ export default function NaryadPage() {
         </Tooltip>
       </Box>
 
-      {panel === 'zad' ? (
-        <NaryadZadaniePanel naryadId={id} />
-      ) : (
-        <NaryadVipolneniePanel naryadId={id} />
-      )}
+      <NaryadWorkspacePanel kind={panel} naryadId={id} />
     </Box>
   )
 }

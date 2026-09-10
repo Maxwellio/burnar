@@ -27,7 +27,9 @@ export function writeStoredRightPanelWidth(width) {
 }
 
 export function clampRightPanelWidth(width, containerWidth) {
-  if (!(containerWidth > 0)) return RIGHT_PANEL_MIN
+  if (!(containerWidth > 0)) {
+    return Number.isFinite(width) && width > 0 ? Math.round(width) : RIGHT_PANEL_MIN
+  }
   const maxRight = Math.floor(containerWidth * RIGHT_PANEL_MAX_RATIO)
   const maxByLeft = containerWidth - LEFT_PANEL_MIN
   const upper = Math.max(RIGHT_PANEL_MIN, Math.min(maxRight, maxByLeft))
