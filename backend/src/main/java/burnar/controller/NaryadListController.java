@@ -89,7 +89,8 @@ public class NaryadListController {
     }
 
     /**
-     * Заголовок карточки /naryad/:id. Только цифры, чтобы не перехватить /periods и /brigades.
+     * Заголовок карточки /naryad/:id (id, nameNar, hasZadanie, hasVipolnenie).
+     * Только цифры, чтобы не перехватить /periods и /brigades.
      */
     @GetMapping("/{id:\\d+}")
     public NaryadHeaderDto header(@PathVariable int id) {

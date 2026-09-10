@@ -10,8 +10,10 @@ import Close from '@mui/icons-material/Close'
 import MenuBook from '@mui/icons-material/MenuBook'
 import Tune from '@mui/icons-material/Tune'
 import { fetchNaryadHeader } from '../api/naryadyApi.js'
-import NaryadWorkspacePanel from './NaryadWorkspacePanel.jsx'
+import NaryadZadaniePanel from './NaryadZadaniePanel.jsx'
+import NaryadVipolneniePanel from './NaryadVipolneniePanel.jsx'
 import { ACTION_BAR_HEIGHT } from './naryadPageLayout.js'
+import { initialOpenPanels, toggleOpenPanels } from './naryadTabs.js'
 
 /** Вкладки карточки наряда — Delphi TfrmComNarZad / TfrmComNarVip. */
 const PANELS = [
@@ -61,33 +63,75 @@ const stubIconSx = {
   color: 'text.secondary',
 }
 
+function paneSx(visible, bothOpen, withDivider) {
+  return {
+    display: visible ? 'flex' : 'none',
+    flexDirection: 'column',
+    flex: bothOpen ? '1 1 50%' : '1 1 100%',
+    minWidth: 0,
+    minHeight: 0,
+    overflow: 'hidden',
+    ...(withDivider
+      ? { borderRight: 1, borderColor: 'divider' }
+      : null),
+  }
+}
+
 /**
  * Карточка наряда /naryad/:id.
- * Action bar под шапкой приложения: вкладки на всю высоту бара, подпись наряда,
- * справа заглушки параметров/каталога и выход на список.
+ * Action bar: включаемые вкладки (нельзя снять последнюю), подпись наряда,
+ * заглушки параметров/каталога и выход на список.
+ * Обе вкладки при включении делят область слева-направо пополам и остаются
+ * смонтированными при скрытии, чтобы ширины колонок сохранялись.
  */
 export default function NaryadPage() {
   const { id } = useParams()
   const navigate = useNavigate()
-  const [panel, setPanel] = useState('zad')
+  const [openPanels, setOpenPanels] = useState([])
+  const [mountedPanels, setMountedPanels] = useState({ zad: false, vip: false })
   const [nameNar, setNameNar] = useState('')
 
   useEffect(() => {
     let cancelled = false
     setNameNar('')
+    setOpenPanels([])
+    setMountedPanels({ zad: false, vip: false })
     if (id == null || id === '') return undefined
     fetchNaryadHeader(id)
       .then((header) => {
-        if (!cancelled) setNameNar(header?.nameNar ?? '')
+        if (cancelled) return
+        setNameNar(header?.nameNar ?? '')
+        const next = initialOpenPanels({
+          hasZadanie: Boolean(header?.hasZadanie),
+          hasVipolnenie: Boolean(header?.hasVipolnenie),
+        })
+        setOpenPanels(next)
+        setMountedPanels({
+          zad: next.includes('zad'),
+          vip: next.includes('vip'),
+        })
       })
       .catch(() => {
-        if (!cancelled) setNameNar('')
+        if (cancelled) return
+        setNameNar('')
+        setOpenPanels(['zad'])
+        setMountedPanels({ zad: true, vip: false })
       })
     return () => {
       cancelled = true
     }
   }, [id])
 
+  useEffect(() => {
+    setMountedPanels((mounted) => ({
+      zad: mounted.zad || openPanels.includes('zad'),
+      vip: mounted.vip || openPanels.includes('vip'),
+    }))
+  }, [openPanels])
+
+  const showZad = openPanels.includes('zad')
+  const showVip = openPanels.includes('vip')
+  const bothOpen = showZad && showVip
   const title = nameNar
     ? `Наряд - ${id} ${nameNar}`
     : `Наряд - ${id}`
@@ -115,10 +159,9 @@ export default function NaryadPage() {
         }}
       >
         <ToggleButtonGroup
-          value={panel}
-          exclusive
+          value={openPanels}
           onChange={(_e, next) => {
-            if (next !== null) setPanel(next)
+            setOpenPanels((prev) => toggleOpenPanels(prev, next))
           }}
           sx={toggleGroupSx}
         >
@@ -173,7 +216,26 @@ export default function NaryadPage() {
         </Tooltip>
       </Box>
 
-      <NaryadWorkspacePanel kind={panel} naryadId={id} />
+      <Box
+        sx={{
+          flex: 1,
+          minHeight: 0,
+          minWidth: 0,
+          display: 'flex',
+          overflow: 'hidden',
+        }}
+      >
+        {mountedPanels.zad ? (
+          <Box sx={paneSx(showZad, bothOpen, bothOpen)}>
+            <NaryadZadaniePanel naryadId={id} />
+          </Box>
+        ) : null}
+        {mountedPanels.vip ? (
+          <Box sx={paneSx(showVip, bothOpen, false)}>
+            <NaryadVipolneniePanel naryadId={id} />
+          </Box>
+        ) : null}
+      </Box>
     </Box>
   )
 }

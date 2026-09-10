@@ -9,36 +9,21 @@ import {
   readStoredRightPanelWidth,
   writeStoredRightPanelWidth,
 } from './naryadPageLayout.js'
-import {
-  naryadParamColumns,
-  naryadVipolnenieColumns,
-  naryadZadanieColumns,
-} from './naryadWorkspaceColumns.jsx'
 
 const ALG_FIELD_HEIGHT = 120
 
-const WORKSPACES = {
-  zad: {
-    actionBarAriaLabel: 'Панель действий задания',
-    treeSegment: 'zadanie',
-    treeColumns: naryadZadanieColumns,
-  },
-  vip: {
-    actionBarAriaLabel: 'Панель действий выполнения',
-    treeSegment: 'vipolnenie',
-    treeColumns: naryadVipolnenieColumns,
-  },
-}
-
 /**
- * Общая раскладка задания и выполнения: один экземпляр на карточку,
- * вкладка меняет только URL/колонки. Ширина правой панели общая, в localStorage.
+ * Раскладка одной вкладки: дерево / сплиттер / параметры + алгоритм.
+ * Задание и выполнение — разные экземпляры, чтобы ресайз колонок не тёк.
+ * Ширина правой панели стартует из общего localStorage.
  */
-export default function NaryadWorkspacePanel({ kind, naryadId }) {
-  const workspace = WORKSPACES[kind] ?? WORKSPACES.zad
-  const treeUrl = `/naryady/${naryadId}/${workspace.treeSegment}`
-  const paramsUrl = `${treeUrl}/params`
-
+export default function NaryadWorkspacePanel({
+  actionBarAriaLabel,
+  treeUrl,
+  treeColumns,
+  paramsUrl,
+  paramColumns,
+}) {
   const [treeFilters, setTreeFilters] = useState([])
   const [paramFilters, setParamFilters] = useState([])
   const containerRef = useRef(null)
@@ -125,7 +110,7 @@ export default function NaryadWorkspacePanel({ kind, naryadId }) {
       }}
     >
       <Box
-        aria-label={workspace.actionBarAriaLabel}
+        aria-label={actionBarAriaLabel}
         sx={{
           height: ACTION_BAR_HEIGHT,
           flexShrink: 0,
@@ -159,7 +144,7 @@ export default function NaryadWorkspacePanel({ kind, naryadId }) {
             <Box sx={{ flex: 1, minHeight: 0, minWidth: 0, overflow: 'hidden' }}>
               <BaseTreeTable
                 url={treeUrl}
-                columns={workspace.treeColumns}
+                columns={treeColumns}
                 filters={treeFilters}
                 setFilters={setTreeFilters}
                 initialState={{ pagination: { pageIndex: 0, pageSize: 10000 } }}
@@ -196,7 +181,7 @@ export default function NaryadWorkspacePanel({ kind, naryadId }) {
             <Box sx={{ flex: 1, minHeight: 0, minWidth: 0, overflow: 'hidden' }}>
               <BaseTable
                 url={paramsUrl}
-                columns={naryadParamColumns}
+                columns={paramColumns}
                 filters={paramFilters}
                 setFilters={setParamFilters}
               />

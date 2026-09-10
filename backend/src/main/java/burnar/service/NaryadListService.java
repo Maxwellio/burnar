@@ -81,6 +81,15 @@ public class NaryadListService {
     static final String MASTER_NAME_FILTER_SQL =
             "burnar.getmasters(d.key) ILIKE CONCAT('%', :masterNar, '%')";
 
+    /**
+     * Заголовок карточки: как qrCountDefNarZad / qrCountDefNarVip —
+     * есть строка описателя в defnarzad / defnarvip.
+     */
+    static final String HEADER_SELECT_SQL =
+            "SELECT d.key AS id, d.nm AS name_nar, "
+                    + "EXISTS (SELECT 1 FROM burnar.defnarzad z WHERE z.narkey = d.key) AS has_zadanie, "
+                    + "EXISTS (SELECT 1 FROM burnar.defnarvip v WHERE v.narkey = d.key) AS has_vipolnenie ";
+
     private static final ObjectMapper JSON = new ObjectMapper();
     private static final TypeReference<List<NaryadMasterDto>> MASTERS_TYPE =
             new TypeReference<List<NaryadMasterDto>>() { };
@@ -175,14 +184,15 @@ public class NaryadListService {
     }
 
     /**
-     * Карточка: код и имя наряда с тем же ACL, что у списка (без cut по orgUnitId).
+     * Карточка: код, имя и флаги описателей с тем же ACL, что у списка (без cut по orgUnitId).
+     * hasZadanie / hasVipolnenie — EXISTS в defnarzad / defnarvip (как qrCountDefNarZad / Vip = 1).
      * Нет строки / нет доступа — 404, без различия «не существует» и «чужой».
      */
     public NaryadHeaderDto findHeader(int id) {
         MapSqlParameterSource params = new MapSqlParameterSource("id", id);
         StringBuilder where = new StringBuilder("WHERE d.nartype = 1 AND d.key = :id ");
         appendAcl(where, params, null);
-        String sql = "SELECT d.key AS id, d.nm AS name_nar "
+        String sql = HEADER_SELECT_SQL
                 + "FROM burnar.defnar d "
                 + AUTHOR_USER_JOIN
                 + where;
@@ -190,6 +200,8 @@ public class NaryadListService {
             NaryadHeaderDto dto = new NaryadHeaderDto();
             dto.setId(rs.getInt("id"));
             dto.setNameNar(rs.getString("name_nar"));
+            dto.setHasZadanie(rs.getBoolean("has_zadanie"));
+            dto.setHasVipolnenie(rs.getBoolean("has_vipolnenie"));
             return dto;
         });
         if (rows.isEmpty()) {
