@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react'
-import { useParams } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 import Box from '@mui/material/Box'
 import IconButton from '@mui/material/IconButton'
 import ToggleButton from '@mui/material/ToggleButton'
 import ToggleButtonGroup from '@mui/material/ToggleButtonGroup'
 import Tooltip from '@mui/material/Tooltip'
 import Typography from '@mui/material/Typography'
+import Close from '@mui/icons-material/Close'
 import MenuBook from '@mui/icons-material/MenuBook'
 import Tune from '@mui/icons-material/Tune'
 import { fetchNaryadHeader } from '../api/naryadyApi.js'
@@ -64,10 +65,11 @@ const stubIconSx = {
 /**
  * Карточка наряда /naryad/:id.
  * Action bar под шапкой приложения: вкладки на всю высоту бара, подпись наряда,
- * справа заглушки общих кнопок (параметры / каталог).
+ * справа заглушки параметров/каталога и выход на список.
  */
 export default function NaryadPage() {
   const { id } = useParams()
+  const navigate = useNavigate()
   const [panel, setPanel] = useState('zad')
   const [nameNar, setNameNar] = useState('')
 
@@ -159,6 +161,15 @@ export default function NaryadPage() {
             sx={stubIconSx}
           >
             <MenuBook />
+          </IconButton>
+        </Tooltip>
+        <Tooltip title="Выйти из наряда">
+          <IconButton
+            aria-label="Выйти из наряда"
+            onClick={() => navigate('/')}
+            sx={stubIconSx}
+          >
+            <Close />
           </IconButton>
         </Tooltip>
       </Box>
