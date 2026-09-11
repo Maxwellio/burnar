@@ -51,7 +51,9 @@ export default function Navigation() {
   }
 
   const isActive = (path) => {
-    if (path === '/') return location.pathname === '/'
+    if (path === '/') {
+      return location.pathname === '/' || location.pathname.startsWith('/naryad/')
+    }
     return location.pathname.startsWith(path)
   }
 

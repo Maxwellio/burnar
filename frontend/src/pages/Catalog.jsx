@@ -99,7 +99,7 @@ export default function Catalog() {
           Свернуть все
         </Button>
       </Box>
-      <Box sx={{ flex: 1, minHeight: 0 }}>
+      <Box sx={{ flex: 1, minHeight: 0, minWidth: 0, overflow: 'hidden' }}>
         <AxiosProvider baseapi="/api">
           <BaseTreeTable
             url="/tematic-razdels"

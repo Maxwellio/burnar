@@ -1,6 +1,7 @@
 package burnar.service;
 
 import burnar.dto.BrigadeDto;
+import burnar.dto.NaryadHeaderDto;
 import burnar.dto.NaryadListDto;
 import burnar.dto.NaryadListFilter;
 import burnar.dto.NaryadMasterDto;
@@ -11,6 +12,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
+import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
@@ -18,6 +20,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -77,6 +80,15 @@ public class NaryadListService {
     /** Фильтр колонки «Мастер» — только ФИО из getmasters, без people.id. */
     static final String MASTER_NAME_FILTER_SQL =
             "burnar.getmasters(d.key) ILIKE CONCAT('%', :masterNar, '%')";
+
+    /**
+     * Заголовок карточки: как qrCountDefNarZad / qrCountDefNarVip —
+     * есть строка описателя в defnarzad / defnarvip.
+     */
+    static final String HEADER_SELECT_SQL =
+            "SELECT d.key AS id, d.nm AS name_nar, "
+                    + "EXISTS (SELECT 1 FROM burnar.defnarzad z WHERE z.narkey = d.key) AS has_zadanie, "
+                    + "EXISTS (SELECT 1 FROM burnar.defnarvip v WHERE v.narkey = d.key) AS has_vipolnenie ";
 
     private static final ObjectMapper JSON = new ObjectMapper();
     private static final TypeReference<List<NaryadMasterDto>> MASTERS_TYPE =
@@ -169,6 +181,33 @@ public class NaryadListService {
                 + "LIMIT :limit OFFSET :offset";
         List<NaryadListDto> content = jdbc.query(listSql, params, ROW_MAPPER);
         return new PageImpl<>(content, pageable, total);
+    }
+
+    /**
+     * Карточка: код, имя и флаги описателей с тем же ACL, что у списка (без cut по orgUnitId).
+     * hasZadanie / hasVipolnenie — EXISTS в defnarzad / defnarvip (как qrCountDefNarZad / Vip = 1).
+     * Нет строки / нет доступа — 404, без различия «не существует» и «чужой».
+     */
+    public NaryadHeaderDto findHeader(int id) {
+        MapSqlParameterSource params = new MapSqlParameterSource("id", id);
+        StringBuilder where = new StringBuilder("WHERE d.nartype = 1 AND d.key = :id ");
+        appendAcl(where, params, null);
+        String sql = HEADER_SELECT_SQL
+                + "FROM burnar.defnar d "
+                + AUTHOR_USER_JOIN
+                + where;
+        List<NaryadHeaderDto> rows = jdbc.query(sql, params, (rs, rowNum) -> {
+            NaryadHeaderDto dto = new NaryadHeaderDto();
+            dto.setId(rs.getInt("id"));
+            dto.setNameNar(rs.getString("name_nar"));
+            dto.setHasZadanie(rs.getBoolean("has_zadanie"));
+            dto.setHasVipolnenie(rs.getBoolean("has_vipolnenie"));
+            return dto;
+        });
+        if (rows.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Naryad not found");
+        }
+        return rows.get(0);
     }
 
     /**

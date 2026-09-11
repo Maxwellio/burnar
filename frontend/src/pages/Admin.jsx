@@ -327,7 +327,7 @@ export default function Admin() {
               size="small"
               sx={{ ml: 'auto', minWidth: 210, bgcolor: 'background.paper' }}
             >
-              <InputLabel id="admin-org-structure-label"Структурное подразделение</InputLabel>
+              <InputLabel id="admin-org-structure-label">Структурное подразделение</InputLabel>
               <Select
                 labelId="admin-org-structure-label"
                 id="admin-org-structure-select"

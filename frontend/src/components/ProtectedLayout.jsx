@@ -82,6 +82,7 @@ export default function ProtectedLayout() {
           sx={{
             flex: 1,
             minHeight: 0,
+            overflow: 'hidden',
             display: 'flex',
             flexDirection: 'column',
             bgcolor: 'background.default',

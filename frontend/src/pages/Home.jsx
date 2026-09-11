@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
 import FormControl from '@mui/material/FormControl'
@@ -18,6 +19,13 @@ import { fetchOrgUnits } from '../api/orgUnitsApi.js'
 import { useAuth } from '../context/AuthContext.jsx'
 import { isAdmin } from '../utils/roles.js'
 import { getNaryadColumns } from './naryadColumns.jsx'
+
+const buttonOutlinedSx = {
+  textTransform: 'none',
+  bgcolor: 'background.paper',
+  borderColor: 'divider',
+  color: 'text.secondary',
+}
 
 /** Режимы отбора по датам — как rgDate в Delphi NarListUnit. */
 const DATE_MODE_OPTIONS = [
@@ -77,11 +85,23 @@ const pickPeriod = (dates, preferred) => {
  * dateMode/period/orgUnitId уходят в query через filters; колоночные фильтры — из таблицы.
  * Select «структура» — только ROLE_ADMIN.
  * Layout: боковая панель вплотную слева на всю высоту main (без заголовка «Наряды»).
+ * «Открыть» и даблклик — как Delphi BtnOpenNar / grdDefNarListDblClick → /naryad/:id.
  */
 export default function Home() {
+  const navigate = useNavigate()
   const { user } = useAuth()
   const admin = isAdmin(user)
   const columns = useMemo(() => getNaryadColumns(admin), [admin])
+  const [selectedId, setSelectedId] = useState(null)
+  const hasRow = selectedId != null
+
+  // BaseTable double-click передаёт id; кнопка — event, тогда берём selectedId.
+  const handleOpen = (idArg) => {
+    const id = typeof idArg === 'number' ? idArg : selectedId
+    if (id == null) return
+    setSelectedId(id)
+    navigate(`/naryad/${id}`)
+  }
 
   const [dateMode, setDateMode] = useState(0)
   const [selectedDate, setSelectedDate] = useState(currentMonthStart)
@@ -339,24 +359,17 @@ export default function Home() {
           <Button
             variant="outlined"
             startIcon={<EditOutlinedIcon />}
-            sx={{
-              textTransform: 'none',
-              bgcolor: 'background.paper',
-              borderColor: 'divider',
-              color: 'text.secondary',
-            }}
+            disabled={!hasRow}
+            onClick={handleOpen}
+            sx={buttonOutlinedSx}
           >
             Открыть
           </Button>
           <Button
             variant="outlined"
             startIcon={<DeleteOutlineIcon />}
-            sx={{
-              textTransform: 'none',
-              bgcolor: 'background.paper',
-              borderColor: 'divider',
-              color: 'text.secondary',
-            }}
+            disabled={!hasRow}
+            sx={buttonOutlinedSx}
           >
             Удалить
           </Button>
@@ -394,6 +407,8 @@ export default function Home() {
                 filters={filters}
                 setFilters={setFilters}
                 org={orgParam}
+                setSelectedId={setSelectedId}
+                handleDoubleClick={handleOpen}
                 pageable
               />
             </AxiosProvider>
