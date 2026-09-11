@@ -11,7 +11,7 @@ export function fetchNaryadyPeriods(dateMode = 0, orgUnitId) {
   )
 }
 
-/** Заголовок карточки: { id, nameNar }. */
+/** Заголовок карточки: { id, nameNar, hasZadanie, hasVipolnenie }. */
 export function fetchNaryadHeader(id) {
   return requestJson(`/naryady/${id}`)
 }

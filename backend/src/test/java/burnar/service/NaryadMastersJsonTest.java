@@ -72,3 +72,20 @@ class NaryadMasterSqlContractTest {
         assertFalse(filter.contains("people.id"), filter);
     }
 }
+
+/**
+ * Контракт SQL заголовка карточки: флаги описателей как qrCountDefNarZad / Vip.
+ */
+class NaryadHeaderSqlContractTest {
+
+    @Test
+    void headerSelectChecksDefnarzadAndDefnarvip() {
+        String sql = NaryadListService.HEADER_SELECT_SQL;
+        assertTrue(sql.contains("EXISTS"), sql);
+        assertTrue(sql.contains("burnar.defnarzad"), sql);
+        assertTrue(sql.contains("burnar.defnarvip"), sql);
+        assertTrue(sql.contains("has_zadanie"), sql);
+        assertTrue(sql.contains("has_vipolnenie"), sql);
+        assertTrue(sql.contains("d.nm AS name_nar"), sql);
+    }
+}

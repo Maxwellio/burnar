@@ -6,54 +6,58 @@ import {
   ACTION_BAR_HEIGHT,
   RIGHT_PANEL_DEFAULT_RATIO,
   clampRightPanelWidth,
+  persistTableColumnSizing,
   readStoredRightPanelWidth,
+  seedTableColumnSizing,
   writeStoredRightPanelWidth,
 } from './naryadPageLayout.js'
-import {
-  naryadParamColumns,
-  naryadVipolnenieColumns,
-  naryadZadanieColumns,
-} from './naryadWorkspaceColumns.jsx'
 
 const ALG_FIELD_HEIGHT = 120
 
-const WORKSPACES = {
-  zad: {
-    actionBarAriaLabel: 'Панель действий задания',
-    treeSegment: 'zadanie',
-    treeColumns: naryadZadanieColumns,
-  },
-  vip: {
-    actionBarAriaLabel: 'Панель действий выполнения',
-    treeSegment: 'vipolnenie',
-    treeColumns: naryadVipolnenieColumns,
-  },
-}
-
 /**
- * Общая раскладка задания и выполнения: один экземпляр на карточку,
- * вкладка меняет только URL/колонки. Ширина правой панели общая, в localStorage.
+ * Раскладка одной вкладки: дерево / сплиттер / параметры + алгоритм.
+ * Задание и выполнение — разные экземпляры, чтобы ресайз колонок не тёк.
+ * Ширины колонок и правой панели — в localStorage (стабильные ключи, не id наряда).
  */
-export default function NaryadWorkspacePanel({ kind, naryadId }) {
-  const workspace = WORKSPACES[kind] ?? WORKSPACES.zad
-  const treeUrl = `/naryady/${naryadId}/${workspace.treeSegment}`
-  const paramsUrl = `${treeUrl}/params`
+export default function NaryadWorkspacePanel({
+  actionBarAriaLabel,
+  treeUrl,
+  treeColumns,
+  paramsUrl,
+  paramColumns,
+  rightPanelStorageKey,
+  treeSizingKey,
+  paramsSizingKey,
+}) {
+  const preferredWidthRef = useRef(readStoredRightPanelWidth(rightPanelStorageKey))
+  const seededRef = useRef(false)
+  if (!seededRef.current) {
+    seedTableColumnSizing(treeUrl, treeSizingKey)
+    seedTableColumnSizing(paramsUrl, paramsSizingKey)
+    seededRef.current = true
+  }
 
   const [treeFilters, setTreeFilters] = useState([])
   const [paramFilters, setParamFilters] = useState([])
   const containerRef = useRef(null)
   const dragRef = useRef(null)
-  const [rightWidth, setRightWidth] = useState(() => readStoredRightPanelWidth())
+  const [rightWidth, setRightWidth] = useState(() => preferredWidthRef.current)
   const [dragging, setDragging] = useState(false)
+
+  const persistColumns = useCallback(() => {
+    persistTableColumnSizing(treeUrl, treeSizingKey)
+    persistTableColumnSizing(paramsUrl, paramsSizingKey)
+  }, [treeUrl, treeSizingKey, paramsUrl, paramsSizingKey])
 
   const applyWidth = useCallback((width) => {
     const containerWidth = containerRef.current?.clientWidth ?? 0
     if (!(containerWidth > 0)) return null
     const next = clampRightPanelWidth(width, containerWidth)
+    preferredWidthRef.current = next
     setRightWidth(next)
-    writeStoredRightPanelWidth(next)
+    writeStoredRightPanelWidth(next, rightPanelStorageKey)
     return next
-  }, [])
+  }, [rightPanelStorageKey])
 
   useEffect(() => {
     const el = containerRef.current
@@ -62,11 +66,9 @@ export default function NaryadWorkspacePanel({ kind, naryadId }) {
     const sync = () => {
       const cw = el.clientWidth
       if (!(cw > 0)) return
-      setRightWidth((prev) => {
-        const raw = prev ?? Math.round(cw * RIGHT_PANEL_DEFAULT_RATIO)
-        const next = clampRightPanelWidth(raw, cw)
-        if (next !== prev) writeStoredRightPanelWidth(next)
-        return next
+      setRightWidth(() => {
+        const raw = preferredWidthRef.current ?? Math.round(cw * RIGHT_PANEL_DEFAULT_RATIO)
+        return clampRightPanelWidth(raw, cw)
       })
     }
 
@@ -75,6 +77,15 @@ export default function NaryadWorkspacePanel({ kind, naryadId }) {
     observer.observe(el)
     return () => observer.disconnect()
   }, [])
+
+  useEffect(() => {
+    const onPointerUp = () => persistColumns()
+    window.addEventListener('pointerup', onPointerUp)
+    return () => {
+      window.removeEventListener('pointerup', onPointerUp)
+      persistColumns()
+    }
+  }, [persistColumns])
 
   useEffect(() => {
     if (!dragging) return undefined
@@ -125,7 +136,7 @@ export default function NaryadWorkspacePanel({ kind, naryadId }) {
       }}
     >
       <Box
-        aria-label={workspace.actionBarAriaLabel}
+        aria-label={actionBarAriaLabel}
         sx={{
           height: ACTION_BAR_HEIGHT,
           flexShrink: 0,
@@ -159,7 +170,7 @@ export default function NaryadWorkspacePanel({ kind, naryadId }) {
             <Box sx={{ flex: 1, minHeight: 0, minWidth: 0, overflow: 'hidden' }}>
               <BaseTreeTable
                 url={treeUrl}
-                columns={workspace.treeColumns}
+                columns={treeColumns}
                 filters={treeFilters}
                 setFilters={setTreeFilters}
                 initialState={{ pagination: { pageIndex: 0, pageSize: 10000 } }}
@@ -196,7 +207,7 @@ export default function NaryadWorkspacePanel({ kind, naryadId }) {
             <Box sx={{ flex: 1, minHeight: 0, minWidth: 0, overflow: 'hidden' }}>
               <BaseTable
                 url={paramsUrl}
-                columns={naryadParamColumns}
+                columns={paramColumns}
                 filters={paramFilters}
                 setFilters={setParamFilters}
               />

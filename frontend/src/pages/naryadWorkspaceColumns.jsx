@@ -60,41 +60,59 @@ function WorkNameCell({ row, getValue }) {
   )
 }
 
-const workNameColumn = {
-  accessorKey: 'nm',
-  header: 'Название работы',
-  size: 250,
-  enableColumnFilter: false,
-  cell: WorkNameCell,
+function col(prefix, accessorKey, header, size, extra = {}) {
+  return {
+    id: `${prefix}_${accessorKey}`,
+    accessorKey,
+    header,
+    size,
+    enableColumnFilter: false,
+    ...extra,
+  }
+}
+
+/** Колонки дерева без «Факт»/«Период»; каждый вызов — новые объекты (ресайз не течёт между вкладками). */
+function makePlanTreeColumns(prefix) {
+  return [
+    col(prefix, 'id', 'Код', 70),
+    col(prefix, 'ord', '№ п/п', 80),
+    col(prefix, 'nm', 'Название работы', 250, { cell: WorkNameCell }),
+    col(prefix, 'begoperdate', 'Время начала', 140),
+    col(prefix, 'istnorm', 'Источник норм.', 140),
+    col(prefix, 'ot', 'от', 50),
+    col(prefix, 'do_', 'до', 50),
+    col(prefix, 'n1', 'Н.в. на ед.', 90),
+    col(prefix, 'n2', 'Н.в. на объём', 110),
+    col(prefix, 'tipbur', 'ЭКС', 80),
+  ]
+}
+
+function makeParamColumns(prefix) {
+  return [
+    col(prefix, 'nm', 'Параметр', 140),
+    col(prefix, 'val', 'Значение', 100),
+  ]
 }
 
 /**
  * Колонки дерева задания (Delphi trGrdNar, видимые).
  * Expander в «Название работы» — в BaseTreeTable шеврона нет.
  */
-export const naryadZadanieColumns = [
-  { accessorKey: 'id', header: 'Код', size: 70, enableColumnFilter: false },
-  { accessorKey: 'ord', header: '№ п/п', size: 80, enableColumnFilter: false },
-  workNameColumn,
-  { accessorKey: 'begoperdate', header: 'Время начала', size: 140, enableColumnFilter: false },
-  { accessorKey: 'istnorm', header: 'Источник норм.', size: 140, enableColumnFilter: false },
-  { accessorKey: 'ot', header: 'от', size: 50, enableColumnFilter: false },
-  { accessorKey: 'do_', header: 'до', size: 50, enableColumnFilter: false },
-  { accessorKey: 'n1', header: 'Н.в. на ед.', size: 90, enableColumnFilter: false },
-  { accessorKey: 'n2', header: 'Н.в. на объём', size: 110, enableColumnFilter: false },
-  { accessorKey: 'tipbur', header: 'ЭКС', size: 80, enableColumnFilter: false },
-]
+export const naryadZadanieColumns = makePlanTreeColumns('zad')
 
 /** Как у задания, плюс видимые Delphi-поля «Факт» и «Период». */
-export const naryadVipolnenieColumns = [
-  ...naryadZadanieColumns.slice(0, -1),
-  { accessorKey: 'fact', header: 'Факт', size: 70, enableColumnFilter: false },
-  naryadZadanieColumns[naryadZadanieColumns.length - 1],
-  { accessorKey: 'period_nm', header: 'Период', size: 180, enableColumnFilter: false },
-]
+export const naryadVipolnenieColumns = (() => {
+  const plan = makePlanTreeColumns('vip')
+  return [
+    ...plan.slice(0, -1),
+    col('vip', 'fact', 'Факт', 70),
+    plan[plan.length - 1],
+    col('vip', 'period_nm', 'Период', 180),
+  ]
+})()
 
-/** Параметры операции (Delphi GrdParams): параметр / значение. */
-export const naryadParamColumns = [
-  { accessorKey: 'nm', header: 'Параметр', size: 140, enableColumnFilter: false },
-  { accessorKey: 'val', header: 'Значение', size: 100, enableColumnFilter: false },
-]
+/** Параметры операции задания (Delphi GrdParams). */
+export const naryadZadanieParamColumns = makeParamColumns('zadp')
+
+/** Параметры операции выполнения — отдельный массив, без общих ссылок с заданием. */
+export const naryadVipolnenieParamColumns = makeParamColumns('vipp')
