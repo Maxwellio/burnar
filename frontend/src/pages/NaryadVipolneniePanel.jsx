@@ -1,4 +1,5 @@
 import NaryadWorkspacePanel from './NaryadWorkspacePanel.jsx'
+import { COLUMN_SIZING_KEYS, RIGHT_PANEL_WIDTH_KEYS } from './naryadPageLayout.js'
 import {
   naryadVipolnenieColumns,
   naryadVipolnenieParamColumns,
@@ -13,6 +14,9 @@ export default function NaryadVipolneniePanel({ naryadId }) {
       treeColumns={naryadVipolnenieColumns}
       paramsUrl={`/naryady/${naryadId}/vipolnenie/params`}
       paramColumns={naryadVipolnenieParamColumns}
+      rightPanelStorageKey={RIGHT_PANEL_WIDTH_KEYS.vip}
+      treeSizingKey={COLUMN_SIZING_KEYS.vipolnenieTree}
+      paramsSizingKey={COLUMN_SIZING_KEYS.vipolnenieParams}
     />
   )
 }

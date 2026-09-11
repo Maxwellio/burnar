@@ -77,7 +77,9 @@
 | Справа сверху | `BaseTable` `GET /api/naryady/{id}/zadanie/params` (то же) |
 | Справа снизу ~120px | read-only поле алгоритма (Delphi `algInfo`, без подписи), пока пустое |
 
-Ширина правой панели тянется сплиттером; стартовое значение общее, в `localStorage` (`naryad-right-panel-width`). По умолчанию 25%, min 180px, max 50%. Бэкенда дерева/параметров нет: фронт только монтирует таблицы.
+Ширина правой панели тянется сплиттером и пишется в `localStorage` отдельно для задания и выполнения (`naryad-right-panel-width:zad` / `:vip`; старый общий ключ читается как fallback). В storage уходит только значение после drag; ResizeObserver только поджимает отображение, чтобы сплит 50/50 не затирал сохранённую ширину. По умолчанию 25%, min 180px, max 50%.
+
+Ширины колонок дерева и параметров пакет кладёт в `table-column-sizing:${url}` (url с id наряда). Перед монтированием таблицы мы копируем туда стабильные ключи `naryad-column-sizing:zadanie-tree` / `zadanie-params` / `vipolnenie-tree` / `vipolnenie-params`, после ресайза копируем обратно — раскладка общая для всех нарядов.
 
 Колонки дерева (видимые Delphi `trGrdNar`): Код, № п/п, Название работы (expander), Время начала, Источник норм., от, до, Н.в. на ед., Н.в. на объём, ЭКС. Фильтров колонок нет.
 
@@ -108,6 +110,7 @@
 | `frontend/src/pages/NaryadZadaniePanel.jsx` | вкладка задания |
 | `frontend/src/pages/NaryadVipolneniePanel.jsx` | вкладка выполнения |
 | `frontend/src/pages/NaryadWorkspacePanel.jsx` | раскладка одной вкладки |
+| `frontend/src/pages/naryadPageLayout.js` | сплиттер и localStorage ширин колонок/панели |
 | `frontend/src/pages/naryadWorkspaceColumns.jsx` | колонки деревьев и параметров (раздельные объекты) |
 | `frontend/src/api/naryadyApi.js` | `fetchNaryadHeader` |
 | `frontend/src/App.jsx` | маршрут `/naryad/:id` |

@@ -6,7 +6,9 @@ import {
   ACTION_BAR_HEIGHT,
   RIGHT_PANEL_DEFAULT_RATIO,
   clampRightPanelWidth,
+  persistTableColumnSizing,
   readStoredRightPanelWidth,
+  seedTableColumnSizing,
   writeStoredRightPanelWidth,
 } from './naryadPageLayout.js'
 
@@ -15,7 +17,7 @@ const ALG_FIELD_HEIGHT = 120
 /**
  * Раскладка одной вкладки: дерево / сплиттер / параметры + алгоритм.
  * Задание и выполнение — разные экземпляры, чтобы ресайз колонок не тёк.
- * Ширина правой панели стартует из общего localStorage.
+ * Ширины колонок и правой панели — в localStorage (стабильные ключи, не id наряда).
  */
 export default function NaryadWorkspacePanel({
   actionBarAriaLabel,
@@ -23,22 +25,39 @@ export default function NaryadWorkspacePanel({
   treeColumns,
   paramsUrl,
   paramColumns,
+  rightPanelStorageKey,
+  treeSizingKey,
+  paramsSizingKey,
 }) {
+  const preferredWidthRef = useRef(readStoredRightPanelWidth(rightPanelStorageKey))
+  const seededRef = useRef(false)
+  if (!seededRef.current) {
+    seedTableColumnSizing(treeUrl, treeSizingKey)
+    seedTableColumnSizing(paramsUrl, paramsSizingKey)
+    seededRef.current = true
+  }
+
   const [treeFilters, setTreeFilters] = useState([])
   const [paramFilters, setParamFilters] = useState([])
   const containerRef = useRef(null)
   const dragRef = useRef(null)
-  const [rightWidth, setRightWidth] = useState(() => readStoredRightPanelWidth())
+  const [rightWidth, setRightWidth] = useState(() => preferredWidthRef.current)
   const [dragging, setDragging] = useState(false)
+
+  const persistColumns = useCallback(() => {
+    persistTableColumnSizing(treeUrl, treeSizingKey)
+    persistTableColumnSizing(paramsUrl, paramsSizingKey)
+  }, [treeUrl, treeSizingKey, paramsUrl, paramsSizingKey])
 
   const applyWidth = useCallback((width) => {
     const containerWidth = containerRef.current?.clientWidth ?? 0
     if (!(containerWidth > 0)) return null
     const next = clampRightPanelWidth(width, containerWidth)
+    preferredWidthRef.current = next
     setRightWidth(next)
-    writeStoredRightPanelWidth(next)
+    writeStoredRightPanelWidth(next, rightPanelStorageKey)
     return next
-  }, [])
+  }, [rightPanelStorageKey])
 
   useEffect(() => {
     const el = containerRef.current
@@ -47,11 +66,9 @@ export default function NaryadWorkspacePanel({
     const sync = () => {
       const cw = el.clientWidth
       if (!(cw > 0)) return
-      setRightWidth((prev) => {
-        const raw = prev ?? Math.round(cw * RIGHT_PANEL_DEFAULT_RATIO)
-        const next = clampRightPanelWidth(raw, cw)
-        if (next !== prev) writeStoredRightPanelWidth(next)
-        return next
+      setRightWidth(() => {
+        const raw = preferredWidthRef.current ?? Math.round(cw * RIGHT_PANEL_DEFAULT_RATIO)
+        return clampRightPanelWidth(raw, cw)
       })
     }
 
@@ -60,6 +77,15 @@ export default function NaryadWorkspacePanel({
     observer.observe(el)
     return () => observer.disconnect()
   }, [])
+
+  useEffect(() => {
+    const onPointerUp = () => persistColumns()
+    window.addEventListener('pointerup', onPointerUp)
+    return () => {
+      window.removeEventListener('pointerup', onPointerUp)
+      persistColumns()
+    }
+  }, [persistColumns])
 
   useEffect(() => {
     if (!dragging) return undefined
