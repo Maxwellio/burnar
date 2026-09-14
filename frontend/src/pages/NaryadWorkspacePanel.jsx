@@ -1,7 +1,8 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Box from '@mui/material/Box'
 import TextField from '@mui/material/TextField'
 import { AxiosProvider, BaseTable, BaseTreeTable } from 'mainComponent'
+import { fetchNaryadAlgorithm } from '../api/naryadyApi.js'
 import {
   ACTION_BAR_HEIGHT,
   RIGHT_PANEL_DEFAULT_RATIO,
@@ -11,6 +12,7 @@ import {
   seedTableColumnSizing,
   writeStoredRightPanelWidth,
 } from './naryadPageLayout.js'
+import { nodeIdFilters } from './naryadWorkspaceData.js'
 
 const ALG_FIELD_HEIGHT = 120
 
@@ -18,12 +20,14 @@ const ALG_FIELD_HEIGHT = 120
  * Раскладка одной вкладки: дерево / сплиттер / параметры + алгоритм.
  * Задание и выполнение — разные экземпляры, чтобы ресайз колонок не тёк.
  * Ширины колонок и правой панели — в localStorage (стабильные ключи, не id наряда).
+ * Параметры и алгоритм — по выбранной строке (Delphi ReadOpParams, типы 79/80).
  */
 export default function NaryadWorkspacePanel({
   actionBarAriaLabel,
   treeUrl,
   treeColumns,
   paramsUrl,
+  algorithmUrl,
   paramColumns,
   rightPanelStorageKey,
   treeSizingKey,
@@ -38,11 +42,36 @@ export default function NaryadWorkspacePanel({
   }
 
   const [treeFilters, setTreeFilters] = useState([])
-  const [paramFilters, setParamFilters] = useState([])
+  const [selectedId, setSelectedId] = useState(null)
+  const [algorithm, setAlgorithm] = useState('')
+  const paramFilters = useMemo(() => nodeIdFilters(selectedId), [selectedId])
   const containerRef = useRef(null)
   const dragRef = useRef(null)
   const [rightWidth, setRightWidth] = useState(() => preferredWidthRef.current)
   const [dragging, setDragging] = useState(false)
+
+  useEffect(() => {
+    setSelectedId(null)
+    setAlgorithm('')
+  }, [treeUrl])
+
+  useEffect(() => {
+    let cancelled = false
+    if (selectedId == null || !algorithmUrl) {
+      setAlgorithm('')
+      return undefined
+    }
+    fetchNaryadAlgorithm(algorithmUrl, selectedId)
+      .then((data) => {
+        if (!cancelled) setAlgorithm(data?.text ?? '')
+      })
+      .catch(() => {
+        if (!cancelled) setAlgorithm('')
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [algorithmUrl, selectedId])
 
   const persistColumns = useCallback(() => {
     persistTableColumnSizing(treeUrl, treeSizingKey)
@@ -173,6 +202,7 @@ export default function NaryadWorkspacePanel({
                 columns={treeColumns}
                 filters={treeFilters}
                 setFilters={setTreeFilters}
+                setSelectedId={setSelectedId}
                 initialState={{ pagination: { pageIndex: 0, pageSize: 10000 } }}
               />
             </Box>
@@ -209,7 +239,7 @@ export default function NaryadWorkspacePanel({
                 url={paramsUrl}
                 columns={paramColumns}
                 filters={paramFilters}
-                setFilters={setParamFilters}
+                setFilters={() => {}}
               />
             </Box>
             <Box
@@ -225,7 +255,7 @@ export default function NaryadWorkspacePanel({
               }}
             >
               <TextField
-                value=""
+                value={algorithm}
                 multiline
                 fullWidth
                 size="small"

@@ -13,6 +13,7 @@ export default function NaryadZadaniePanel({ naryadId }) {
       treeUrl={`/naryady/${naryadId}/zadanie`}
       treeColumns={naryadZadanieColumns}
       paramsUrl={`/naryady/${naryadId}/zadanie/params`}
+      algorithmUrl={`/naryady/${naryadId}/zadanie/algorithm`}
       paramColumns={naryadZadanieParamColumns}
       rightPanelStorageKey={RIGHT_PANEL_WIDTH_KEYS.zad}
       treeSizingKey={COLUMN_SIZING_KEYS.zadanieTree}

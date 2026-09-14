@@ -16,3 +16,8 @@ export function fetchNaryadHeader(id) {
   return requestJson(`/naryady/${id}`)
 }
 
+/** Текст алгоритма выбранной операции (пустой, если тип не 80). */
+export function fetchNaryadAlgorithm(algorithmPath, nodeId) {
+  return requestJson(`${algorithmPath}${buildQuery({ nodeId })}`)
+}
+

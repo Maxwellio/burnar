@@ -14,12 +14,13 @@
 | Вкладки «Задание» / «Выполнение» | **сделано** (включаемые, нельзя снять последнюю) |
 | Стартовый набор вкладок как `OpenNar` | **сделано** (`hasZadanie` / `hasVipolnenie`) |
 | Action bar (подпись наряда, параметры/каталог, выход на список) | **сделано** |
-| Вкладка «Задание»: дерево / параметры + алгоритм | **сделано** (таблицы пустые; правая панель тянется) |
-| Вкладка «Выполнение»: тот же лейаут, отдельный инстанс | **сделано** (колонки плюс «Факт» и «Период») |
+| Вкладка «Задание»: дерево / параметры + алгоритм | **сделано** (данные из qrNarZad / qrParamZ / qrAlgInfo; дерево свёрнуто) |
+| Вкладка «Выполнение»: тот же лейаут, отдельный инстанс | **сделано** (данные из qrNarVip / qrParamV / qrAlgInfo; колонки плюс «Факт» и «Период») |
 | Обе вкладки сразу: 50/50 слева-направо | **сделано** (скрытая вкладка остаётся смонтированной) |
 | localStorage ширин колонок и правой панели | **сделано** (стабильные ключи, не id наряда) |
 | Добавить / Удалить | отложено («Удалить» уже `disabled` без выбора) |
-| Данные деревьев, параметры, расчёт | отложено |
+| Данные деревьев, параметры, алгоритм | **сделано** (read-only; параметры/алгоритм по клику, типы 79/80) |
+| Расчёт, правка, кнопки тулбара | отложено |
 
 ---
 
@@ -74,9 +75,9 @@
 | Элемент | Поведение |
 |---------|-----------|
 | Action bar задания (48px) | пустой, кнопки позже |
-| Слева | `BaseTreeTable` `GET /api/naryady/{id}/zadanie` (пока 404 → пустое тело, шапка колонок видна) |
-| Справа сверху | `BaseTable` `GET /api/naryady/{id}/zadanie/params` (то же) |
-| Справа снизу ~120px | read-only поле алгоритма (Delphi `algInfo`, без подписи), пока пустое |
+| Слева | `BaseTreeTable` `GET /api/naryady/{id}/zadanie` (корни, свёрнуто); дети — `GET .../zadanie/{nodeId}/children` |
+| Справа сверху | `BaseTable` `GET /api/naryady/{id}/zadanie/params?nodeId=` — массив; пусто без выбора или если тип не 79/80 |
+| Справа снизу ~120px | read-only поле алгоритма: `GET .../zadanie/algorithm?nodeId=` (`algs.ops`, только тип 80) |
 
 Ширина правой панели тянется сплиттером и пишется в `localStorage` отдельно для задания и выполнения (`naryad-right-panel-width:zad` / `:vip`; старый общий ключ читается как fallback). В storage уходит только значение после drag; ResizeObserver только поджимает отображение, чтобы сплит 50/50 не затирал сохранённую ширину. По умолчанию 25%, min 180px, max 50%.
 
@@ -84,7 +85,7 @@
 
 Колонки дерева (видимые Delphi `trGrdNar`): Код, № п/п, Название работы (expander), Время начала, Источник норм., от, до, Н.в. на ед., Н.в. на объём, ЭКС. Фильтров колонок нет.
 
-Колонки параметров (Delphi `GrdParams`): Параметр, Значение — заголовки-заглушки до контракта API.
+Колонки параметров (Delphi `GrdParams`): Параметр (`nm`), Значение (`val`). Дата начала: `dd.mm.yyyy` или `dd.mm.yyyy HH:mm`, если есть часы и минуты.
 
 ### Вкладка «Выполнение»
 
@@ -93,9 +94,9 @@
 | Элемент | Поведение |
 |---------|-----------|
 | Action bar выполнения (48px) | пустой, кнопки позже |
-| Слева | `BaseTreeTable` `GET /api/naryady/{id}/vipolnenie` |
-| Справа сверху | `BaseTable` `GET /api/naryady/{id}/vipolnenie/params` |
-| Справа снизу ~120px | то же read-only поле алгоритма |
+| Слева | `BaseTreeTable` `GET /api/naryady/{id}/vipolnenie` + `/{nodeId}/children` |
+| Справа сверху | `BaseTable` `GET /api/naryady/{id}/vipolnenie/params?nodeId=` |
+| Справа снизу ~120px | `GET .../vipolnenie/algorithm?nodeId=` |
 
 Колонки дерева как у задания, плюс видимые Delphi-поля «Факт» и «Период». Итоги по периодам (нижняя панель Delphi) пока не делаем.
 
@@ -113,8 +114,10 @@
 | `frontend/src/pages/NaryadWorkspacePanel.jsx` | раскладка одной вкладки |
 | `frontend/src/pages/naryadPageLayout.js` | сплиттер и localStorage ширин колонок/панели |
 | `frontend/src/pages/naryadWorkspaceColumns.jsx` | колонки деревьев и параметров (раздельные объекты) |
-| `frontend/src/api/naryadyApi.js` | `fetchNaryadHeader` |
+| `frontend/src/api/naryadyApi.js` | `fetchNaryadHeader`, `fetchNaryadAlgorithm` |
+| `frontend/src/pages/naryadWorkspaceData.js` | фильтр `nodeId` для таблицы параметров |
 | `frontend/src/App.jsx` | маршрут `/naryad/:id` |
 | `frontend/src/components/Navigation.jsx` | active для `/naryad/...` |
 | `NaryadListController` `GET /{id}` | заголовок (id, nm, hasZadanie, hasVipolnenie) |
+| `NaryadWorkspaceController` | дерево / params / algorithm задания и выполнения |
 | `SpaForwardController` | forward SPA в продакшен-сборке |
