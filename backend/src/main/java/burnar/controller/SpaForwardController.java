@@ -20,8 +20,6 @@ public class SpaForwardController {
     @GetMapping({
             "/naryad",
             "/naryad/**",
-            "/catalog",
-            "/catalog/**",
             "/reports",
             "/reports/**",
             "/settings",
