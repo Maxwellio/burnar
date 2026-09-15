@@ -5,12 +5,43 @@ import { useFetchData } from "../BaseTable/hooks/useFetchTreeData";
 import { DebouncedInput, DynamicDatePicker, DynamicSelect } from "../Input/InputComponents";
 import { FILTER_TYPES } from "../utils/types";
 import { ColumnFilter } from "./BaseTable";
-import { getTreeStatusBarParts, isTreeStatusBarVisible } from "./treeStatusBar";
 
 /** Флаги полей футера. Сам объект statusBar включает футер; selectedId — поле «Код». */
 export type TreeStatusBar = {
     selectedId?: boolean;
 };
+
+type TreeStatusBarContext = {
+    selectedRowId?: unknown;
+};
+
+const TREE_STATUS_BAR_FIELDS: Array<{
+    key: keyof TreeStatusBar;
+    render: (ctx?: TreeStatusBarContext) => string | null;
+}> = [
+    {
+        key: 'selectedId',
+        render: ({ selectedRowId } = {}) =>
+            selectedRowId == null || selectedRowId === '' ? null : `Код: ${selectedRowId}`,
+    },
+];
+
+function isTreeStatusBarVisible(statusBar?: TreeStatusBar | null) {
+    return statusBar != null;
+}
+
+function getTreeStatusBarParts(statusBar?: TreeStatusBar | null, ctx: TreeStatusBarContext = {}) {
+    if (statusBar == null) {
+        return [];
+    }
+    return TREE_STATUS_BAR_FIELDS.flatMap((field) => {
+        if (!statusBar[field.key]) {
+            return [];
+        }
+        const part = field.render(ctx);
+        return part == null || part === '' ? [] : [part];
+    });
+}
 
 interface BaseTreeTableProps<TData> extends Partial<TableOptions<TData>>{
     url: string;

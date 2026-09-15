@@ -7,7 +7,6 @@
 
 Скопировать в пакет (пути в `Maxwellio/mainComponent`):
 
-- `BaseTable/treeStatusBar.js` — флаги полей футера
 - `BaseTable/BaseTreeTable.tsx` — полная версия; кроме футера остальное без правок
 
 ### API
@@ -23,7 +22,7 @@
 
 При выборе строки в футере: `Код: {id}`. Пока строка не выбрана, полоска есть, текста нет.
 
-Новое поле: флаг в типе `TreeStatusBar` + запись в `TREE_STATUS_BAR_FIELDS`.
+Новое поле: флаг в типе `TreeStatusBar` + запись в `TREE_STATUS_BAR_FIELDS` в том же файле.
 
 Стили футера как у `BaseTable` (`tfoot` sticky bottom). Текст в одной ячейке на всю ширину, чтобы не обрезался узкой колонкой «Код».
 
@@ -32,7 +31,7 @@
 `NaryadWorkspacePanel` передаёт `statusBar={{ selectedId: true }}` на дерево задания/выполнения.
 Каталог тематических разделов — без пропа, футера нет.
 
-Сначала скопировать файлы в пакет, иначе `statusBar` уйдёт в `useReactTable` через `...props`.
+Сначала скопировать файл в пакет, иначе `statusBar` уйдёт в `useReactTable` через `...props`.
 
 ## DynamicDateList (предыдущая поставка)
 
