@@ -21,7 +21,7 @@
 | Модальный `GetHierarchyItem` | отложено |
 | Хаб прочих справочников | отложено |
 
-Маршрут: `/catalog`. Меню: «Тематические разделы» (`ROLE_USER` + `ROLE_ADMIN`).
+Открытие: кнопка «Каталог» на карточке наряда (`/naryad/:id`) → модалка. Отдельной страницы и пункта меню нет; `/catalog` не обслуживается.
 
 ---
 
@@ -71,9 +71,10 @@ Delphi LoadTree скрывает `parent_id`, `ord`, `nartype`. В JSON они �
 
 ## 3. Frontend
 
-- [frontend/src/pages/Catalog.jsx](../frontend/src/pages/Catalog.jsx) — «Раскрыть все» / «Свернуть все» + фильтры колонок + `BaseTreeTable url="/tematic-razdels"`. Сброс поиска снимает `expandAll`, дерево снова ленивые свёрнутые корни.
+- [frontend/src/pages/CatalogDialog.jsx](../frontend/src/pages/CatalogDialog.jsx) — модалка с карточки наряда: «Раскрыть все» / «Свернуть все» + фильтры колонок + `BaseTreeTable url="/tematic-razdels"`. Дерево монтируется при первом открытии и не размонтируется, пока открыта карточка (раскрытие и фильтры помнятся). Сброс поиска снимает `expandAll`, дерево снова ленивые свёрнутые корни.
+- [frontend/src/pages/catalogTreeFilters.js](../frontend/src/pages/catalogTreeFilters.js) — expandAll в фильтрах и сброс токена при очистке поиска
+- [frontend/src/pages/catalogDialogState.js](../frontend/src/pages/catalogDialogState.js) — первое открытие и keepMounted
 - [frontend/src/pages/tematicRazdelColumns.jsx](../frontend/src/pages/tematicRazdelColumns.jsx) — три колонки с поиском в шапке; expander в «Наименование»
-- [frontend/src/config/menuItems.jsx](../frontend/src/config/menuItems.jsx) — пункт «Тематические разделы»
 
 Контракт `BaseTreeTable` (пакет не править):
 

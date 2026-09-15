@@ -10,6 +10,7 @@ import Close from '@mui/icons-material/Close'
 import MenuBook from '@mui/icons-material/MenuBook'
 import Tune from '@mui/icons-material/Tune'
 import { fetchNaryadHeader } from '../api/naryadyApi.js'
+import CatalogDialog from './CatalogDialog.jsx'
 import NaryadZadaniePanel from './NaryadZadaniePanel.jsx'
 import NaryadVipolneniePanel from './NaryadVipolneniePanel.jsx'
 import { ACTION_BAR_HEIGHT } from './naryadPageLayout.js'
@@ -80,7 +81,7 @@ function paneSx(visible, bothOpen, withDivider) {
 /**
  * Карточка наряда /naryad/:id.
  * Action bar: включаемые вкладки (нельзя снять последнюю), подпись наряда,
- * заглушки параметров/каталога и выход на список.
+ * заглушка параметров, модальный каталог и выход на список.
  * Обе вкладки при включении делят область слева-направо пополам и остаются
  * смонтированными при скрытии, чтобы ширины колонок сохранялись.
  */
@@ -90,12 +91,14 @@ export default function NaryadPage() {
   const [openPanels, setOpenPanels] = useState([])
   const [mountedPanels, setMountedPanels] = useState({ zad: false, vip: false })
   const [nameNar, setNameNar] = useState('')
+  const [catalogOpen, setCatalogOpen] = useState(false)
 
   useEffect(() => {
     let cancelled = false
     setNameNar('')
     setOpenPanels([])
     setMountedPanels({ zad: false, vip: false })
+    setCatalogOpen(false)
     if (id == null || id === '') return undefined
     fetchNaryadHeader(id)
       .then((header) => {
@@ -200,6 +203,7 @@ export default function NaryadPage() {
         <Tooltip title="Каталог">
           <IconButton
             aria-label="Каталог"
+            onClick={() => setCatalogOpen(true)}
             sx={stubIconSx}
           >
             <MenuBook />
@@ -236,6 +240,12 @@ export default function NaryadPage() {
           </Box>
         ) : null}
       </Box>
+
+      <CatalogDialog
+        key={id}
+        open={catalogOpen}
+        onClose={() => setCatalogOpen(false)}
+      />
     </Box>
   )
 }

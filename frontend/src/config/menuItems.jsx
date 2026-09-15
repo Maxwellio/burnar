@@ -1,5 +1,4 @@
 import Assignment from '@mui/icons-material/Assignment'
-import MenuBook from '@mui/icons-material/MenuBook'
 import Assessment from '@mui/icons-material/Assessment'
 import Settings from '@mui/icons-material/Settings'
 import Badge from '@mui/icons-material/Badge'
@@ -9,18 +8,13 @@ import Logout from '@mui/icons-material/Logout'
 /**
  * Пункты основного списка Drawer (без «Выход» — он снизу панели отдельно).
  * Роли Spring: ROLE_USER / ROLE_ADMIN.
+ * Каталог тематических разделов открывается с карточки наряда, не из меню.
  */
 export const menuItems = [
   {
     text: 'Наряды',
     icon: <Assignment />,
     path: '/',
-    roles: ['ROLE_USER', 'ROLE_ADMIN'],
-  },
-  {
-    text: 'Тематические разделы',
-    icon: <MenuBook />,
-    path: '/catalog',
     roles: ['ROLE_USER', 'ROLE_ADMIN'],
   },
   {
