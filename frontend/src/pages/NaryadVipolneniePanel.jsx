@@ -13,6 +13,7 @@ export default function NaryadVipolneniePanel({ naryadId }) {
       treeUrl={`/naryady/${naryadId}/vipolnenie`}
       treeColumns={naryadVipolnenieColumns}
       paramsUrl={`/naryady/${naryadId}/vipolnenie/params`}
+      algorithmUrl={`/naryady/${naryadId}/vipolnenie/algorithm`}
       paramColumns={naryadVipolnenieParamColumns}
       rightPanelStorageKey={RIGHT_PANEL_WIDTH_KEYS.vip}
       treeSizingKey={COLUMN_SIZING_KEYS.vipolnenieTree}
