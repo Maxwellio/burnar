@@ -203,6 +203,7 @@ export default function NaryadWorkspacePanel({
                 filters={treeFilters}
                 setFilters={setTreeFilters}
                 setSelectedId={setSelectedId}
+                statusBar={{ selectedId: true }}
                 initialState={{ pagination: { pageIndex: 0, pageSize: 10000 } }}
               />
             </Box>
