@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
 import DialogActions from '@mui/material/DialogActions'
@@ -41,9 +41,9 @@ export default function CatalogDialog({ open, onClose }) {
   filtersRef.current = filters
   expandTokenRef.current = expandToken
 
-  useEffect(() => {
-    setHasOpened((prev) => nextCatalogHasOpened(prev, open))
-  }, [open])
+  if (nextCatalogHasOpened(hasOpened, open) !== hasOpened) {
+    setHasOpened(true)
+  }
 
   const tableFilters = useMemo(
     () => buildCatalogTableFilters(filters, expandToken),
