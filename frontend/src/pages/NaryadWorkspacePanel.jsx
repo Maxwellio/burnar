@@ -14,7 +14,9 @@ import {
 } from './naryadPageLayout.js'
 import { nodeIdFilters } from './naryadWorkspaceData.js'
 
-const ALG_FIELD_HEIGHT = 120
+/** Пустое поле — несколько строк; дальше высота растёт по тексту, лишнее прокручивается внутри рамки. */
+const ALG_FIELD_MIN_ROWS = 4
+const ALG_FIELD_MAX_ROWS = 12
 
 /**
  * Раскладка одной вкладки: дерево / сплиттер / параметры + алгоритм.
@@ -244,8 +246,9 @@ export default function NaryadWorkspacePanel({
             </Box>
             <Box
               sx={{
-                height: ALG_FIELD_HEIGHT,
-                flexShrink: 0,
+                flex: '0 1 auto',
+                minHeight: 0,
+                overflow: 'auto',
                 px: 1,
                 py: 0.75,
                 boxSizing: 'border-box',
@@ -259,17 +262,17 @@ export default function NaryadWorkspacePanel({
                 multiline
                 fullWidth
                 size="small"
+                minRows={ALG_FIELD_MIN_ROWS}
+                maxRows={ALG_FIELD_MAX_ROWS}
                 InputProps={{ readOnly: true }}
                 inputProps={{ 'aria-label': 'Алгоритм', 'aria-readonly': true }}
                 sx={{
-                  height: '100%',
                   '& .MuiInputBase-root': {
-                    height: '100%',
                     alignItems: 'flex-start',
-                    overflow: 'auto',
                   },
                   '& textarea': {
                     overflow: 'auto !important',
+                    resize: 'none',
                   },
                 }}
               />
