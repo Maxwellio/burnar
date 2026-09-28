@@ -71,6 +71,15 @@ function col(prefix, accessorKey, header, size, extra = {}) {
   }
 }
 
+/** Общая ячейка шапки над несколькими колонками. BaseTreeTable рисует её как в BaseTable. */
+function group(prefix, id, header, columns) {
+  return {
+    id: `${prefix}_${id}`,
+    header,
+    columns,
+  }
+}
+
 /** Колонки дерева без «Факт»/«Период»; каждый вызов — новые объекты (ресайз не течёт между вкладками). */
 function makePlanTreeColumns(prefix) {
   return [
@@ -79,11 +88,14 @@ function makePlanTreeColumns(prefix) {
     col(prefix, 'nm', 'Название работы', 250, { cell: WorkNameCell }),
     col(prefix, 'begoperdate', 'Время начала', 140),
     col(prefix, 'istnorm', 'Источник норм.', 140),
-    col(prefix, 'ot', 'от', 50),
-    col(prefix, 'do_', 'до', 50),
-    col(prefix, 'n1', 'Н.в. на ед.', 90),
-    col(prefix, 'n2', 'Н.в. на объём', 110),
-    col(prefix, 'tipbur', 'ЭКС', 80),
+    group(prefix, 'interval', 'Интервал', [
+      col(prefix, 'ot', 'от', 50),
+      col(prefix, 'do_', 'до', 50),
+    ]),
+    group(prefix, 'norm', 'Норма времени', [
+      col(prefix, 'n1', 'Н.в. на ед.', 90),
+      col(prefix, 'n2', 'Н.в. на объём', 110),
+    ]),
   ]
 }
 
@@ -98,18 +110,18 @@ function makeParamColumns(prefix) {
  * Колонки дерева задания (Delphi trGrdNar, видимые).
  * Expander в «Название работы» — в BaseTreeTable шеврона нет.
  */
-export const naryadZadanieColumns = makePlanTreeColumns('zad')
+export const naryadZadanieColumns = [
+  ...makePlanTreeColumns('zad'),
+  // col('zad', 'tipbur', 'ЭКС', 80),
+]
 
-/** Как у задания, плюс видимые Delphi-поля «Факт» и «Период». */
-export const naryadVipolnenieColumns = (() => {
-  const plan = makePlanTreeColumns('vip')
-  return [
-    ...plan.slice(0, -1),
-    col('vip', 'fact', 'Факт', 70),
-    plan[plan.length - 1],
-    col('vip', 'period_nm', 'Период', 180),
-  ]
-})()
+/** Как у задания, плюс «Факт» сразу после нормы времени и перед «Период». */
+export const naryadVipolnenieColumns = [
+  ...makePlanTreeColumns('vip'),
+  col('vip', 'fact', 'Факт', 70),
+  // col('vip', 'tipbur', 'ЭКС', 80),
+  col('vip', 'period_nm', 'Период', 180),
+]
 
 /** Параметры операции задания (Delphi GrdParams). */
 export const naryadZadanieParamColumns = makeParamColumns('zadp')

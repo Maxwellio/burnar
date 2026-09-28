@@ -187,7 +187,17 @@ export const BaseTreeTable = <TData,>({url, columns, filters, setFilters, setSel
                     <thead className="sticky top-0 bg-gray-100 text-white z-10">
                     {table.getHeaderGroups().map(headerGroup => (
                             <tr key = {headerGroup.id}>
-                                {headerGroup.headers.map(header => {  
+                                {headerGroup.headers.map(header => {
+                                    // Двухуровневая шапка, как в BaseTable.
+                                    const depth = header.depth - header.column.depth;
+                                    // Нижний дубль одиночной колонки не рисуем: её заголовок уже растянут на оба ряда.
+                                    if (depth > 1) {
+                                        return null;
+                                    }
+                                    let rowSpan = 1;
+                                    if (header.isPlaceholder) {
+                                        rowSpan = 2;
+                                    }
                                     const id = header.column.id.replace(/\./g, '-');
                                     return (
                                         <th 
@@ -196,6 +206,8 @@ export const BaseTreeTable = <TData,>({url, columns, filters, setFilters, setSel
                                             width: `var(--col-${id}-size)`,
                                         }}
                                         key = {header.id}
+                                        colSpan={header.colSpan}
+                                        rowSpan={rowSpan}
                                         className="relative px-1 py-2 text-center shrink-0 overflow-hidden text-ellipsis bg-[#F0F4FF] text-[#364FC7] border border-t font-medium text-sm whitespace-pre-line break-words hyphens-auto">
                                         {header.column.getCanResize() && (
                                             <div

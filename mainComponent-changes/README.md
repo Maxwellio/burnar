@@ -7,7 +7,7 @@
 
 Скопировать в пакет (пути в `Maxwellio/mainComponent`):
 
-- `BaseTable/BaseTreeTable.tsx` — полная версия; кроме футера остальное без правок
+- `BaseTable/BaseTreeTable.tsx` — полная версия. Кроме футера: шапка как в `BaseTable` (`colSpan`, `rowSpan` у placeholder, пропуск нижнего дубля одиночной колонки). Подсветки группы по клику нет.
 
 ### API
 
