@@ -25,7 +25,7 @@ export const tematicRazdelColumns = [
     size: 400,
     enableColumnFilter: true,
     cell: ({ row, getValue }) => (
-      <Box sx={{ display: 'flex', alignItems: 'center', minWidth: 0, minHeight: EXPANDER_SIZE }}>
+      <Box sx={{ display: 'flex', alignItems: 'flex-start', minWidth: 0, minHeight: EXPANDER_SIZE }}>
         {row.depth > 0 ? (
           <Box
             aria-hidden
@@ -68,7 +68,7 @@ export const tematicRazdelColumns = [
         )}
         <Box
           component="span"
-          sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+          sx={{ minWidth: 0, whiteSpace: 'normal' }}
         >
           {getValue() ?? ''}
         </Box>
