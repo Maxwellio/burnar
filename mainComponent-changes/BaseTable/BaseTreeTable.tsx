@@ -238,7 +238,7 @@ export const BaseTreeTable = <TData,>({url, columns, filters, setFilters, setSel
                                         width: `var(--col-${id}-size)`,
                                     }}
                                         onClick={() => handleRowClick(row, cell)}
-                                        className="px-4 py-2 border text-sm text-gray-800 text-left whitespace-normal overflow-hidden text-ellipsis"
+                                        className="px-4 py-2 border text-sm text-gray-800 text-left whitespace-normal break-words"
                                     >
                                         <div>{flexRender(cell.column.columnDef.cell, cell.getContext())} </div>
                                     </td>
@@ -247,15 +247,25 @@ export const BaseTreeTable = <TData,>({url, columns, filters, setFilters, setSel
                         </tr>
                     ))}
                 </tbody>
-                {showStatusBar &&
-                    <tfoot>
-                        <tr className="sticky bottom-0 bg-gray-100 isolate border-t border-gray-300 max-h-10 border-separate border-spacing-0">
-                            <td colSpan={Math.max(table.getVisibleLeafColumns().length, 1)} className="font-semibold text-[#364FC7] whitespace-nowrap">{statusBarText}</td>
-                        </tr>
-                    </tfoot>
-                }
             </table>
         </div>
+        {showStatusBar &&
+            <div
+                style={{
+                    flexShrink: 0,
+                    minHeight: 32,
+                    boxSizing: 'border-box',
+                    padding: '6px 8px',
+                    backgroundColor: '#F3F4F6',
+                    borderTop: '1px solid #D1D5DB',
+                    color: '#364FC7',
+                    fontWeight: 600,
+                    whiteSpace: 'nowrap',
+                }}
+            >
+                {statusBarText}
+            </div>
+        }
     </div>
     );
 };
