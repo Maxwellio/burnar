@@ -238,9 +238,9 @@ export const BaseTreeTable = <TData,>({url, columns, filters, setFilters, setSel
                                         width: `var(--col-${id}-size)`,
                                     }}
                                         onClick={() => handleRowClick(row, cell)}
-                                        className="px-4 py-2 border text-sm text-gray- overflow-hedden overflow-ellipsis whitespase-nowrap"
+                                        className="px-4 py-2 border text-sm text-gray-800 text-left whitespace-normal overflow-hidden text-ellipsis"
                                     >
-                                        <div className="max-h-10 overflow-y-auto">{flexRender(cell.column.columnDef.cell, cell.getContext())} </div>
+                                        <div>{flexRender(cell.column.columnDef.cell, cell.getContext())} </div>
                                     </td>
                                 )
                             })}
