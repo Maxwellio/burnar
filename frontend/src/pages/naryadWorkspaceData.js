@@ -5,3 +5,11 @@ export function nodeIdFilters(selectedId) {
   }
   return [{ id: 'nodeId', value: String(selectedId) }]
 }
+
+/** Текст строки состояния дерева; без выбранной записи полоса остаётся пустой. */
+export function selectedNodeStatusText(selectedId) {
+  if (selectedId == null || selectedId === '') {
+    return ''
+  }
+  return `Код: ${String(selectedId)}`
+}

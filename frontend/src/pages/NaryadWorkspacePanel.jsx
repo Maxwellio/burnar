@@ -12,7 +12,10 @@ import {
   seedTableColumnSizing,
   writeStoredRightPanelWidth,
 } from './naryadPageLayout.js'
-import { nodeIdFilters } from './naryadWorkspaceData.js'
+import {
+  nodeIdFilters,
+  selectedNodeStatusText,
+} from './naryadWorkspaceData.js'
 
 /** Пустое поле — несколько строк; дальше высота растёт по тексту, лишнее прокручивается внутри рамки. */
 const ALG_FIELD_MIN_ROWS = 4
@@ -47,6 +50,7 @@ export default function NaryadWorkspacePanel({
   const [selectedId, setSelectedId] = useState(null)
   const [algorithm, setAlgorithm] = useState('')
   const paramFilters = useMemo(() => nodeIdFilters(selectedId), [selectedId])
+  const treeStatusText = selectedNodeStatusText(selectedId)
   const containerRef = useRef(null)
   const dragRef = useRef(null)
   const [rightWidth, setRightWidth] = useState(() => preferredWidthRef.current)
@@ -205,9 +209,29 @@ export default function NaryadWorkspacePanel({
                 filters={treeFilters}
                 setFilters={setTreeFilters}
                 setSelectedId={setSelectedId}
-                statusBar={{ selectedId: true }}
                 initialState={{ pagination: { pageIndex: 0, pageSize: 10000 } }}
               />
+            </Box>
+            <Box
+              role="status"
+              aria-live="polite"
+              sx={{
+                height: 32,
+                flexShrink: 0,
+                display: 'flex',
+                alignItems: 'center',
+                px: 1.5,
+                boxSizing: 'border-box',
+                borderTop: 1,
+                borderColor: 'divider',
+                bgcolor: '#F1F3F5',
+                color: '#364FC7',
+                fontSize: '0.875rem',
+                fontWeight: 600,
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {treeStatusText}
             </Box>
           </Box>
 

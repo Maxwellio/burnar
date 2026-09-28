@@ -6,43 +6,6 @@ import { DebouncedInput, DynamicDatePicker, DynamicSelect } from "../Input/Input
 import { FILTER_TYPES } from "../utils/types";
 import { ColumnFilter } from "./BaseTable";
 
-/** Флаги полей футера. Сам объект statusBar включает футер; selectedId — поле «Код». */
-export type TreeStatusBar = {
-    selectedId?: boolean;
-};
-
-type TreeStatusBarContext = {
-    selectedRowId?: unknown;
-};
-
-const TREE_STATUS_BAR_FIELDS: Array<{
-    key: keyof TreeStatusBar;
-    render: (ctx?: TreeStatusBarContext) => string | null;
-}> = [
-    {
-        key: 'selectedId',
-        render: ({ selectedRowId } = {}) =>
-            selectedRowId == null || selectedRowId === '' ? null : `Код: ${selectedRowId}`,
-    },
-];
-
-function isTreeStatusBarVisible(statusBar?: TreeStatusBar | null) {
-    return statusBar != null;
-}
-
-function getTreeStatusBarParts(statusBar?: TreeStatusBar | null, ctx: TreeStatusBarContext = {}) {
-    if (statusBar == null) {
-        return [];
-    }
-    return TREE_STATUS_BAR_FIELDS.flatMap((field) => {
-        if (!statusBar[field.key]) {
-            return [];
-        }
-        const part = field.render(ctx);
-        return part == null || part === '' ? [] : [part];
-    });
-}
-
 interface BaseTreeTableProps<TData> extends Partial<TableOptions<TData>>{
     url: string;
     columns: ColumnDef<TData>[];
@@ -54,14 +17,12 @@ interface BaseTreeTableProps<TData> extends Partial<TableOptions<TData>>{
     defColumnVisibility?: VisibilityState;
     reRenderSignal?: number;
     disabled?: boolean;
-    statusBar?: TreeStatusBar;
 }
 
 
-export const BaseTreeTable = <TData,>({url, columns, filters, setFilters, setSelectedId, setSelectedCol, setIsLeaf, defColumnVisibility, reRenderSignal, disabled=false, statusBar, ...props}: BaseTreeTableProps<TData>) =>{
+export const BaseTreeTable = <TData,>({url, columns, filters, setFilters, setSelectedId, setSelectedCol, setIsLeaf, defColumnVisibility, reRenderSignal, disabled=false, ...props}: BaseTreeTableProps<TData>) =>{
     const {data, loading, setData, fetchChildren} = useFetchData<TData>(url, filters || [], reRenderSignal);
     const [expanded, setExpanded] = useState({});
-    const [selectedRowId, setSelectedRowId] = useState(null);
     const [columnVisibility, setColumnVisibility] = useState<VisibilityState>(defColumnVisibility || {})
     const [columnSizing, setColumnSizing] = useState(() => {
         const saved = localStorage.getItem(`table-column-sizing:${url}`);
@@ -139,7 +100,6 @@ export const BaseTreeTable = <TData,>({url, columns, filters, setFilters, setSel
 
     const handleRowClick = (row, cell) => {        
         if (row.id){
-            setSelectedRowId(row.original.id);
             if(setSelectedId){
                 setSelectedId(row.original.id);
             }
@@ -148,9 +108,6 @@ export const BaseTreeTable = <TData,>({url, columns, filters, setFilters, setSel
             }
         }
     };
-
-    const showStatusBar = isTreeStatusBarVisible(statusBar);
-    const statusBarText = getTreeStatusBarParts(statusBar, { selectedRowId }).join('  ');
 
     // сохраниение размера колонок
     useEffect(() => {
@@ -177,7 +134,6 @@ export const BaseTreeTable = <TData,>({url, columns, filters, setFilters, setSel
 
     useEffect(() => {
         setExpanded({});
-        setSelectedRowId(null);
     }, [filters, url]);
     
     return(
@@ -259,13 +215,6 @@ export const BaseTreeTable = <TData,>({url, columns, filters, setFilters, setSel
                         </tr>
                     ))}
                 </tbody>
-                {showStatusBar &&
-                    <tfoot>
-                        <tr className="sticky bottom-0 bg-gray-100 isolate border-t border-gray-300 max-h-10 border-separate border-spacing-0">
-                            <td colSpan={Math.max(table.getVisibleLeafColumns().length, 1)} className="font-semibold text-[#364FC7] whitespace-nowrap">{statusBarText}</td>
-                        </tr>
-                    </tfoot>
-                }
             </table>
         </div>
     </div>
