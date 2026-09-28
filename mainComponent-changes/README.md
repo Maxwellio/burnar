@@ -1,4 +1,4 @@
-# Изменения mainComponent для выбора года в DynamicDateList
+# Изменения mainComponent для ручного переноса
 
 Временная папка для ручного переноса в соседний репозиторий `mainComponent`
 (пакет `table_comp/src/mainComponent`). После переноса этот коммит удаляется.
@@ -25,3 +25,23 @@
 
 Потребитель: `frontend/src/pages/Home.jsx` (burnar) передаёт `yearSelectable`,
 а бэкенд принимает `period=yyyy` наравне с `period=yyyy-MM-dd`.
+
+## Файл `BaseTable/BaseTreeTable.tsx`
+
+Полная изменённая версия `BaseTable/BaseTreeTable.tsx` пакета.
+Изменены только классы ячейки `td` и обёртка контента. Остальное — без правок.
+
+В `BaseTable` строка растёт по тексту: у `td` стоит `whitespace-normal`,
+внутренний `div` без `max-height`. В дереве было иначе: `max-h-10 overflow-y-auto`
+ограничивал ячейку 40px и включал прокрутку внутри неё, а классы
+`overflow-hedden` / `whitespase-nowrap` не действовали из-за опечаток.
+
+Теперь ячейка дерева переносит текст так же, как `BaseTable`:
+`whitespace-normal`, без потолка высоты. Отступы дерева оставлены `px-4 py-2`.
+
+Потребитель на карточке наряда — деревья задания и выполнения.
+Колонка «Название работы» дополнительно переносится в burnar
+(`frontend/src/pages/naryadWorkspaceColumns.jsx`): у текста сняты
+`nowrap` и `ellipsis`. Таблица параметров уже на `BaseTable`, её не меняли.
+Каталог тематических разделов тот же `BaseTreeTable`, но название там
+по-прежнему одна строка с многоточием.

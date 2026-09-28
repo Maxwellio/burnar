@@ -9,7 +9,7 @@ const EXPANDER_SIZE = 30
 
 function WorkNameCell({ row, getValue }) {
   return (
-    <Box sx={{ display: 'flex', alignItems: 'center', minWidth: 0, minHeight: EXPANDER_SIZE }}>
+    <Box sx={{ display: 'flex', alignItems: 'flex-start', minWidth: 0, minHeight: EXPANDER_SIZE }}>
       {row.depth > 0 ? (
         <Box
           aria-hidden
@@ -52,7 +52,7 @@ function WorkNameCell({ row, getValue }) {
       )}
       <Box
         component="span"
-        sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+        sx={{ minWidth: 0, whiteSpace: 'normal' }}
       >
         {getValue() ?? ''}
       </Box>
