@@ -177,8 +177,12 @@ export const BaseTreeTable = <TData,>({url, columns, filters, setFilters, setSel
 
     useEffect(() => {
         setExpanded({});
+    }, [filters]);
+
+    useEffect(() => {
+        setExpanded({});
         setSelectedRowId(null);
-    }, [filters, url]);
+    }, [url]);
     
     return(
         <div className="h-full w-full overflow-hidden flex flex-col rounded-lg">
@@ -236,11 +240,18 @@ export const BaseTreeTable = <TData,>({url, columns, filters, setFilters, setSel
                             ? 'bg-[#D0EBFF] even:bg-[#D0EBFF] hover:bg-[#B1D7FF] shadow-[inset_3px_0_0_0_#364FC7]'
                             : 'bg-white even:bg-[#F8FAFF]'}
                         `}
-                            onClick={(e) => {
+                            onClick={() => {
                             if (!row.getIsSelected()){
                                 table.resetRowSelection();
                             }
-                            row.toggleSelected(true);}}
+                            row.toggleSelected(true);
+                            if (row.original?.id != null && row.original.id !== '') {
+                                setSelectedRowId(row.original.id);
+                                if (setSelectedId) {
+                                    setSelectedId(row.original.id);
+                                }
+                            }
+                            }}
                         >
                             {row.getVisibleCells().map(cell => { 
                                 const id = cell.column.id.replace(/\./g, '-');
@@ -259,15 +270,11 @@ export const BaseTreeTable = <TData,>({url, columns, filters, setFilters, setSel
                         </tr>
                     ))}
                 </tbody>
-                {showStatusBar &&
-                    <tfoot>
-                        <tr className="sticky bottom-0 bg-gray-100 isolate border-t border-gray-300 max-h-10 border-separate border-spacing-0">
-                            <td colSpan={Math.max(table.getVisibleLeafColumns().length, 1)} className="font-semibold text-[#364FC7] whitespace-nowrap">{statusBarText}</td>
-                        </tr>
-                    </tfoot>
-                }
             </table>
         </div>
+        {showStatusBar &&
+            <div className="shrink-0 bg-gray-100 border-t border-gray-300 font-semibold text-[#364FC7] whitespace-nowrap px-2 py-2">{statusBarText}</div>
+        }
     </div>
     );
 };

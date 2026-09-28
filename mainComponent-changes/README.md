@@ -5,9 +5,14 @@
 
 ## Строка состояния BaseTreeTable
 
-Скопировать в пакет (пути в `Maxwellio/mainComponent`):
+Скопировать поверх файла, который реально импортирует пакет.
+`index.d.ts` экспортирует `./src/BaseTable/BaseTreeTable`, а в зеркале GitHub файл лежит как `BaseTable/BaseTreeTable.tsx`.
+Если править только корень репозитория, приложение продолжит грузить старый `src/BaseTable/BaseTreeTable.tsx` без строки состояния.
 
-- `BaseTable/BaseTreeTable.tsx` — полная версия. Кроме футера: шапка как в `BaseTable` (`colSpan`, `rowSpan` у placeholder, пропуск нижнего дубля одиночной колонки). Подсветки группы по клику нет.
+- локально: `table_comp/src/mainComponent/src/BaseTable/BaseTreeTable.tsx`
+- зеркало: `BaseTable/BaseTreeTable.tsx`
+
+Полная версия. Кроме строки состояния: шапка как в `BaseTable` (`colSpan`, `rowSpan` у placeholder, пропуск нижнего дубля одиночной колонки). Подсветки группы по клику нет.
 
 ### API
 
@@ -24,7 +29,9 @@
 
 Новое поле: флаг в типе `TreeStatusBar` + запись в `TREE_STATUS_BAR_FIELDS` в том же файле.
 
-Стили футера как у `BaseTable` (`tfoot` sticky bottom). Текст в одной ячейке на всю ширину, чтобы не обрезался узкой колонкой «Код».
+Полоска стоит под прокручиваемой таблицей (`shrink-0`, не `tfoot`).
+Так она остаётся внизу панели и не пропадает из-за `rowspan` шапки и липкого `tfoot` внутри скролла.
+Пока строка не выбрана, полоска пустая, но видна (`py-2`).
 
 ### Потребитель в burnar
 
