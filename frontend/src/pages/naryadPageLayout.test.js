@@ -3,9 +3,11 @@ import { beforeEach, describe, it } from 'node:test'
 import {
   persistTableColumnSizing,
   readStoredRightPanelWidth,
+  readStoredSplitOrientation,
   seedTableColumnSizing,
   tableColumnSizingUrlKey,
   writeStoredRightPanelWidth,
+  writeStoredSplitOrientation,
 } from './naryadPageLayout.js'
 
 function installMemoryStorage() {
@@ -44,6 +46,28 @@ describe('right panel width', () => {
     localStorage.setItem('naryad-right-panel-width', '280')
     writeStoredRightPanelWidth(360, 'naryad-right-panel-width:zad')
     assert.equal(readStoredRightPanelWidth('naryad-right-panel-width:zad'), 360)
+  })
+})
+
+describe('split orientation', () => {
+  it('defaults to vertical', () => {
+    assert.equal(readStoredSplitOrientation(), 'vertical')
+  })
+
+  it('writes and reads horizontal', () => {
+    writeStoredSplitOrientation('horizontal')
+    assert.equal(readStoredSplitOrientation(), 'horizontal')
+  })
+
+  it('ignores an unknown value and keeps the previous one', () => {
+    writeStoredSplitOrientation('horizontal')
+    writeStoredSplitOrientation('diagonal')
+    assert.equal(readStoredSplitOrientation(), 'horizontal')
+  })
+
+  it('falls back to vertical when storage has an unknown value', () => {
+    localStorage.setItem('naryad-split-orientation', 'diagonal')
+    assert.equal(readStoredSplitOrientation(), 'vertical')
   })
 })
 

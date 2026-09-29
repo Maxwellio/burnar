@@ -7,13 +7,19 @@ import ToggleButtonGroup from '@mui/material/ToggleButtonGroup'
 import Tooltip from '@mui/material/Tooltip'
 import Typography from '@mui/material/Typography'
 import Close from '@mui/icons-material/Close'
+import HorizontalSplit from '@mui/icons-material/HorizontalSplit'
 import MenuBook from '@mui/icons-material/MenuBook'
 import Tune from '@mui/icons-material/Tune'
+import VerticalSplit from '@mui/icons-material/VerticalSplit'
 import { fetchNaryadHeader } from '../api/naryadyApi.js'
 import CatalogDialog from './CatalogDialog.jsx'
 import NaryadZadaniePanel from './NaryadZadaniePanel.jsx'
 import NaryadVipolneniePanel from './NaryadVipolneniePanel.jsx'
-import { ACTION_BAR_HEIGHT } from './naryadPageLayout.js'
+import {
+  ACTION_BAR_HEIGHT,
+  readStoredSplitOrientation,
+  writeStoredSplitOrientation,
+} from './naryadPageLayout.js'
 import { initialOpenPanels, toggleOpenPanels } from './naryadTabs.js'
 
 /** Вкладки карточки наряда — Delphi TfrmComNarZad / TfrmComNarVip. */
@@ -64,7 +70,21 @@ const stubIconSx = {
   color: 'text.secondary',
 }
 
-function paneSx(visible, bothOpen, withDivider) {
+const splitButtonSx = {
+  height: '100%',
+  width: ACTION_BAR_HEIGHT,
+  borderRadius: 0,
+  borderLeft: 1,
+  borderRight: 1,
+  borderColor: 'divider',
+  color: 'text.secondary',
+  '&.Mui-disabled': {
+    color: 'text.disabled',
+    borderColor: 'action.disabled',
+  },
+}
+
+function paneSx(visible, bothOpen, dividerSide) {
   return {
     display: visible ? 'flex' : 'none',
     flexDirection: 'column',
@@ -72,17 +92,22 @@ function paneSx(visible, bothOpen, withDivider) {
     minWidth: 0,
     minHeight: 0,
     overflow: 'hidden',
-    ...(withDivider
+    ...(dividerSide === 'right'
       ? { borderRight: 1, borderColor: 'divider' }
+      : null),
+    ...(dividerSide === 'bottom'
+      ? { borderBottom: 1, borderColor: 'divider' }
       : null),
   }
 }
 
 /**
  * Карточка наряда /naryad/:id.
- * Action bar: включаемые вкладки (нельзя снять последнюю), подпись наряда,
+ * Action bar: включаемые вкладки (повторный клик по единственной переключает
+ * на другую), кнопка деления, подпись наряда,
  * заглушка параметров, модальный каталог и выход на список.
- * Обе вкладки при включении делят область слева-направо пополам и остаются
+ * Обе вкладки при включении делят область пополам: слева-направо или
+ * сверху-вниз. Направление хранится в localStorage. Панели остаются
  * смонтированными при скрытии, чтобы ширины колонок сохранялись.
  */
 export default function NaryadPage() {
@@ -90,6 +115,7 @@ export default function NaryadPage() {
   const navigate = useNavigate()
   const [openPanels, setOpenPanels] = useState([])
   const [mountedPanels, setMountedPanels] = useState({ zad: false, vip: false })
+  const [splitOrientation, setSplitOrientation] = useState(readStoredSplitOrientation)
   const [nameNar, setNameNar] = useState('')
   const [catalogOpen, setCatalogOpen] = useState(false)
 
@@ -135,6 +161,10 @@ export default function NaryadPage() {
   const showZad = openPanels.includes('zad')
   const showVip = openPanels.includes('vip')
   const bothOpen = showZad && showVip
+  const horizontalSplit = bothOpen && splitOrientation === 'horizontal'
+  const splitButtonTitle = bothOpen
+    ? (splitOrientation === 'horizontal' ? 'Вертикальное деление' : 'Горизонтальное деление')
+    : 'Доступно, когда открыты задание и выполнение'
   const title = nameNar
     ? `Наряд - ${id} ${nameNar}`
     : `Наряд - ${id}`
@@ -174,6 +204,23 @@ export default function NaryadPage() {
             </ToggleButton>
           ))}
         </ToggleButtonGroup>
+
+        <Tooltip title={splitButtonTitle}>
+          <Box component="span" sx={{ display: 'inline-flex', alignSelf: 'stretch' }}>
+            <IconButton
+              aria-label={splitButtonTitle}
+              disabled={!bothOpen}
+              onClick={() => {
+                const next = splitOrientation === 'horizontal' ? 'vertical' : 'horizontal'
+                writeStoredSplitOrientation(next)
+                setSplitOrientation(next)
+              }}
+              sx={splitButtonSx}
+            >
+              {splitOrientation === 'horizontal' ? <VerticalSplit /> : <HorizontalSplit />}
+            </IconButton>
+          </Box>
+        </Tooltip>
 
         <Typography
           component="h1"
@@ -226,16 +273,17 @@ export default function NaryadPage() {
           minHeight: 0,
           minWidth: 0,
           display: 'flex',
+          flexDirection: horizontalSplit ? 'column' : 'row',
           overflow: 'hidden',
         }}
       >
         {mountedPanels.zad ? (
-          <Box sx={paneSx(showZad, bothOpen, bothOpen)}>
+          <Box sx={paneSx(showZad, bothOpen, bothOpen ? (horizontalSplit ? 'bottom' : 'right') : null)}>
             <NaryadZadaniePanel naryadId={id} />
           </Box>
         ) : null}
         {mountedPanels.vip ? (
-          <Box sx={paneSx(showVip, bothOpen, false)}>
+          <Box sx={paneSx(showVip, bothOpen, null)}>
             <NaryadVipolneniePanel naryadId={id} />
           </Box>
         ) : null}
