@@ -1,6 +1,9 @@
 /** Высота action bar карточки наряда — как Toolbar в ProtectedLayout (minHeight 48). */
 export const ACTION_BAR_HEIGHT = 48
 
+/** Вертикальное или горизонтальное деление задания и выполнения. */
+export const SPLIT_ORIENTATION_KEY = 'naryad-split-orientation'
+
 /** Прежний общий ключ — читаем как fallback, новые записи идут в per-tab ключи. */
 export const RIGHT_PANEL_WIDTH_KEY = 'naryad-right-panel-width'
 export const RIGHT_PANEL_WIDTH_KEYS = {
@@ -58,6 +61,15 @@ export function readStoredRightPanelWidth(storageKey = RIGHT_PANEL_WIDTH_KEY) {
 export function writeStoredRightPanelWidth(width, storageKey = RIGHT_PANEL_WIDTH_KEY) {
   if (!(Number.isFinite(width) && width > 0)) return
   writeStorage(storageKey, String(Math.round(width)))
+}
+
+export function readStoredSplitOrientation() {
+  return readStorage(SPLIT_ORIENTATION_KEY) === 'horizontal' ? 'horizontal' : 'vertical'
+}
+
+export function writeStoredSplitOrientation(orientation) {
+  if (orientation !== 'horizontal' && orientation !== 'vertical') return
+  writeStorage(SPLIT_ORIENTATION_KEY, orientation)
 }
 
 export function clampRightPanelWidth(width, containerWidth) {

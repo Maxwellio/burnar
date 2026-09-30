@@ -33,9 +33,14 @@ describe('initialOpenPanels', () => {
 })
 
 describe('toggleOpenPanels', () => {
-  it('keeps the last remaining panel', () => {
-    assert.deepEqual(toggleOpenPanels(['zad'], []), ['zad'])
+  it('switches the only open panel when that tab is clicked again', () => {
+    assert.deepEqual(toggleOpenPanels(['zad'], []), ['vip'])
+    assert.deepEqual(toggleOpenPanels(['vip'], []), ['zad'])
+  })
+
+  it('keeps the current panels when the next value is missing', () => {
     assert.deepEqual(toggleOpenPanels(['vip'], null), ['vip'])
+    assert.deepEqual(toggleOpenPanels(['zad', 'vip'], []), ['zad', 'vip'])
   })
 
   it('allows opening the second panel and keeps zad left of vip', () => {

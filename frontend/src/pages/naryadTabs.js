@@ -13,8 +13,15 @@ export function initialOpenPanels({ hasZadanie, hasVipolnenie }) {
   return ['zad']
 }
 
-/** Нельзя снять последнюю вкладку; порядок всегда zad → vip. */
+/**
+ * Пустой next при одной открытой вкладке переключает на другую.
+ * Иначе последнюю вкладку снять нельзя; порядок всегда zad → vip.
+ */
 export function toggleOpenPanels(prev, next) {
-  if (!Array.isArray(next) || next.length === 0) return prev
+  if (!Array.isArray(next)) return prev
+  if (next.length === 0 && Array.isArray(prev) && prev.length === 1) {
+    return prev[0] === 'zad' ? ['vip'] : ['zad']
+  }
+  if (next.length === 0) return prev
   return PANEL_ORDER.filter((id) => next.includes(id))
 }
