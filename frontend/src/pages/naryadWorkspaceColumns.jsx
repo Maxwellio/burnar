@@ -35,7 +35,6 @@ function OperTypeMark({ node }) {
     <Box
       component="span"
       role="img"
-      title={OPER_TYPE_LABELS[name]}
       aria-label={OPER_TYPE_LABELS[name]}
       sx={{
         display: 'inline-flex',
@@ -135,7 +134,6 @@ function MarkedValueCell({ getValue, iconName, Icon, label, color = 'text.second
       <Box
         component="span"
         role="img"
-        title={label}
         aria-label={label}
         sx={{
           display: 'inline-flex',
