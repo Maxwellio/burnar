@@ -1,6 +1,10 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
-import { naryadOperIconName } from './naryadOperIcons.js'
+import {
+  naryadCorrelationIconName,
+  naryadLockIconName,
+  naryadOperIconName,
+} from './naryadOperIcons.js'
 
 describe('naryadOperIconName', () => {
   it('uses calculator for leaf combination and algorithm', () => {
@@ -30,10 +34,39 @@ describe('naryadOperIconName', () => {
     assert.equal(naryadOperIconName(undefined), null)
   })
 
-  it('ignores lock and correlation', () => {
+  it('keeps the name icon when the row is also locked or correlated', () => {
     assert.equal(
       naryadOperIconName({ operlifetype: 79, hasChildren: false, locked: 1, kor: 1 }),
       'calculator',
     )
+  })
+})
+
+describe('naryadCorrelationIconName', () => {
+  it('uses bell on a typed leaf with kor = 1', () => {
+    assert.equal(naryadCorrelationIconName({ operlifetype: 79, hasChildren: false, kor: 1 }), 'bell')
+    assert.equal(naryadCorrelationIconName({ operlifetype: 82, hasChildren: false, kor: '1' }), 'bell')
+    assert.equal(naryadCorrelationIconName({ operlifetype: 78, hasChildren: false, kor: 1 }), 'bell')
+  })
+
+  it('skips a parent, a block, and a leaf without a rule', () => {
+    assert.equal(naryadCorrelationIconName({ operlifetype: 79, hasChildren: true, kor: 1 }), null)
+    assert.equal(naryadCorrelationIconName({ operlifetype: null, hasChildren: false, kor: 1 }), null)
+    assert.equal(naryadCorrelationIconName({ operlifetype: 80, hasChildren: false, kor: 0 }), null)
+    assert.equal(naryadCorrelationIconName(null), null)
+  })
+})
+
+describe('naryadLockIconName', () => {
+  it('uses link-2 for any locked row', () => {
+    assert.equal(naryadLockIconName({ operlifetype: 79, hasChildren: false, locked: 1 }), 'link-2')
+    assert.equal(naryadLockIconName({ operlifetype: 79, hasChildren: true, locked: '1' }), 'link-2')
+    assert.equal(naryadLockIconName({ operlifetype: null, hasChildren: true, locked: 1 }), 'link-2')
+  })
+
+  it('draws nothing when the row is unlocked or missing', () => {
+    assert.equal(naryadLockIconName({ locked: 0 }), null)
+    assert.equal(naryadLockIconName({ locked: null }), null)
+    assert.equal(naryadLockIconName(null), null)
   })
 })
