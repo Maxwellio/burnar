@@ -40,6 +40,8 @@
 
     "formik": "^2.4.9",
 
+    "lucide-react": "0.469.0",
+
     "mainComponent": "file:../../table_comp/src/mainComponent",
 
     "react": "^18.2.0",

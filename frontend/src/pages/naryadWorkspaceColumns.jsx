@@ -2,10 +2,49 @@ import Box from '@mui/material/Box'
 import IconButton from '@mui/material/IconButton'
 import Add from '@mui/icons-material/Add'
 import Remove from '@mui/icons-material/Remove'
+import { Calculator, FolderTree, SquareArrowOutUpRight } from 'lucide-react'
+import { naryadOperIconName } from './naryadOperIcons.js'
 
 /** Отступ одного уровня (~32px), как в каталоге тематических разделов. */
 const LEVEL_INDENT = 4
 const EXPANDER_SIZE = 30
+
+/** Имена из naryadOperIconName → компоненты lucide-react 0.469.0. */
+const OPER_TYPE_ICONS = {
+  calculator: Calculator,
+  'square-arrow-out-up-right': SquareArrowOutUpRight,
+  'folder-tree': FolderTree,
+}
+
+const OPER_TYPE_LABELS = {
+  calculator: 'Комбинация или алгоритм',
+  'square-arrow-out-up-right': 'Ненормируемая работа',
+  'folder-tree': 'Структура',
+}
+
+function OperTypeMark({ node }) {
+  const name = naryadOperIconName(node)
+  const Icon = name ? OPER_TYPE_ICONS[name] : null
+  if (!Icon) return null
+  return (
+    <Box
+      component="span"
+      role="img"
+      title={OPER_TYPE_LABELS[name]}
+      aria-label={OPER_TYPE_LABELS[name]}
+      sx={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        flexShrink: 0,
+        height: EXPANDER_SIZE,
+        mr: 0.75,
+        color: 'text.secondary',
+      }}
+    >
+      <Icon size={16} aria-hidden />
+    </Box>
+  )
+}
 
 function WorkNameCell({ row, getValue }) {
   return (
@@ -50,6 +89,7 @@ function WorkNameCell({ row, getValue }) {
       ) : (
         <Box sx={{ width: EXPANDER_SIZE, flexShrink: 0, mr: 0.75 }} />
       )}
+      <OperTypeMark node={row.original} />
       <Box
         component="span"
         sx={{ minWidth: 0, whiteSpace: 'normal' }}
