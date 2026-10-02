@@ -48,3 +48,25 @@ export function rowBackgroundColor(row, overrides) {
 export function canChangeRowColor(selectedId, closed, pending = false) {
   return selectedId != null && closed !== true && !pending
 }
+
+export function withRowColorOverride(overrides, nodeId, color) {
+  const next = new Map(overrides)
+  next.set(nodeId, color)
+  return next
+}
+
+export function colorOverrideBaseline(overrides, nodeId) {
+  return {
+    nodeId,
+    had: overrides.has(nodeId),
+    color: overrides.get(nodeId),
+  }
+}
+
+export function withoutUnsavedColorOverride(overrides, baseline) {
+  const next = new Map(overrides)
+  if (!baseline) return next
+  if (baseline.had) next.set(baseline.nodeId, baseline.color)
+  else next.delete(baseline.nodeId)
+  return next
+}

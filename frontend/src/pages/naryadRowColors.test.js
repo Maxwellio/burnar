@@ -4,9 +4,12 @@ import {
   NARYAD_COLOR_SWATCHES,
   NARYAD_DEFAULT_PICKER_COLOR,
   canChangeRowColor,
+  colorOverrideBaseline,
   cssColorToDelphi,
   delphiColorToCss,
   rowBackgroundColor,
+  withRowColorOverride,
+  withoutUnsavedColorOverride,
 } from './naryadRowColors.js'
 
 describe('delphiColorToCss', () => {
@@ -85,6 +88,29 @@ describe('NARYAD_COLOR_SWATCHES', () => {
 
   it('includes the default yellow sample', () => {
     assert.ok(NARYAD_COLOR_SWATCHES.some((swatch) => swatch.css === NARYAD_DEFAULT_PICKER_COLOR))
+  })
+})
+
+describe('row color preview', () => {
+  it('shows an intermediate override before the server answers', () => {
+    const overrides = withRowColorOverride(new Map([[7, 255]]), 7, 16711680)
+    assert.equal(rowBackgroundColor({ id: 7, colorsel: 255 }, overrides), '#0000ff')
+  })
+
+  it('restores the previous override when a custom color is not saved', () => {
+    const original = new Map([[7, 255]])
+    const baseline = colorOverrideBaseline(original, 7)
+    const preview = withRowColorOverride(original, 7, 16711680)
+    assert.equal(
+      withoutUnsavedColorOverride(preview, baseline).get(7),
+      255,
+    )
+  })
+
+  it('drops an unsaved override when the row had no local color', () => {
+    const baseline = colorOverrideBaseline(new Map(), 7)
+    const preview = withRowColorOverride(new Map(), 7, 255)
+    assert.equal(withoutUnsavedColorOverride(preview, baseline).has(7), false)
   })
 })
 
