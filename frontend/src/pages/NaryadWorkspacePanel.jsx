@@ -87,6 +87,8 @@ export default function NaryadWorkspacePanel({
   const [clearSelectionSignal, setClearSelectionSignal] = useState(0)
   const [mutationPending, setMutationPending] = useState(false)
   const [colorMenuAnchor, setColorMenuAnchor] = useState(null)
+  const [colorTooltipOpen, setColorTooltipOpen] = useState(false)
+  const [resetTooltipOpen, setResetTooltipOpen] = useState(false)
   const paramFilters = useMemo(() => nodeIdFilters(selectedId), [selectedId])
   const treeStatusText = selectedNodeStatusText(selectedId)
   const colorActionsEnabled = canChangeRowColor(selectedId, closed, mutationPending)
@@ -111,6 +113,13 @@ export default function NaryadWorkspacePanel({
   useEffect(() => {
     if (selectedId == null || closed === true) setColorMenuAnchor(null)
   }, [selectedId, closed])
+
+  useEffect(() => {
+    if (colorMenuAnchor || !colorActionsEnabled) {
+      setColorTooltipOpen(false)
+      setResetTooltipOpen(false)
+    }
+  }, [colorMenuAnchor, colorActionsEnabled])
 
   useEffect(() => {
     let cancelled = false
@@ -339,14 +348,25 @@ export default function NaryadWorkspacePanel({
           borderColor: 'divider',
         }}
       >
-        <Tooltip title={colorMenuAnchor ? '' : 'Выделить строку цветом'}>
+        <Tooltip
+          title="Выделить строку цветом"
+          open={colorTooltipOpen && !colorMenuAnchor && colorActionsEnabled}
+          onOpen={() => {
+            if (!colorMenuAnchor && colorActionsEnabled) setColorTooltipOpen(true)
+          }}
+          onClose={() => setColorTooltipOpen(false)}
+          disableFocusListener
+        >
           <Box component="span" sx={{ display: 'inline-flex', position: 'relative' }}>
             <IconButton
               aria-label="Выделить строку цветом"
               aria-haspopup="dialog"
               aria-expanded={Boolean(colorMenuAnchor)}
               disabled={!colorActionsEnabled}
-              onClick={(event) => setColorMenuAnchor(event.currentTarget)}
+              onClick={(event) => {
+                setColorTooltipOpen(false)
+                setColorMenuAnchor(event.currentTarget)
+              }}
               sx={actionButtonSx}
             >
               <Colorize />
@@ -395,15 +415,28 @@ export default function NaryadWorkspacePanel({
               </Box>
               <Box
                 sx={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 1,
-                  px: 1.5,
-                  py: 0.75,
+                  position: 'relative',
                   borderTop: 1,
                   borderColor: 'divider',
                 }}
               >
+                <Box
+                  component="span"
+                  sx={{
+                    display: 'block',
+                    pl: '52px',
+                    pr: 1.5,
+                    py: 1,
+                    pointerEvents: 'none',
+                    color: 'text.primary',
+                    fontSize: '0.875rem',
+                    lineHeight: '28px',
+                  }}
+                >
+                  Свой цвет
+                </Box>
+                {/* Поле накрывает всю строку, поэтому клик по надписи тоже открывает
+                    селектор. Это по-прежнему прямой клик по видимому input, не скрипт. */}
                 <Box
                   ref={bindColorInput}
                   component="input"
@@ -418,39 +451,55 @@ export default function NaryadWorkspacePanel({
                     previewCustomColor(event.currentTarget.value)
                   }}
                   sx={{
-                    width: 28,
-                    height: 28,
-                    minWidth: 28,
-                    minHeight: 28,
+                    position: 'absolute',
+                    inset: 0,
+                    width: '100%',
+                    height: '100%',
+                    m: 0,
                     p: 0,
-                    boxSizing: 'border-box',
-                    border: 1,
-                    borderColor: 'divider',
-                    borderRadius: 0.5,
-                    bgcolor: 'transparent',
+                    border: 0,
+                    opacity: 1,
                     cursor: 'pointer',
-                    flexShrink: 0,
+                    bgcolor: 'transparent',
                     appearance: 'none',
-                    '&::-webkit-color-swatch-wrapper': { padding: 0 },
-                    '&::-webkit-color-swatch': { border: 0, borderRadius: 0.5 },
+                    '&:hover': { bgcolor: 'action.hover' },
+                    '&::-webkit-color-swatch-wrapper': {
+                      position: 'relative',
+                      p: 0,
+                      width: '100%',
+                      height: '100%',
+                    },
+                    '&::-webkit-color-swatch': {
+                      position: 'absolute',
+                      left: 12,
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      width: 28,
+                      height: 28,
+                      border: '1px solid rgba(0, 0, 0, 0.12)',
+                      borderRadius: 0.5,
+                    },
                   }}
                 />
-                <Box
-                  component="span"
-                  sx={{ color: 'text.primary', fontSize: '0.875rem' }}
-                >
-                  Свой цвет
-                </Box>
               </Box>
             </Popover>
           </Box>
         </Tooltip>
-        <Tooltip title="Сбросить цвет">
+        <Tooltip
+          title="Сбросить цвет"
+          open={resetTooltipOpen && colorActionsEnabled}
+          onOpen={() => {
+            if (colorActionsEnabled) setResetTooltipOpen(true)
+          }}
+          onClose={() => setResetTooltipOpen(false)}
+          disableFocusListener
+        >
           <Box component="span" sx={{ display: 'inline-flex' }}>
             <IconButton
               aria-label="Сбросить цвет"
               disabled={!colorActionsEnabled}
               onClick={() => {
+                setResetTooltipOpen(false)
                 void changeSelectedRowColor(0)
               }}
               sx={actionButtonSx}
