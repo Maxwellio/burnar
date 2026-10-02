@@ -11,7 +11,7 @@ export function fetchNaryadyPeriods(dateMode = 0, orgUnitId) {
   )
 }
 
-/** Заголовок карточки: { id, nameNar, hasZadanie, hasVipolnenie }. */
+/** Заголовок карточки: { id, nameNar, hasZadanie, hasVipolnenie, zadanieClosed, vipolnenieClosed }. */
 export function fetchNaryadHeader(id) {
   return requestJson(`/naryady/${id}`)
 }
@@ -19,5 +19,14 @@ export function fetchNaryadHeader(id) {
 /** Текст алгоритма выбранной операции (пустой, если тип не 80). */
 export function fetchNaryadAlgorithm(algorithmPath, nodeId) {
   return requestJson(`${algorithmPath}${buildQuery({ nodeId })}`)
+}
+
+/** Обновляет Delphi BGR-цвет одной строки задания или выполнения. */
+export function updateNaryadRowColor(id, part, nodeId, color) {
+  return requestJson(`/naryady/${id}/${part}/${nodeId}/color`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ color }),
+  })
 }
 

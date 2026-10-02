@@ -1,3 +1,8 @@
+/** Счётчик фильтров параметров: смена выбора отменяет предыдущий запрос. */
+export function nextParamsRequestId(requestId) {
+  return requestId + 1
+}
+
 /** Фильтр BaseTable параметров: nodeId уходит query-параметром, без выбора — пустой список. */
 export function nodeIdFilters(selectedId) {
   if (selectedId == null || selectedId === '') {

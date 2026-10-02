@@ -88,7 +88,9 @@ public class NaryadListService {
     static final String HEADER_SELECT_SQL =
             "SELECT d.key AS id, d.nm AS name_nar, "
                     + "EXISTS (SELECT 1 FROM burnar.defnarzad z WHERE z.narkey = d.key) AS has_zadanie, "
-                    + "EXISTS (SELECT 1 FROM burnar.defnarvip v WHERE v.narkey = d.key) AS has_vipolnenie ";
+                    + "EXISTS (SELECT 1 FROM burnar.defnarvip v WHERE v.narkey = d.key) AS has_vipolnenie, "
+                    + "(SELECT z.closed = 1 FROM burnar.defnarzad z WHERE z.narkey = d.key) AS zadanie_closed, "
+                    + "(SELECT v.closed = 1 FROM burnar.defnarvip v WHERE v.narkey = d.key) AS vipolnenie_closed ";
 
     private static final ObjectMapper JSON = new ObjectMapper();
     private static final TypeReference<List<NaryadMasterDto>> MASTERS_TYPE =
@@ -202,6 +204,8 @@ public class NaryadListService {
             dto.setNameNar(rs.getString("name_nar"));
             dto.setHasZadanie(rs.getBoolean("has_zadanie"));
             dto.setHasVipolnenie(rs.getBoolean("has_vipolnenie"));
+            dto.setZadanieClosed((Boolean) rs.getObject("zadanie_closed"));
+            dto.setVipolnenieClosed((Boolean) rs.getObject("vipolnenie_closed"));
             return dto;
         });
         if (rows.isEmpty()) {

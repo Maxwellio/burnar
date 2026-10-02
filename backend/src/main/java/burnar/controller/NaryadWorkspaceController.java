@@ -3,9 +3,13 @@ package burnar.controller;
 import burnar.dto.NaryadAlgorithmDto;
 import burnar.dto.NaryadOperNodeDto;
 import burnar.dto.NaryadOperParamDto;
+import burnar.dto.NaryadRowColorDto;
+import burnar.dto.NaryadRowColorRequest;
 import burnar.service.NaryadWorkspaceService;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -48,6 +52,15 @@ public class NaryadWorkspaceController {
         return naryadWorkspaceService.findZadanieAlgorithm(id, nodeId);
     }
 
+    @PatchMapping("/{id:\\d+}/zadanie/{nodeId:\\d+}/color")
+    public NaryadRowColorDto updateZadanieColor(
+            @PathVariable int id,
+            @PathVariable long nodeId,
+            @RequestBody(required = false) NaryadRowColorRequest request) {
+        return naryadWorkspaceService.updateZadanieColor(
+                id, nodeId, request == null ? null : request.getColor());
+    }
+
     @GetMapping("/{id:\\d+}/vipolnenie")
     public List<NaryadOperNodeDto> vipolnenieRoots(@PathVariable int id) {
         return naryadWorkspaceService.findVipolnenieRoots(id);
@@ -69,5 +82,14 @@ public class NaryadWorkspaceController {
     public NaryadAlgorithmDto vipolnenieAlgorithm(
             @PathVariable int id, @RequestParam(required = false) Long nodeId) {
         return naryadWorkspaceService.findVipolnenieAlgorithm(id, nodeId);
+    }
+
+    @PatchMapping("/{id:\\d+}/vipolnenie/{nodeId:\\d+}/color")
+    public NaryadRowColorDto updateVipolnenieColor(
+            @PathVariable int id,
+            @PathVariable long nodeId,
+            @RequestBody(required = false) NaryadRowColorRequest request) {
+        return naryadWorkspaceService.updateVipolnenieColor(
+                id, nodeId, request == null ? null : request.getColor());
     }
 }

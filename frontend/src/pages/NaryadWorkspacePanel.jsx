@@ -1,8 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Box from '@mui/material/Box'
+import IconButton from '@mui/material/IconButton'
 import TextField from '@mui/material/TextField'
+import Tooltip from '@mui/material/Tooltip'
+import Colorize from '@mui/icons-material/Colorize'
+import FormatColorReset from '@mui/icons-material/FormatColorReset'
 import { AxiosProvider, BaseTable, BaseTreeTable } from 'mainComponent'
-import { fetchNaryadAlgorithm } from '../api/naryadyApi.js'
+import { fetchNaryadAlgorithm, updateNaryadRowColor } from '../api/naryadyApi.js'
+import { useAlert } from '../context/ConfirmContext.jsx'
 import {
   ACTION_BAR_HEIGHT,
   RIGHT_PANEL_DEFAULT_RATIO,
@@ -13,13 +18,41 @@ import {
   writeStoredRightPanelWidth,
 } from './naryadPageLayout.js'
 import {
+  nextParamsRequestId,
   nodeIdFilters,
   selectedNodeStatusText,
 } from './naryadWorkspaceData.js'
+import {
+  NARYAD_DEFAULT_PICKER_COLOR,
+  canChangeRowColor,
+  cssColorToDelphi,
+  rowBackgroundColor,
+} from './naryadRowColors.js'
 
 /** Пустое поле — несколько строк; дальше высота растёт по тексту, лишнее прокручивается внутри рамки. */
 const ALG_FIELD_MIN_ROWS = 4
 const ALG_FIELD_MAX_ROWS = 12
+
+const actionButtonSx = {
+  height: '100%',
+  width: ACTION_BAR_HEIGHT,
+  borderRadius: 0,
+  borderRight: 1,
+  borderColor: 'divider',
+  color: 'text.secondary',
+}
+
+const visuallyHiddenInputSx = {
+  position: 'absolute',
+  width: 1,
+  height: 1,
+  p: 0,
+  m: -1,
+  overflow: 'hidden',
+  clip: 'rect(0 0 0 0)',
+  whiteSpace: 'nowrap',
+  border: 0,
+}
 
 /**
  * Раскладка одной вкладки: дерево / сплиттер / параметры + алгоритм.
@@ -29,6 +62,9 @@ const ALG_FIELD_MAX_ROWS = 12
  */
 export default function NaryadWorkspacePanel({
   actionBarAriaLabel,
+  naryadId,
+  part,
+  closed,
   treeUrl,
   treeColumns,
   paramsUrl,
@@ -38,6 +74,9 @@ export default function NaryadWorkspacePanel({
   treeSizingKey,
   paramsSizingKey,
 }) {
+  const showAlert = useAlert()
+  const colorInputRef = useRef(null)
+  const mutationPendingRef = useRef(false)
   const preferredWidthRef = useRef(readStoredRightPanelWidth(rightPanelStorageKey))
   const seededRef = useRef(false)
   if (!seededRef.current) {
@@ -49,8 +88,16 @@ export default function NaryadWorkspacePanel({
   const [treeFilters, setTreeFilters] = useState([])
   const [selectedId, setSelectedId] = useState(null)
   const [algorithm, setAlgorithm] = useState('')
-  const paramFilters = useMemo(() => nodeIdFilters(selectedId), [selectedId])
+  const [colorOverrides, setColorOverrides] = useState(() => new Map())
+  const [clearSelectionSignal, setClearSelectionSignal] = useState(0)
+  const [mutationPending, setMutationPending] = useState(false)
+  const [paramsRequestId, setParamsRequestId] = useState(0)
+  const paramFilters = useMemo(
+    () => [...nodeIdFilters(selectedId), { id: 'paramsRequest', value: String(paramsRequestId) }],
+    [paramsRequestId, selectedId],
+  )
   const treeStatusText = selectedNodeStatusText(selectedId)
+  const colorActionsEnabled = canChangeRowColor(selectedId, closed, mutationPending)
   const containerRef = useRef(null)
   const dragRef = useRef(null)
   const [rightWidth, setRightWidth] = useState(() => preferredWidthRef.current)
@@ -59,6 +106,7 @@ export default function NaryadWorkspacePanel({
   useEffect(() => {
     setSelectedId(null)
     setAlgorithm('')
+    setColorOverrides(new Map())
   }, [treeUrl])
 
   useEffect(() => {
@@ -159,6 +207,30 @@ export default function NaryadWorkspacePanel({
     setDragging(true)
   }
 
+  const changeSelectedRowColor = async (color) => {
+    if (!canChangeRowColor(selectedId, closed, mutationPendingRef.current)) return
+    const nodeId = selectedId
+    mutationPendingRef.current = true
+    setMutationPending(true)
+    try {
+      const updated = await updateNaryadRowColor(naryadId, part, nodeId, color)
+      setColorOverrides((current) => {
+        const next = new Map(current)
+        next.set(nodeId, updated.color)
+        return next
+      })
+      setSelectedId(null)
+      setAlgorithm('')
+      setParamsRequestId(nextParamsRequestId)
+      setClearSelectionSignal((signal) => signal + 1)
+    } catch {
+      void showAlert('Не удалось изменить цвет строки.')
+    } finally {
+      mutationPendingRef.current = false
+      setMutationPending(false)
+    }
+  }
+
   return (
     <Box
       sx={{
@@ -175,11 +247,59 @@ export default function NaryadWorkspacePanel({
         sx={{
           height: ACTION_BAR_HEIGHT,
           flexShrink: 0,
+          display: 'flex',
+          alignItems: 'stretch',
           bgcolor: 'background.paper',
           borderBottom: 1,
           borderColor: 'divider',
         }}
-      />
+      >
+        <Tooltip title="Выделить строку цветом">
+          <Box component="span" sx={{ display: 'inline-flex', position: 'relative' }}>
+            <IconButton
+              aria-label="Выделить строку цветом"
+              disabled={!colorActionsEnabled}
+              onClick={() => colorInputRef.current?.click()}
+              sx={actionButtonSx}
+            >
+              <Colorize />
+            </IconButton>
+              <Box
+              ref={colorInputRef}
+              component="input"
+              type="color"
+              defaultValue={NARYAD_DEFAULT_PICKER_COLOR}
+              aria-label="Цвет строки"
+              tabIndex={-1}
+              sx={visuallyHiddenInputSx}
+              onClick={(event) => {
+                event.currentTarget.value = '#000000'
+              }}
+              onChange={(event) => {
+                const input = event.currentTarget
+                void changeSelectedRowColor(cssColorToDelphi(input.value))
+                  .finally(() => {
+                    input.value = NARYAD_DEFAULT_PICKER_COLOR
+                  })
+              }}
+            />
+          </Box>
+        </Tooltip>
+        <Tooltip title="Сбросить цвет">
+          <Box component="span" sx={{ display: 'inline-flex' }}>
+            <IconButton
+              aria-label="Сбросить цвет"
+              disabled={!colorActionsEnabled}
+              onClick={() => {
+                void changeSelectedRowColor(0)
+              }}
+              sx={actionButtonSx}
+            >
+              <FormatColorReset />
+            </IconButton>
+          </Box>
+        </Tooltip>
+      </Box>
 
       <Box
         ref={containerRef}
@@ -209,6 +329,8 @@ export default function NaryadWorkspacePanel({
                 filters={treeFilters}
                 setFilters={setTreeFilters}
                 setSelectedId={setSelectedId}
+                getRowBackgroundColor={(row) => rowBackgroundColor(row, colorOverrides)}
+                clearSelectionSignal={clearSelectionSignal}
                 initialState={{ pagination: { pageIndex: 0, pageSize: 10000 } }}
               />
             </Box>

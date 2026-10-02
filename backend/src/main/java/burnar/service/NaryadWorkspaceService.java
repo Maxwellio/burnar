@@ -3,10 +3,14 @@ package burnar.service;
 import burnar.dto.NaryadAlgorithmDto;
 import burnar.dto.NaryadOperNodeDto;
 import burnar.dto.NaryadOperParamDto;
+import burnar.dto.NaryadRowColorDto;
+import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -218,6 +222,20 @@ public class NaryadWorkspaceService {
             "SELECT operlifeid, operlifetype FROM burnar.vipolnenie_oper "
                     + "WHERE narkey = :narkey AND key = :nodeId";
 
+    static final String ZADANIE_DESCRIPTOR_SQL =
+            "SELECT closed FROM burnar.defnarzad WHERE narkey = :narkey FOR UPDATE";
+
+    static final String VIPOLNENIE_DESCRIPTOR_SQL =
+            "SELECT closed FROM burnar.defnarvip WHERE narkey = :narkey FOR UPDATE";
+
+    static final String UPDATE_ZADANIE_COLOR_SQL =
+            "UPDATE burnar.zadanie_oper SET colorsel = :color "
+                    + "WHERE narkey = :narkey AND key = :nodeId";
+
+    static final String UPDATE_VIPOLNENIE_COLOR_SQL =
+            "UPDATE burnar.vipolnenie_oper SET colorsel = :color "
+                    + "WHERE narkey = :narkey AND key = :nodeId";
+
     private static final RowMapper<NaryadOperParamDto> PARAM_MAPPER = (rs, rowNum) -> {
         NaryadOperParamDto dto = new NaryadOperParamDto();
         dto.setNm(rs.getString("nm"));
@@ -292,6 +310,26 @@ public class NaryadWorkspaceService {
         return findAlgorithm(naryadId, nodeId, VIPOLNENIE_OPER_REF_SQL);
     }
 
+    @Transactional
+    public NaryadRowColorDto updateZadanieColor(int naryadId, long nodeId, Integer color) {
+        return updateColor(
+                naryadId, nodeId, color, ZADANIE_DESCRIPTOR_SQL, UPDATE_ZADANIE_COLOR_SQL);
+    }
+
+    @Transactional
+    public NaryadRowColorDto updateVipolnenieColor(int naryadId, long nodeId, Integer color) {
+        return updateColor(
+                naryadId, nodeId, color, VIPOLNENIE_DESCRIPTOR_SQL, UPDATE_VIPOLNENIE_COLOR_SQL);
+    }
+
+    static int requireValidColor(Integer color) {
+        if (color == null || color < 0 || color > 0xFFFFFF) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST, "Color must be between 0 and 16777215");
+        }
+        return color;
+    }
+
     static boolean loadsParams(Integer operlifetype) {
         return operlifetype != null
                 && (operlifetype == OPERTYPE_COMBINATION || operlifetype == OPERTYPE_ALGORITHM);
@@ -329,6 +367,28 @@ public class NaryadWorkspaceService {
             return NaryadAlgorithmDto.empty();
         }
         return new NaryadAlgorithmDto(rows.get(0));
+    }
+
+    private NaryadRowColorDto updateColor(
+            int naryadId, long nodeId, Integer color, String descriptorSql, String updateSql) {
+        naryadListService.findHeader(naryadId);
+        int validColor = requireValidColor(color);
+        MapSqlParameterSource params = new MapSqlParameterSource()
+                .addValue("narkey", naryadId)
+                .addValue("nodeId", nodeId)
+                .addValue("color", validColor);
+        List<Integer> descriptors = jdbc.query(
+                descriptorSql, params, (rs, rowNum) -> rs.getInt("closed"));
+        if (descriptors.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Naryad descriptor not found");
+        }
+        if (descriptors.get(0) == 1) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Naryad part is closed");
+        }
+        if (jdbc.update(updateSql, params) == 0) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Naryad row not found");
+        }
+        return new NaryadRowColorDto(nodeId, validColor);
     }
 
     private OperRef loadOperRef(String sql, int naryadId, Long nodeId) {
