@@ -11,6 +11,8 @@ public class NaryadHeaderDto {
     private String nameNar;
     private Boolean hasZadanie;
     private Boolean hasVipolnenie;
+    private Boolean zadanieClosed;
+    private Boolean vipolnenieClosed;
 
     public Integer getId() {
         return id;
@@ -42,5 +44,21 @@ public class NaryadHeaderDto {
 
     public void setHasVipolnenie(Boolean hasVipolnenie) {
         this.hasVipolnenie = hasVipolnenie;
+    }
+
+    public Boolean getZadanieClosed() {
+        return zadanieClosed;
+    }
+
+    public void setZadanieClosed(Boolean zadanieClosed) {
+        this.zadanieClosed = zadanieClosed;
+    }
+
+    public Boolean getVipolnenieClosed() {
+        return vipolnenieClosed;
+    }
+
+    public void setVipolnenieClosed(Boolean vipolnenieClosed) {
+        this.vipolnenieClosed = vipolnenieClosed;
     }
 }

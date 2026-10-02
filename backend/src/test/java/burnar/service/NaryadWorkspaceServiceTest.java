@@ -1,6 +1,7 @@
 package burnar.service;
 
 import org.junit.jupiter.api.Test;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.sql.Timestamp;
 import java.time.LocalDateTime;
@@ -8,6 +9,7 @@ import java.time.LocalDateTime;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -111,5 +113,47 @@ class NaryadWorkspaceServiceTest {
     void treeLevelWhereRootsAndChildren() {
         assertTrue(NaryadWorkspaceService.TREE_ROOTS_WHERE.contains("parent IS NULL"));
         assertTrue(NaryadWorkspaceService.TREE_CHILDREN_WHERE.contains(":parentId"));
+    }
+
+    @Test
+    void colorMustBeWithinRgbRange() {
+        assertEquals(0, NaryadWorkspaceService.requireValidColor(0));
+        assertEquals(0xFFFFFF, NaryadWorkspaceService.requireValidColor(0xFFFFFF));
+        assertThrows(ResponseStatusException.class,
+                () -> NaryadWorkspaceService.requireValidColor(-1));
+        assertThrows(ResponseStatusException.class,
+                () -> NaryadWorkspaceService.requireValidColor(0x1000000));
+        assertThrows(ResponseStatusException.class,
+                () -> NaryadWorkspaceService.requireValidColor(null));
+    }
+
+    @Test
+    void zadanieColorUpdateIsScopedToNaryadAndNode() {
+        String sql = NaryadWorkspaceService.UPDATE_ZADANIE_COLOR_SQL;
+        assertTrue(sql.contains("UPDATE burnar.zadanie_oper"), sql);
+        assertTrue(sql.contains("SET colorsel = :color"), sql);
+        assertTrue(sql.contains("narkey = :narkey"), sql);
+        assertTrue(sql.contains("key = :nodeId"), sql);
+    }
+
+    @Test
+    void vipolnenieColorUpdateIsScopedToNaryadAndNode() {
+        String sql = NaryadWorkspaceService.UPDATE_VIPOLNENIE_COLOR_SQL;
+        assertTrue(sql.contains("UPDATE burnar.vipolnenie_oper"), sql);
+        assertTrue(sql.contains("SET colorsel = :color"), sql);
+        assertTrue(sql.contains("narkey = :narkey"), sql);
+        assertTrue(sql.contains("key = :nodeId"), sql);
+    }
+
+    @Test
+    void zadanieDescriptorIsLockedBeforeColorUpdate() {
+        String sql = NaryadWorkspaceService.ZADANIE_DESCRIPTOR_SQL;
+        assertTrue(sql.contains("FOR UPDATE"), sql);
+    }
+
+    @Test
+    void vipolnenieDescriptorIsLockedBeforeColorUpdate() {
+        String sql = NaryadWorkspaceService.VIPOLNENIE_DESCRIPTOR_SQL;
+        assertTrue(sql.contains("FOR UPDATE"), sql);
     }
 }

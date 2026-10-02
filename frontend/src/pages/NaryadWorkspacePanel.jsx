@@ -1,8 +1,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Box from '@mui/material/Box'
+import IconButton from '@mui/material/IconButton'
+import Popover from '@mui/material/Popover'
 import TextField from '@mui/material/TextField'
+import Tooltip from '@mui/material/Tooltip'
+import Colorize from '@mui/icons-material/Colorize'
+import FormatColorReset from '@mui/icons-material/FormatColorReset'
 import { AxiosProvider, BaseTable, BaseTreeTable } from 'mainComponent'
-import { fetchNaryadAlgorithm } from '../api/naryadyApi.js'
+import { fetchNaryadAlgorithm, updateNaryadRowColor } from '../api/naryadyApi.js'
+import { useAlert } from '../context/ConfirmContext.jsx'
 import {
   ACTION_BAR_HEIGHT,
   RIGHT_PANEL_DEFAULT_RATIO,
@@ -16,10 +22,29 @@ import {
   nodeIdFilters,
   selectedNodeStatusText,
 } from './naryadWorkspaceData.js'
+import {
+  NARYAD_COLOR_SWATCHES,
+  NARYAD_DEFAULT_PICKER_COLOR,
+  canChangeRowColor,
+  colorOverrideBaseline,
+  cssColorToDelphi,
+  rowBackgroundColor,
+  withRowColorOverride,
+  withoutUnsavedColorOverride,
+} from './naryadRowColors.js'
 
 /** Пустое поле — несколько строк; дальше высота растёт по тексту, лишнее прокручивается внутри рамки. */
 const ALG_FIELD_MIN_ROWS = 4
 const ALG_FIELD_MAX_ROWS = 12
+
+const actionButtonSx = {
+  height: '100%',
+  width: ACTION_BAR_HEIGHT,
+  borderRadius: 0,
+  borderRight: 1,
+  borderColor: 'divider',
+  color: 'text.secondary',
+}
 
 /**
  * Раскладка одной вкладки: дерево / сплиттер / параметры + алгоритм.
@@ -29,6 +54,9 @@ const ALG_FIELD_MAX_ROWS = 12
  */
 export default function NaryadWorkspacePanel({
   actionBarAriaLabel,
+  naryadId,
+  part,
+  closed,
   treeUrl,
   treeColumns,
   paramsUrl,
@@ -38,6 +66,12 @@ export default function NaryadWorkspacePanel({
   treeSizingKey,
   paramsSizingKey,
 }) {
+  const showAlert = useAlert()
+  const colorInputRef = useRef(null)
+  const mutationPendingRef = useRef(false)
+  const desiredColorRef = useRef(null)
+  const customPreviewBaselineRef = useRef(null)
+  const ignoreCustomInputRef = useRef(false)
   const preferredWidthRef = useRef(readStoredRightPanelWidth(rightPanelStorageKey))
   const seededRef = useRef(false)
   if (!seededRef.current) {
@@ -49,17 +83,51 @@ export default function NaryadWorkspacePanel({
   const [treeFilters, setTreeFilters] = useState([])
   const [selectedId, setSelectedId] = useState(null)
   const [algorithm, setAlgorithm] = useState('')
+  const [colorOverrides, setColorOverrides] = useState(() => new Map())
+  const [clearSelectionSignal, setClearSelectionSignal] = useState(0)
+  const [mutationPending, setMutationPending] = useState(false)
+  const [colorMenuAnchor, setColorMenuAnchor] = useState(null)
+  const [colorTooltipOpen, setColorTooltipOpen] = useState(false)
+  const [resetTooltipOpen, setResetTooltipOpen] = useState(false)
+  const colorMenuAnchorRef = useRef(null)
   const paramFilters = useMemo(() => nodeIdFilters(selectedId), [selectedId])
   const treeStatusText = selectedNodeStatusText(selectedId)
+  const colorActionsEnabled = canChangeRowColor(selectedId, closed, mutationPending)
+  const selectedIdRef = useRef(selectedId)
+  const closedRef = useRef(closed)
+  const colorOverridesRef = useRef(colorOverrides)
+  selectedIdRef.current = selectedId
+  closedRef.current = closed
+  colorOverridesRef.current = colorOverrides
   const containerRef = useRef(null)
   const dragRef = useRef(null)
   const [rightWidth, setRightWidth] = useState(() => preferredWidthRef.current)
   const [dragging, setDragging] = useState(false)
 
+  const closeColorTooltips = () => {
+    setColorTooltipOpen(false)
+    setResetTooltipOpen(false)
+  }
+  const setColorMenu = (anchor) => {
+    colorMenuAnchorRef.current = anchor
+    setColorMenuAnchor(anchor)
+    closeColorTooltips()
+  }
+
   useEffect(() => {
     setSelectedId(null)
     setAlgorithm('')
+    setColorOverrides(new Map())
+    setColorMenu(null)
   }, [treeUrl])
+
+  useEffect(() => {
+    if (selectedId == null || closed === true) setColorMenu(null)
+  }, [selectedId, closed])
+
+  useEffect(() => {
+    if (colorMenuAnchor || !colorActionsEnabled) closeColorTooltips()
+  }, [colorMenuAnchor, colorActionsEnabled])
 
   useEffect(() => {
     let cancelled = false
@@ -159,6 +227,113 @@ export default function NaryadWorkspacePanel({
     setDragging(true)
   }
 
+  const revertCustomPreview = () => {
+    const baseline = customPreviewBaselineRef.current
+    customPreviewBaselineRef.current = null
+    if (!baseline) return
+    setColorOverrides((current) => withoutUnsavedColorOverride(current, baseline))
+  }
+
+  const drainColorSaves = async () => {
+    if (mutationPendingRef.current) return false
+    const job = desiredColorRef.current
+    if (!job) return false
+    if (!canChangeRowColor(job.nodeId, closedRef.current, false)) {
+      desiredColorRef.current = null
+      return false
+    }
+    desiredColorRef.current = null
+    mutationPendingRef.current = true
+    setMutationPending(true)
+    closeColorTooltips()
+    let saved = false
+    try {
+      const updated = await updateNaryadRowColor(naryadId, part, job.nodeId, job.color)
+      setColorOverrides((current) => {
+        if (desiredColorRef.current) return current
+        return withRowColorOverride(current, job.nodeId, updated.color)
+      })
+      // Синяя подсветка скрывает фон, но строка остаётся целью кнопок:
+      // цвет можно подбирать повторно, не выбирая её заново.
+      setClearSelectionSignal((signal) => signal + 1)
+      if (job.closeMenu) setColorMenu(null)
+      if (!desiredColorRef.current) customPreviewBaselineRef.current = null
+      saved = true
+    } catch {
+      if (!desiredColorRef.current) revertCustomPreview()
+      void showAlert('Не удалось изменить цвет строки.')
+    } finally {
+      mutationPendingRef.current = false
+      setMutationPending(false)
+    }
+    if (desiredColorRef.current) void drainColorSavesRef.current()
+    return saved
+  }
+  const drainColorSavesRef = useRef(drainColorSaves)
+  drainColorSavesRef.current = drainColorSaves
+
+  const changeSelectedRowColor = (color, { closeMenu = true } = {}) => {
+    if (!canChangeRowColor(selectedId, closed, false)) return Promise.resolve(false)
+    if (closeMenu) customPreviewBaselineRef.current = null
+    desiredColorRef.current = { color, closeMenu, nodeId: selectedId }
+    return drainColorSaves()
+  }
+
+  const previewCustomColor = (css) => {
+    if (ignoreCustomInputRef.current) return
+    const nodeId = selectedIdRef.current
+    if (!canChangeRowColor(nodeId, closedRef.current, false)) return
+    let color
+    try {
+      color = cssColorToDelphi(css)
+    } catch {
+      return
+    }
+    if (!customPreviewBaselineRef.current) {
+      customPreviewBaselineRef.current = colorOverrideBaseline(colorOverridesRef.current, nodeId)
+    }
+    setColorOverrides((current) => withRowColorOverride(current, nodeId, color))
+    setClearSelectionSignal((signal) => signal + 1)
+    desiredColorRef.current = { color, closeMenu: false, nodeId }
+    void drainColorSavesRef.current()
+  }
+
+  const colorChangeListenerRef = useRef(null)
+  const bindColorInput = useCallback((node) => {
+    const previous = colorInputRef.current
+    if (previous === node) return
+    if (previous && colorChangeListenerRef.current) {
+      previous.removeEventListener('change', colorChangeListenerRef.current)
+    }
+    colorInputRef.current = node
+    if (!node) {
+      colorChangeListenerRef.current = null
+      return
+    }
+    // change приходит, когда системный селектор уже закрыт. До этого input
+    // только показывает оттенок и не должен размонтировать поле.
+    const commit = (event) => {
+      const css = event.target.value
+      ignoreCustomInputRef.current = true
+      event.target.value = NARYAD_DEFAULT_PICKER_COLOR
+      ignoreCustomInputRef.current = false
+      let color
+      try {
+        color = cssColorToDelphi(css)
+      } catch {
+        return
+      }
+      desiredColorRef.current = {
+        color,
+        closeMenu: true,
+        nodeId: selectedIdRef.current,
+      }
+      void drainColorSavesRef.current()
+    }
+    colorChangeListenerRef.current = commit
+    node.addEventListener('change', commit)
+  }, [])
+
   return (
     <Box
       sx={{
@@ -175,11 +350,191 @@ export default function NaryadWorkspacePanel({
         sx={{
           height: ACTION_BAR_HEIGHT,
           flexShrink: 0,
+          display: 'flex',
+          alignItems: 'stretch',
           bgcolor: 'background.paper',
           borderBottom: 1,
           borderColor: 'divider',
         }}
-      />
+      >
+        <Tooltip
+          title="Выделить строку цветом"
+          open={colorTooltipOpen}
+          disableFocusListener
+          disableHoverListener
+          disableTouchListener
+          disableInteractive
+          TransitionProps={{ timeout: 0 }}
+        >
+          <Box
+            component="span"
+            onMouseEnter={() => {
+              if (colorMenuAnchorRef.current || mutationPendingRef.current) return
+              setColorTooltipOpen(true)
+            }}
+            onMouseLeave={() => setColorTooltipOpen(false)}
+            sx={{ display: 'inline-flex', position: 'relative' }}
+          >
+            <IconButton
+              aria-label="Выделить строку цветом"
+              aria-haspopup="dialog"
+              aria-expanded={Boolean(colorMenuAnchor)}
+              disabled={!colorActionsEnabled}
+              onClick={(event) => {
+                event.currentTarget.blur()
+                setColorMenu(event.currentTarget)
+              }}
+              sx={actionButtonSx}
+            >
+              <Colorize />
+            </IconButton>
+            <Popover
+              open={Boolean(colorMenuAnchor)}
+              anchorEl={colorMenuAnchor}
+              onClose={() => setColorMenu(null)}
+              disableAutoFocus
+              disableEnforceFocus
+              disableRestoreFocus
+              anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
+              transformOrigin={{ vertical: 'top', horizontal: 'left' }}
+            >
+              <Box
+                aria-label="Образцы цвета"
+                sx={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(5, 28px)',
+                  gap: 0.75,
+                  p: 1,
+                }}
+              >
+                {NARYAD_COLOR_SWATCHES.map((swatch) => (
+                  <Box
+                    key={swatch.css}
+                    component="button"
+                    type="button"
+                    aria-label={swatch.label}
+                    onClick={() => {
+                      setColorMenu(null)
+                      void changeSelectedRowColor(cssColorToDelphi(swatch.css))
+                    }}
+                    sx={{
+                      width: 28,
+                      height: 28,
+                      p: 0,
+                      borderRadius: 0.5,
+                      border: 1,
+                      borderColor: 'divider',
+                      bgcolor: swatch.css,
+                      cursor: 'pointer',
+                    }}
+                  />
+                ))}
+              </Box>
+              <Box
+                sx={{
+                  position: 'relative',
+                  borderTop: 1,
+                  borderColor: 'divider',
+                }}
+              >
+                <Box
+                  component="span"
+                  sx={{
+                    display: 'block',
+                    pl: '52px',
+                    pr: 1.5,
+                    py: 1,
+                    pointerEvents: 'none',
+                    color: 'text.primary',
+                    fontSize: '0.875rem',
+                    lineHeight: '28px',
+                  }}
+                >
+                  Свой цвет
+                </Box>
+                {/* Поле накрывает всю строку, поэтому клик по надписи тоже открывает
+                    селектор. Это по-прежнему прямой клик по видимому input, не скрипт. */}
+                <Box
+                  ref={bindColorInput}
+                  component="input"
+                  type="color"
+                  defaultValue={NARYAD_DEFAULT_PICKER_COLOR}
+                  aria-label="Свой цвет"
+                  onClick={(event) => {
+                    // Чёрный перед диалогом, чтобы повторный жёлтый тоже был изменением.
+                    event.currentTarget.value = '#000000'
+                  }}
+                  onInput={(event) => {
+                    previewCustomColor(event.currentTarget.value)
+                  }}
+                  sx={{
+                    position: 'absolute',
+                    inset: 0,
+                    width: '100%',
+                    height: '100%',
+                    m: 0,
+                    p: 0,
+                    border: 0,
+                    opacity: 1,
+                    cursor: 'pointer',
+                    bgcolor: 'transparent',
+                    appearance: 'none',
+                    '&:hover': { bgcolor: 'action.hover' },
+                    '&::-webkit-color-swatch-wrapper': {
+                      position: 'relative',
+                      p: 0,
+                      width: '100%',
+                      height: '100%',
+                    },
+                    '&::-webkit-color-swatch': {
+                      position: 'absolute',
+                      left: 12,
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      width: 28,
+                      height: 28,
+                      border: '1px solid rgba(0, 0, 0, 0.12)',
+                      borderRadius: 0.5,
+                    },
+                  }}
+                />
+              </Box>
+            </Popover>
+          </Box>
+        </Tooltip>
+        <Tooltip
+          title="Сбросить цвет"
+          open={resetTooltipOpen}
+          disableFocusListener
+          disableHoverListener
+          disableTouchListener
+          disableInteractive
+          TransitionProps={{ timeout: 0 }}
+        >
+          <Box
+            component="span"
+            onMouseEnter={() => {
+              if (mutationPendingRef.current) return
+              setResetTooltipOpen(true)
+            }}
+            onMouseLeave={() => setResetTooltipOpen(false)}
+            sx={{ display: 'inline-flex' }}
+          >
+            <IconButton
+              aria-label="Сбросить цвет"
+              disabled={!colorActionsEnabled}
+              onClick={(event) => {
+                event.currentTarget.blur()
+                closeColorTooltips()
+                void changeSelectedRowColor(0)
+              }}
+              sx={actionButtonSx}
+            >
+              <FormatColorReset />
+            </IconButton>
+          </Box>
+        </Tooltip>
+      </Box>
 
       <Box
         ref={containerRef}
@@ -209,6 +564,8 @@ export default function NaryadWorkspacePanel({
                 filters={treeFilters}
                 setFilters={setTreeFilters}
                 setSelectedId={setSelectedId}
+                getRowBackgroundColor={(row) => rowBackgroundColor(row, colorOverrides)}
+                clearSelectionSignal={clearSelectionSignal}
                 initialState={{ pagination: { pageIndex: 0, pageSize: 10000 } }}
               />
             </Box>
