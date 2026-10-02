@@ -1,5 +1,19 @@
 export const NARYAD_DEFAULT_PICKER_COLOR = '#ffff00'
 
+/** Готовые цвета маркировки. Чёрный не входит: в Delphi он совпадает с «цвета нет». */
+export const NARYAD_COLOR_SWATCHES = [
+  { label: 'Жёлтый', css: '#ffff00' },
+  { label: 'Оранжевый', css: '#ff8000' },
+  { label: 'Красный', css: '#ff0000' },
+  { label: 'Розовый', css: '#ff80ff' },
+  { label: 'Зелёный', css: '#00b050' },
+  { label: 'Салатовый', css: '#92d050' },
+  { label: 'Голубой', css: '#00b0f0' },
+  { label: 'Синий', css: '#0070c0' },
+  { label: 'Фиолетовый', css: '#7030a0' },
+  { label: 'Серый', css: '#808080' },
+]
+
 export function delphiColorToCss(value) {
   if (!Number.isInteger(value) || value <= 0 || value > 0xffffff) {
     return undefined

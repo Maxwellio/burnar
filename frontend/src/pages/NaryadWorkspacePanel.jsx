@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Box from '@mui/material/Box'
+import Button from '@mui/material/Button'
 import IconButton from '@mui/material/IconButton'
+import Popover from '@mui/material/Popover'
 import TextField from '@mui/material/TextField'
 import Tooltip from '@mui/material/Tooltip'
 import Colorize from '@mui/icons-material/Colorize'
@@ -22,6 +24,7 @@ import {
   selectedNodeStatusText,
 } from './naryadWorkspaceData.js'
 import {
+  NARYAD_COLOR_SWATCHES,
   NARYAD_DEFAULT_PICKER_COLOR,
   canChangeRowColor,
   cssColorToDelphi,
@@ -90,6 +93,7 @@ export default function NaryadWorkspacePanel({
   const [colorOverrides, setColorOverrides] = useState(() => new Map())
   const [clearSelectionSignal, setClearSelectionSignal] = useState(0)
   const [mutationPending, setMutationPending] = useState(false)
+  const [colorMenuAnchor, setColorMenuAnchor] = useState(null)
   const paramFilters = useMemo(() => nodeIdFilters(selectedId), [selectedId])
   const treeStatusText = selectedNodeStatusText(selectedId)
   const colorActionsEnabled = canChangeRowColor(selectedId, closed, mutationPending)
@@ -102,7 +106,12 @@ export default function NaryadWorkspacePanel({
     setSelectedId(null)
     setAlgorithm('')
     setColorOverrides(new Map())
+    setColorMenuAnchor(null)
   }, [treeUrl])
+
+  useEffect(() => {
+    if (!colorActionsEnabled) setColorMenuAnchor(null)
+  }, [colorActionsEnabled])
 
   useEffect(() => {
     let cancelled = false
@@ -217,6 +226,7 @@ export default function NaryadWorkspacePanel({
       // Синяя подсветка скрывает фон, но строка остаётся целью кнопок:
       // цвет можно подбирать повторно, не выбирая её заново.
       setClearSelectionSignal((signal) => signal + 1)
+      setColorMenuAnchor(null)
     } catch {
       void showAlert('Не удалось изменить цвет строки.')
     } finally {
@@ -248,22 +258,85 @@ export default function NaryadWorkspacePanel({
           borderColor: 'divider',
         }}
       >
-        <Tooltip title="Выделить строку цветом">
+        <Tooltip title={colorMenuAnchor ? '' : 'Выделить строку цветом'}>
           <Box component="span" sx={{ display: 'inline-flex', position: 'relative' }}>
             <IconButton
               aria-label="Выделить строку цветом"
+              aria-haspopup="dialog"
+              aria-expanded={Boolean(colorMenuAnchor)}
               disabled={!colorActionsEnabled}
-              onClick={() => colorInputRef.current?.click()}
+              onClick={(event) => setColorMenuAnchor(event.currentTarget)}
               sx={actionButtonSx}
             >
               <Colorize />
             </IconButton>
+            <Popover
+              open={Boolean(colorMenuAnchor)}
+              anchorEl={colorMenuAnchor}
+              onClose={() => setColorMenuAnchor(null)}
+              anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
+              transformOrigin={{ vertical: 'top', horizontal: 'left' }}
+            >
               <Box
+                aria-label="Образцы цвета"
+                sx={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(5, 28px)',
+                  gap: 0.75,
+                  p: 1,
+                }}
+              >
+                {NARYAD_COLOR_SWATCHES.map((swatch) => (
+                  <Box
+                    key={swatch.css}
+                    component="button"
+                    type="button"
+                    aria-label={swatch.label}
+                    onClick={() => {
+                      setColorMenuAnchor(null)
+                      void changeSelectedRowColor(cssColorToDelphi(swatch.css))
+                    }}
+                    sx={{
+                      width: 28,
+                      height: 28,
+                      p: 0,
+                      borderRadius: 0.5,
+                      border: 1,
+                      borderColor: 'divider',
+                      bgcolor: swatch.css,
+                      cursor: 'pointer',
+                    }}
+                  />
+                ))}
+              </Box>
+              <Button
+                aria-label="Свой цвет"
+                onClick={() => {
+                  setColorMenuAnchor(null)
+                  colorInputRef.current?.click()
+                }}
+                sx={{
+                  display: 'flex',
+                  width: '100%',
+                  justifyContent: 'flex-start',
+                  px: 1.5,
+                  py: 1,
+                  borderTop: 1,
+                  borderColor: 'divider',
+                  borderRadius: 0,
+                  textTransform: 'none',
+                  color: 'text.primary',
+                }}
+              >
+                Свой цвет
+              </Button>
+            </Popover>
+            <Box
               ref={colorInputRef}
               component="input"
               type="color"
               defaultValue={NARYAD_DEFAULT_PICKER_COLOR}
-              aria-label="Цвет строки"
+              aria-label="Свой цвет строки"
               tabIndex={-1}
               sx={visuallyHiddenInputSx}
               onClick={(event) => {

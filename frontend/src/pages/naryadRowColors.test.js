@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 import {
+  NARYAD_COLOR_SWATCHES,
   NARYAD_DEFAULT_PICKER_COLOR,
   canChangeRowColor,
   cssColorToDelphi,
@@ -66,6 +67,24 @@ describe('rowBackgroundColor', () => {
       rowBackgroundColor({ id: 7, colorsel: 255 }, new Map([[7, 16711680]])),
       '#0000ff',
     )
+  })
+})
+
+describe('NARYAD_COLOR_SWATCHES', () => {
+  it('stores every sample as a visible Delphi color', () => {
+    assert.ok(NARYAD_COLOR_SWATCHES.length >= 8)
+    const labels = new Set()
+    for (const swatch of NARYAD_COLOR_SWATCHES) {
+      assert.equal(labels.has(swatch.label), false)
+      labels.add(swatch.label)
+      const delphi = cssColorToDelphi(swatch.css)
+      assert.ok(delphi > 0)
+      assert.equal(delphiColorToCss(delphi), swatch.css)
+    }
+  })
+
+  it('includes the default yellow sample', () => {
+    assert.ok(NARYAD_COLOR_SWATCHES.some((swatch) => swatch.css === NARYAD_DEFAULT_PICKER_COLOR))
   })
 })
 
