@@ -18,7 +18,6 @@ import {
   writeStoredRightPanelWidth,
 } from './naryadPageLayout.js'
 import {
-  nextParamsRequestId,
   nodeIdFilters,
   selectedNodeStatusText,
 } from './naryadWorkspaceData.js'
@@ -91,11 +90,7 @@ export default function NaryadWorkspacePanel({
   const [colorOverrides, setColorOverrides] = useState(() => new Map())
   const [clearSelectionSignal, setClearSelectionSignal] = useState(0)
   const [mutationPending, setMutationPending] = useState(false)
-  const [paramsRequestId, setParamsRequestId] = useState(0)
-  const paramFilters = useMemo(
-    () => [...nodeIdFilters(selectedId), { id: 'paramsRequest', value: String(paramsRequestId) }],
-    [paramsRequestId, selectedId],
-  )
+  const paramFilters = useMemo(() => nodeIdFilters(selectedId), [selectedId])
   const treeStatusText = selectedNodeStatusText(selectedId)
   const colorActionsEnabled = canChangeRowColor(selectedId, closed, mutationPending)
   const containerRef = useRef(null)
@@ -219,9 +214,8 @@ export default function NaryadWorkspacePanel({
         next.set(nodeId, updated.color)
         return next
       })
-      setSelectedId(null)
-      setAlgorithm('')
-      setParamsRequestId(nextParamsRequestId)
+      // Синяя подсветка скрывает фон, но строка остаётся целью кнопок:
+      // цвет можно подбирать повторно, не выбирая её заново.
       setClearSelectionSignal((signal) => signal + 1)
     } catch {
       void showAlert('Не удалось изменить цвет строки.')

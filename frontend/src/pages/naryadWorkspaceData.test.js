@@ -1,17 +1,9 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 import {
-  nextParamsRequestId,
   nodeIdFilters,
   selectedNodeStatusText,
 } from './naryadWorkspaceData.js'
-
-describe('nextParamsRequestId', () => {
-  it('changes the request identity after a mutation', () => {
-    assert.equal(nextParamsRequestId(0), 1)
-    assert.equal(nextParamsRequestId(4), 5)
-  })
-})
 
 describe('nodeIdFilters', () => {
   it('is empty without a selected row', () => {
