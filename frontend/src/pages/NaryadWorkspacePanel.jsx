@@ -89,6 +89,7 @@ export default function NaryadWorkspacePanel({
   const [colorMenuAnchor, setColorMenuAnchor] = useState(null)
   const [colorTooltipOpen, setColorTooltipOpen] = useState(false)
   const [resetTooltipOpen, setResetTooltipOpen] = useState(false)
+  const colorMenuAnchorRef = useRef(null)
   const paramFilters = useMemo(() => nodeIdFilters(selectedId), [selectedId])
   const treeStatusText = selectedNodeStatusText(selectedId)
   const colorActionsEnabled = canChangeRowColor(selectedId, closed, mutationPending)
@@ -103,22 +104,29 @@ export default function NaryadWorkspacePanel({
   const [rightWidth, setRightWidth] = useState(() => preferredWidthRef.current)
   const [dragging, setDragging] = useState(false)
 
+  const closeColorTooltips = () => {
+    setColorTooltipOpen(false)
+    setResetTooltipOpen(false)
+  }
+  const setColorMenu = (anchor) => {
+    colorMenuAnchorRef.current = anchor
+    setColorMenuAnchor(anchor)
+    closeColorTooltips()
+  }
+
   useEffect(() => {
     setSelectedId(null)
     setAlgorithm('')
     setColorOverrides(new Map())
-    setColorMenuAnchor(null)
+    setColorMenu(null)
   }, [treeUrl])
 
   useEffect(() => {
-    if (selectedId == null || closed === true) setColorMenuAnchor(null)
+    if (selectedId == null || closed === true) setColorMenu(null)
   }, [selectedId, closed])
 
   useEffect(() => {
-    if (colorMenuAnchor || !colorActionsEnabled) {
-      setColorTooltipOpen(false)
-      setResetTooltipOpen(false)
-    }
+    if (colorMenuAnchor || !colorActionsEnabled) closeColorTooltips()
   }, [colorMenuAnchor, colorActionsEnabled])
 
   useEffect(() => {
@@ -237,6 +245,7 @@ export default function NaryadWorkspacePanel({
     desiredColorRef.current = null
     mutationPendingRef.current = true
     setMutationPending(true)
+    closeColorTooltips()
     let saved = false
     try {
       const updated = await updateNaryadRowColor(naryadId, part, job.nodeId, job.color)
@@ -247,7 +256,7 @@ export default function NaryadWorkspacePanel({
       // Синяя подсветка скрывает фон, но строка остаётся целью кнопок:
       // цвет можно подбирать повторно, не выбирая её заново.
       setClearSelectionSignal((signal) => signal + 1)
-      if (job.closeMenu) setColorMenuAnchor(null)
+      if (job.closeMenu) setColorMenu(null)
       if (!desiredColorRef.current) customPreviewBaselineRef.current = null
       saved = true
     } catch {
@@ -350,22 +359,30 @@ export default function NaryadWorkspacePanel({
       >
         <Tooltip
           title="Выделить строку цветом"
-          open={colorTooltipOpen && !colorMenuAnchor && colorActionsEnabled}
-          onOpen={() => {
-            if (!colorMenuAnchor && colorActionsEnabled) setColorTooltipOpen(true)
-          }}
-          onClose={() => setColorTooltipOpen(false)}
+          open={colorTooltipOpen}
           disableFocusListener
+          disableHoverListener
+          disableTouchListener
+          disableInteractive
+          TransitionProps={{ timeout: 0 }}
         >
-          <Box component="span" sx={{ display: 'inline-flex', position: 'relative' }}>
+          <Box
+            component="span"
+            onMouseEnter={() => {
+              if (colorMenuAnchorRef.current || mutationPendingRef.current) return
+              setColorTooltipOpen(true)
+            }}
+            onMouseLeave={() => setColorTooltipOpen(false)}
+            sx={{ display: 'inline-flex', position: 'relative' }}
+          >
             <IconButton
               aria-label="Выделить строку цветом"
               aria-haspopup="dialog"
               aria-expanded={Boolean(colorMenuAnchor)}
               disabled={!colorActionsEnabled}
               onClick={(event) => {
-                setColorTooltipOpen(false)
-                setColorMenuAnchor(event.currentTarget)
+                event.currentTarget.blur()
+                setColorMenu(event.currentTarget)
               }}
               sx={actionButtonSx}
             >
@@ -374,7 +391,7 @@ export default function NaryadWorkspacePanel({
             <Popover
               open={Boolean(colorMenuAnchor)}
               anchorEl={colorMenuAnchor}
-              onClose={() => setColorMenuAnchor(null)}
+              onClose={() => setColorMenu(null)}
               disableAutoFocus
               disableEnforceFocus
               disableRestoreFocus
@@ -397,7 +414,7 @@ export default function NaryadWorkspacePanel({
                     type="button"
                     aria-label={swatch.label}
                     onClick={() => {
-                      setColorMenuAnchor(null)
+                      setColorMenu(null)
                       void changeSelectedRowColor(cssColorToDelphi(swatch.css))
                     }}
                     sx={{
@@ -487,19 +504,28 @@ export default function NaryadWorkspacePanel({
         </Tooltip>
         <Tooltip
           title="Сбросить цвет"
-          open={resetTooltipOpen && colorActionsEnabled}
-          onOpen={() => {
-            if (colorActionsEnabled) setResetTooltipOpen(true)
-          }}
-          onClose={() => setResetTooltipOpen(false)}
+          open={resetTooltipOpen}
           disableFocusListener
+          disableHoverListener
+          disableTouchListener
+          disableInteractive
+          TransitionProps={{ timeout: 0 }}
         >
-          <Box component="span" sx={{ display: 'inline-flex' }}>
+          <Box
+            component="span"
+            onMouseEnter={() => {
+              if (mutationPendingRef.current) return
+              setResetTooltipOpen(true)
+            }}
+            onMouseLeave={() => setResetTooltipOpen(false)}
+            sx={{ display: 'inline-flex' }}
+          >
             <IconButton
               aria-label="Сбросить цвет"
               disabled={!colorActionsEnabled}
-              onClick={() => {
-                setResetTooltipOpen(false)
+              onClick={(event) => {
+                event.currentTarget.blur()
+                closeColorTooltips()
                 void changeSelectedRowColor(0)
               }}
               sx={actionButtonSx}
