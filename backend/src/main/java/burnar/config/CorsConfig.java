@@ -11,6 +11,7 @@ import java.util.List;
 /**
  * CORS для Vite-фронта (порт 5173).
  * allowCredentials — чтобы браузер слал cookie сессии (JSESSIONID) на /api/**.
+ * PATCH нужен смене цвета строки: прокси Vite меняет порт, и Spring считает запрос кросс-доменным.
  */
 @Configuration
 public class CorsConfig {
@@ -20,7 +21,7 @@ public class CorsConfig {
         CorsConfiguration config = new CorsConfiguration();
         config.setAllowCredentials(true);
         config.setAllowedOrigins(List.of("http://localhost:5173"));
-        config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));
         config.setExposedHeaders(List.of("*"));
 

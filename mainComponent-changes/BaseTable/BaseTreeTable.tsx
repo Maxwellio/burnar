@@ -1,6 +1,6 @@
 import type { ColumnDef, TableOptions, VisibilityState } from "@tanstack/react-table";
 import { flexRender, getCoreRowModel, getExpandedRowModel, getPaginationRowModel, useReactTable } from "@tanstack/react-table";
-import React, { useEffect, useMemo, useState, useTransition } from "react";
+import React, { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useFetchData } from "../BaseTable/hooks/useFetchTreeData";
 import { DebouncedInput, DynamicDatePicker, DynamicSelect } from "../Input/InputComponents";
 import { FILTER_TYPES } from "../utils/types";
@@ -17,10 +17,12 @@ interface BaseTreeTableProps<TData> extends Partial<TableOptions<TData>>{
     defColumnVisibility?: VisibilityState;
     reRenderSignal?: number;
     disabled?: boolean;
+    getRowBackgroundColor?: (row: TData) => string | undefined;
+    clearSelectionSignal?: number;
 }
 
 
-export const BaseTreeTable = <TData,>({url, columns, filters, setFilters, setSelectedId, setSelectedCol, setIsLeaf, defColumnVisibility, reRenderSignal, disabled=false, ...props}: BaseTreeTableProps<TData>) =>{
+export const BaseTreeTable = <TData,>({url, columns, filters, setFilters, setSelectedId, setSelectedCol, setIsLeaf, defColumnVisibility, reRenderSignal, disabled=false, getRowBackgroundColor, clearSelectionSignal, ...props}: BaseTreeTableProps<TData>) =>{
     const {data, loading, setData, fetchChildren} = useFetchData<TData>(url, filters || [], reRenderSignal);
     const [expanded, setExpanded] = useState({});
     const [columnVisibility, setColumnVisibility] = useState<VisibilityState>(defColumnVisibility || {})
@@ -28,6 +30,8 @@ export const BaseTreeTable = <TData,>({url, columns, filters, setFilters, setSel
         const saved = localStorage.getItem(`table-column-sizing:${url}`);
         return saved ? JSON.parse(saved) : {};
     });
+    const hasClearSelectionEffectMounted = useRef(false);
+    const previousClearSelectionSignal = useRef(clearSelectionSignal);
     const table = useReactTable({
         data,
         columns,
@@ -83,6 +87,18 @@ export const BaseTreeTable = <TData,>({url, columns, filters, setFilters, setSel
         columnResizeMode: 'onChange',
         ...props,
     });
+
+    useEffect(() => {
+        if (!hasClearSelectionEffectMounted.current) {
+            hasClearSelectionEffectMounted.current = true
+            previousClearSelectionSignal.current = clearSelectionSignal
+            return
+        }
+        if (clearSelectionSignal !== undefined && previousClearSelectionSignal.current !== clearSelectionSignal) {
+            table.resetRowSelection()
+        }
+        previousClearSelectionSignal.current = clearSelectionSignal
+    }, [clearSelectionSignal])
 
     // сохраняем стили с размерами для хранения в стилях таблицы style = {{ ...columnSizeVars}} (убирает инппут лаг при перемещении) 
     const columnSizeVars = useMemo(() => {
@@ -187,6 +203,11 @@ export const BaseTreeTable = <TData,>({url, columns, filters, setFilters, setSel
                 <tbody className="bg-white divide-y divide-gray-200">
                     {table.getRowModel().rows.map(row =>(
                         <tr key = {row.id} 
+                        style={{
+                            backgroundColor: row.getIsSelected()
+                                ? undefined
+                                : getRowBackgroundColor?.(row.original),
+                        }}
                         className={`hover:bg-[#E7F0FF] transition-colors duration-150 
                             ${row.getIsSelected()
                             ? 'bg-[#D0EBFF] even:bg-[#D0EBFF] hover:bg-[#B1D7FF] shadow-[inset_3px_0_0_0_#364FC7]'

@@ -117,11 +117,15 @@ export default function NaryadPage() {
   const [mountedPanels, setMountedPanels] = useState({ zad: false, vip: false })
   const [splitOrientation, setSplitOrientation] = useState(readStoredSplitOrientation)
   const [nameNar, setNameNar] = useState('')
+  const [zadanieClosed, setZadanieClosed] = useState(null)
+  const [vipolnenieClosed, setVipolnenieClosed] = useState(null)
   const [catalogOpen, setCatalogOpen] = useState(false)
 
   useEffect(() => {
     let cancelled = false
     setNameNar('')
+    setZadanieClosed(null)
+    setVipolnenieClosed(null)
     setOpenPanels([])
     setMountedPanels({ zad: false, vip: false })
     setCatalogOpen(false)
@@ -130,6 +134,8 @@ export default function NaryadPage() {
       .then((header) => {
         if (cancelled) return
         setNameNar(header?.nameNar ?? '')
+        setZadanieClosed(header?.zadanieClosed ?? null)
+        setVipolnenieClosed(header?.vipolnenieClosed ?? null)
         const next = initialOpenPanels({
           hasZadanie: Boolean(header?.hasZadanie),
           hasVipolnenie: Boolean(header?.hasVipolnenie),
@@ -143,6 +149,8 @@ export default function NaryadPage() {
       .catch(() => {
         if (cancelled) return
         setNameNar('')
+        setZadanieClosed(null)
+        setVipolnenieClosed(null)
         setOpenPanels(['zad'])
         setMountedPanels({ zad: true, vip: false })
       })
@@ -279,12 +287,12 @@ export default function NaryadPage() {
       >
         {mountedPanels.zad ? (
           <Box sx={paneSx(showZad, bothOpen, bothOpen ? (horizontalSplit ? 'bottom' : 'right') : null)}>
-            <NaryadZadaniePanel naryadId={id} />
+            <NaryadZadaniePanel naryadId={id} closed={zadanieClosed} />
           </Box>
         ) : null}
         {mountedPanels.vip ? (
           <Box sx={paneSx(showVip, bothOpen, null)}>
-            <NaryadVipolneniePanel naryadId={id} />
+            <NaryadVipolneniePanel naryadId={id} closed={vipolnenieClosed} />
           </Box>
         ) : null}
       </Box>
