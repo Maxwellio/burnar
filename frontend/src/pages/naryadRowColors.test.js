@@ -3,13 +3,19 @@ import { describe, it } from 'node:test'
 import {
   NARYAD_COLOR_SWATCHES,
   NARYAD_DEFAULT_PICKER_COLOR,
+  NARYAD_RECENT_ROW_COLORS_KEY,
+  NARYAD_RECENT_ROW_COLOR_LIMIT,
   canChangeRowColor,
   colorOverrideBaseline,
   cssColorToDelphi,
   delphiColorToCss,
+  parseRecentRowColors,
+  readRecentRowColors,
+  rememberRecentRowColor,
   rowBackgroundColor,
   withRowColorOverride,
   withoutUnsavedColorOverride,
+  writeRecentRowColors,
 } from './naryadRowColors.js'
 
 describe('delphiColorToCss', () => {
@@ -111,6 +117,53 @@ describe('row color preview', () => {
     const baseline = colorOverrideBaseline(new Map(), 7)
     const preview = withRowColorOverride(new Map(), 7, 255)
     assert.equal(withoutUnsavedColorOverride(preview, baseline).has(7), false)
+  })
+})
+
+describe('recent row colors', () => {
+  it('keeps the five newest custom colors with the latest first', () => {
+    let colors = []
+    for (const css of ['#ff0000', '#00ff00', '#0000ff', '#ffff00', '#ff8000', '#7030a0']) {
+      colors = rememberRecentRowColor(colors, css)
+    }
+    assert.deepEqual(colors, ['#7030a0', '#ff8000', '#ffff00', '#0000ff', '#00ff00'])
+    assert.equal(colors.length, NARYAD_RECENT_ROW_COLOR_LIMIT)
+  })
+
+  it('moves a repeated color to the front without a duplicate', () => {
+    const colors = rememberRecentRowColor(['#00ff00', '#ff0000'], '#FF0000')
+    assert.deepEqual(colors, ['#ff0000', '#00ff00'])
+  })
+
+  it('does not store black or malformed colors', () => {
+    const colors = ['#ff0000']
+    assert.deepEqual(rememberRecentRowColor(colors, '#000000'), colors)
+    assert.deepEqual(rememberRecentRowColor(colors, 'red'), colors)
+    assert.deepEqual(rememberRecentRowColor(colors, '#12345'), colors)
+  })
+
+  it('parses only valid stored colors', () => {
+    assert.deepEqual(parseRecentRowColors('not-json'), [])
+    assert.deepEqual(parseRecentRowColors('{"color":"#ff0000"}'), [])
+    assert.deepEqual(
+      parseRecentRowColors('["#FF0000","#000000","nope","#00ff00","#ff0000","#123456","#abcdef","#010101"]'),
+      ['#ff0000', '#00ff00', '#123456', '#abcdef', '#010101'],
+    )
+  })
+
+  it('round-trips the list through storage and ignores storage failures', () => {
+    const storage = new Map()
+    const api = {
+      getItem: (key) => (storage.has(key) ? storage.get(key) : null),
+      setItem: (key, value) => storage.set(key, value),
+    }
+    writeRecentRowColors(['#00ff00', '#000000', '#ff0000'], api)
+    assert.equal(storage.get(NARYAD_RECENT_ROW_COLORS_KEY), '["#00ff00","#ff0000"]')
+    assert.deepEqual(readRecentRowColors(api), ['#00ff00', '#ff0000'])
+    assert.deepEqual(readRecentRowColors({ getItem: () => { throw new Error('denied') } }), [])
+    assert.doesNotThrow(() => writeRecentRowColors(['#ff0000'], {
+      setItem: () => { throw new Error('denied') },
+    }))
   })
 })
 

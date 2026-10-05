@@ -25,12 +25,16 @@ import {
 import {
   NARYAD_COLOR_SWATCHES,
   NARYAD_DEFAULT_PICKER_COLOR,
+  NARYAD_RECENT_ROW_COLOR_LIMIT,
   canChangeRowColor,
   colorOverrideBaseline,
   cssColorToDelphi,
+  readRecentRowColors,
+  rememberRecentRowColor,
   rowBackgroundColor,
   withRowColorOverride,
   withoutUnsavedColorOverride,
+  writeRecentRowColors,
 } from './naryadRowColors.js'
 
 /** Пустое поле — несколько строк; дальше высота растёт по тексту, лишнее прокручивается внутри рамки. */
@@ -89,7 +93,10 @@ export default function NaryadWorkspacePanel({
   const [colorMenuAnchor, setColorMenuAnchor] = useState(null)
   const [colorTooltipOpen, setColorTooltipOpen] = useState(false)
   const [resetTooltipOpen, setResetTooltipOpen] = useState(false)
+  const [recentColors, setRecentColors] = useState(() => readRecentRowColors())
   const colorMenuAnchorRef = useRef(null)
+  const recentColorsRef = useRef(recentColors)
+  recentColorsRef.current = recentColors
   const paramFilters = useMemo(() => nodeIdFilters(selectedId), [selectedId])
   const treeStatusText = selectedNodeStatusText(selectedId)
   const colorActionsEnabled = canChangeRowColor(selectedId, closed, mutationPending)
@@ -128,6 +135,13 @@ export default function NaryadWorkspacePanel({
   useEffect(() => {
     if (colorMenuAnchor || !colorActionsEnabled) closeColorTooltips()
   }, [colorMenuAnchor, colorActionsEnabled])
+
+  useEffect(() => {
+    if (!colorMenuAnchor) return
+    const stored = readRecentRowColors()
+    recentColorsRef.current = stored
+    setRecentColors(stored)
+  }, [colorMenuAnchor])
 
   useEffect(() => {
     let cancelled = false
@@ -323,6 +337,12 @@ export default function NaryadWorkspacePanel({
       } catch {
         return
       }
+      const nextRecent = rememberRecentRowColor(recentColorsRef.current, css)
+      if (nextRecent !== recentColorsRef.current) {
+        recentColorsRef.current = nextRecent
+        writeRecentRowColors(nextRecent)
+        setRecentColors(nextRecent)
+      }
       desiredColorRef.current = {
         color,
         closeMenu: true,
@@ -429,6 +449,46 @@ export default function NaryadWorkspacePanel({
                     }}
                   />
                 ))}
+                {Array.from({ length: NARYAD_RECENT_ROW_COLOR_LIMIT }, (_, index) => {
+                  const css = recentColors[index]
+                  if (!css) {
+                    return (
+                      <Box
+                        key={`empty-recent-${index}`}
+                        aria-hidden
+                        sx={{
+                          width: 28,
+                          height: 28,
+                          borderRadius: 0.5,
+                          border: 1,
+                          borderColor: 'divider',
+                        }}
+                      />
+                    )
+                  }
+                  return (
+                    <Box
+                      key={css}
+                      component="button"
+                      type="button"
+                      aria-label={`Недавний цвет ${css}`}
+                      onClick={() => {
+                        setColorMenu(null)
+                        void changeSelectedRowColor(cssColorToDelphi(css))
+                      }}
+                      sx={{
+                        width: 28,
+                        height: 28,
+                        p: 0,
+                        borderRadius: 0.5,
+                        border: 1,
+                        borderColor: 'divider',
+                        bgcolor: css,
+                        cursor: 'pointer',
+                      }}
+                    />
+                  )
+                })}
               </Box>
               <Box
                 sx={{

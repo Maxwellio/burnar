@@ -49,6 +49,70 @@ export function canChangeRowColor(selectedId, closed, pending = false) {
   return selectedId != null && closed !== true && !pending
 }
 
+export const NARYAD_RECENT_ROW_COLORS_KEY = 'naryad-recent-row-colors'
+export const NARYAD_RECENT_ROW_COLOR_LIMIT = 5
+
+function recentRowColorCss(value) {
+  if (typeof value !== 'string') return undefined
+  const css = value.trim().toLowerCase()
+  if (!/^#[0-9a-f]{6}$/.test(css) || css === '#000000') return undefined
+  return css
+}
+
+function sameRecentRowColors(left, right) {
+  return left.length === right.length && left.every((color, index) => color === right[index])
+}
+
+function collectRecentRowColors(colors) {
+  if (!Array.isArray(colors)) return []
+  const result = []
+  for (const item of colors) {
+    const css = recentRowColorCss(item)
+    if (!css || result.includes(css)) continue
+    result.push(css)
+    if (result.length === NARYAD_RECENT_ROW_COLOR_LIMIT) break
+  }
+  return result
+}
+
+/** Последний подтверждённый свой цвет становится первым. Чёрный и мусор не попадают в список. */
+export function rememberRecentRowColor(colors, css) {
+  const current = collectRecentRowColors(colors)
+  const normalized = recentRowColorCss(css)
+  if (!normalized) return sameRecentRowColors(current, colors) ? colors : current
+  const next = [normalized, ...current.filter((item) => item !== normalized)]
+    .slice(0, NARYAD_RECENT_ROW_COLOR_LIMIT)
+  return sameRecentRowColors(next, colors) ? colors : next
+}
+
+export function parseRecentRowColors(raw) {
+  if (typeof raw !== 'string') return []
+  try {
+    return collectRecentRowColors(JSON.parse(raw))
+  } catch {
+    return []
+  }
+}
+
+export function readRecentRowColors(storage = globalThis.localStorage) {
+  try {
+    return parseRecentRowColors(storage?.getItem(NARYAD_RECENT_ROW_COLORS_KEY))
+  } catch {
+    return []
+  }
+}
+
+export function writeRecentRowColors(colors, storage = globalThis.localStorage) {
+  try {
+    storage?.setItem(
+      NARYAD_RECENT_ROW_COLORS_KEY,
+      JSON.stringify(collectRecentRowColors(colors)),
+    )
+  } catch {
+    // localStorage может быть недоступен.
+  }
+}
+
 export function withRowColorOverride(overrides, nodeId, color) {
   const next = new Map(overrides)
   next.set(nodeId, color)
