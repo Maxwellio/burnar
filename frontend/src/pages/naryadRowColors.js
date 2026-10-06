@@ -46,7 +46,10 @@ export function rowBackgroundColor(row, overrides) {
 }
 
 export function canChangeRowColor(selectedId, closed, pending = false) {
-  return selectedId != null && closed !== true && !pending
+  const selected = Array.isArray(selectedId)
+    ? selectedId.length > 0
+    : selectedId != null
+  return selected && closed !== true && !pending
 }
 
 export const NARYAD_RECENT_ROW_COLORS_KEY = 'naryad-recent-row-colors'
@@ -133,4 +136,21 @@ export function withoutUnsavedColorOverride(overrides, baseline) {
   if (baseline.had) next.set(baseline.nodeId, baseline.color)
   else next.delete(baseline.nodeId)
   return next
+}
+
+export function withRowColorOverrides(overrides, nodeIds, color) {
+  const next = new Map(overrides)
+  for (const nodeId of nodeIds) next.set(nodeId, color)
+  return next
+}
+
+export function colorOverrideBaselines(overrides, nodeIds) {
+  return nodeIds.map((nodeId) => colorOverrideBaseline(overrides, nodeId))
+}
+
+export function withoutUnsavedColorOverrides(overrides, baselines) {
+  return (baselines ?? []).reduce(
+    (current, baseline) => withoutUnsavedColorOverride(current, baseline),
+    new Map(overrides),
+  )
 }

@@ -5,6 +5,7 @@ import { useFetchData } from "../BaseTable/hooks/useFetchTreeData";
 import { DebouncedInput, DynamicDatePicker, DynamicSelect } from "../Input/InputComponents";
 import { FILTER_TYPES } from "../utils/types";
 import { ColumnFilter } from "./BaseTable";
+import { nextTreeSelection } from "./rowSelection.js";
 
 interface BaseTreeTableProps<TData> extends Partial<TableOptions<TData>>{
     url: string;
@@ -19,10 +20,13 @@ interface BaseTreeTableProps<TData> extends Partial<TableOptions<TData>>{
     disabled?: boolean;
     getRowBackgroundColor?: (row: TData) => string | undefined;
     clearSelectionSignal?: number;
+    /** Ctrl/Cmd переключает строку, Shift выделяет видимый диапазон. Без пропа клик остаётся однострочным. */
+    multiSelect?: boolean;
+    setSelectedIds?: (ids: any[]) => void;
 }
 
 
-export const BaseTreeTable = <TData,>({url, columns, filters, setFilters, setSelectedId, setSelectedCol, setIsLeaf, defColumnVisibility, reRenderSignal, disabled=false, getRowBackgroundColor, clearSelectionSignal, ...props}: BaseTreeTableProps<TData>) =>{
+export const BaseTreeTable = <TData,>({url, columns, filters, setFilters, setSelectedId, setSelectedCol, setIsLeaf, defColumnVisibility, reRenderSignal, disabled=false, getRowBackgroundColor, clearSelectionSignal, multiSelect=false, setSelectedIds, ...props}: BaseTreeTableProps<TData>) =>{
     const {data, loading, setData, fetchChildren} = useFetchData<TData>(url, filters || [], reRenderSignal);
     const [expanded, setExpanded] = useState({});
     const [columnVisibility, setColumnVisibility] = useState<VisibilityState>(defColumnVisibility || {})
@@ -32,6 +36,8 @@ export const BaseTreeTable = <TData,>({url, columns, filters, setFilters, setSel
     });
     const hasClearSelectionEffectMounted = useRef(false);
     const previousClearSelectionSignal = useRef(clearSelectionSignal);
+    const anchorIdRef = useRef<string | null>(null);
+    const [selectionHighlight, setSelectionHighlight] = useState(true);
     const table = useReactTable({
         data,
         columns,
@@ -95,10 +101,19 @@ export const BaseTreeTable = <TData,>({url, columns, filters, setFilters, setSel
             return
         }
         if (clearSelectionSignal !== undefined && previousClearSelectionSignal.current !== clearSelectionSignal) {
-            table.resetRowSelection()
+            if (multiSelect) setSelectionHighlight(false)
+            else table.resetRowSelection()
         }
         previousClearSelectionSignal.current = clearSelectionSignal
-    }, [clearSelectionSignal])
+    }, [clearSelectionSignal, multiSelect])
+
+    useEffect(() => {
+        if (!multiSelect) return
+        anchorIdRef.current = null
+        setSelectionHighlight(true)
+        table.resetRowSelection()
+        setSelectedIds?.([])
+    }, [url, multiSelect])
 
     // сохраняем стили с размерами для хранения в стилях таблицы style = {{ ...columnSizeVars}} (убирает инппут лаг при перемещении) 
     const columnSizeVars = useMemo(() => {
@@ -116,7 +131,7 @@ export const BaseTreeTable = <TData,>({url, columns, filters, setFilters, setSel
 
     const handleRowClick = (row, cell) => {        
         if (row.id){
-            if(setSelectedId){
+            if(!multiSelect && setSelectedId){
                 setSelectedId(row.original.id);
             }
             if(setSelectedCol){
@@ -124,6 +139,27 @@ export const BaseTreeTable = <TData,>({url, columns, filters, setFilters, setSel
             }
         }
     };
+
+    const applyMultiSelect = (event, row) => {
+        if (event.shiftKey) event.preventDefault()
+        const state = table.getState().rowSelection
+        const selectedIds = Object.keys(state).filter((id) => state[id])
+        const visibleIds = table.getRowModel().rows.map((item) => item.id)
+        const next = nextTreeSelection({
+            visibleIds,
+            selectedIds,
+            anchorId: anchorIdRef.current,
+            clickedId: row.id,
+            shiftKey: event.shiftKey,
+            toggleKey: event.ctrlKey || event.metaKey,
+        })
+        const selection: Record<string, boolean> = {}
+        for (const id of next.selectedIds) selection[id] = true
+        table.setRowSelection(selection)
+        anchorIdRef.current = next.anchorId
+        setSelectionHighlight(true)
+        setSelectedIds?.(next.selectedIds.map((id) => originalRowId(table, id)))
+    }
 
     // сохраниение размера колонок
     useEffect(() => {
@@ -201,19 +237,28 @@ export const BaseTreeTable = <TData,>({url, columns, filters, setFilters, setSel
                     ))}
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                    {table.getRowModel().rows.map(row =>(
+                    {table.getRowModel().rows.map(row => {
+                        const highlighted = row.getIsSelected() && selectionHighlight
+                        return (
                         <tr key = {row.id} 
                         style={{
-                            backgroundColor: row.getIsSelected()
+                            backgroundColor: highlighted
                                 ? undefined
                                 : getRowBackgroundColor?.(row.original),
                         }}
                         className={`hover:bg-[#E7F0FF] transition-colors duration-150 
-                            ${row.getIsSelected()
+                            ${highlighted
                             ? 'bg-[#D0EBFF] even:bg-[#D0EBFF] hover:bg-[#B1D7FF] shadow-[inset_3px_0_0_0_#364FC7]'
                             : 'bg-white even:bg-[#F8FAFF]'}
                         `}
+                            onMouseDown={(e) => {
+                            if (multiSelect && e.shiftKey) e.preventDefault()
+                            }}
                             onClick={(e) => {
+                            if (multiSelect) {
+                                applyMultiSelect(e, row)
+                                return
+                            }
                             if (!row.getIsSelected()){
                                 table.resetRowSelection();
                             }
@@ -234,13 +279,22 @@ export const BaseTreeTable = <TData,>({url, columns, filters, setFilters, setSel
                                 )
                             })}
                         </tr>
-                    ))}
+                        )
+                    })}
                 </tbody>
             </table>
         </div>
     </div>
     );
 };
+
+function originalRowId(table, rowId) {
+    try {
+        return table.getRow(rowId).original.id
+    } catch {
+        return rowId
+    }
+}
 
 function Filter({ column }) {
     const [isPending, startTransition] = useTransition();

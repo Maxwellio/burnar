@@ -5,6 +5,8 @@ import burnar.dto.NaryadOperNodeDto;
 import burnar.dto.NaryadOperParamDto;
 import burnar.dto.NaryadRowColorDto;
 import burnar.dto.NaryadRowColorRequest;
+import burnar.dto.NaryadRowsColorDto;
+import burnar.dto.NaryadRowsColorRequest;
 import burnar.service.NaryadWorkspaceService;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -61,6 +63,16 @@ public class NaryadWorkspaceController {
                 id, nodeId, request == null ? null : request.getColor());
     }
 
+    @PatchMapping("/{id:\\d+}/zadanie/colors")
+    public NaryadRowsColorDto updateZadanieColors(
+            @PathVariable int id,
+            @RequestBody(required = false) NaryadRowsColorRequest request) {
+        return naryadWorkspaceService.updateZadanieColors(
+                id,
+                request == null ? null : request.getColor(),
+                request == null ? null : request.getNodeIds());
+    }
+
     @GetMapping("/{id:\\d+}/vipolnenie")
     public List<NaryadOperNodeDto> vipolnenieRoots(@PathVariable int id) {
         return naryadWorkspaceService.findVipolnenieRoots(id);
@@ -91,5 +103,15 @@ public class NaryadWorkspaceController {
             @RequestBody(required = false) NaryadRowColorRequest request) {
         return naryadWorkspaceService.updateVipolnenieColor(
                 id, nodeId, request == null ? null : request.getColor());
+    }
+
+    @PatchMapping("/{id:\\d+}/vipolnenie/colors")
+    public NaryadRowsColorDto updateVipolnenieColors(
+            @PathVariable int id,
+            @RequestBody(required = false) NaryadRowsColorRequest request) {
+        return naryadWorkspaceService.updateVipolnenieColors(
+                id,
+                request == null ? null : request.getColor(),
+                request == null ? null : request.getNodeIds());
     }
 }

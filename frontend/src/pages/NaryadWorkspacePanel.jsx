@@ -7,7 +7,7 @@ import Tooltip from '@mui/material/Tooltip'
 import Colorize from '@mui/icons-material/Colorize'
 import FormatColorReset from '@mui/icons-material/FormatColorReset'
 import { AxiosProvider, BaseTable, BaseTreeTable } from 'mainComponent'
-import { fetchNaryadAlgorithm, updateNaryadRowColor } from '../api/naryadyApi.js'
+import { fetchNaryadAlgorithm, updateNaryadRowsColor } from '../api/naryadyApi.js'
 import { useAlert } from '../context/ConfirmContext.jsx'
 import {
   ACTION_BAR_HEIGHT,
@@ -19,21 +19,22 @@ import {
   writeStoredRightPanelWidth,
 } from './naryadPageLayout.js'
 import {
+  detailNodeId,
   nodeIdFilters,
-  selectedNodeStatusText,
+  treeSelectionStatusText,
 } from './naryadWorkspaceData.js'
 import {
   NARYAD_COLOR_SWATCHES,
   NARYAD_DEFAULT_PICKER_COLOR,
   NARYAD_RECENT_ROW_COLOR_LIMIT,
   canChangeRowColor,
-  colorOverrideBaseline,
+  colorOverrideBaselines,
   cssColorToDelphi,
   readRecentRowColors,
   rememberRecentRowColor,
   rowBackgroundColor,
-  withRowColorOverride,
-  withoutUnsavedColorOverride,
+  withRowColorOverrides,
+  withoutUnsavedColorOverrides,
   writeRecentRowColors,
 } from './naryadRowColors.js'
 
@@ -85,7 +86,7 @@ export default function NaryadWorkspacePanel({
   }
 
   const [treeFilters, setTreeFilters] = useState([])
-  const [selectedId, setSelectedId] = useState(null)
+  const [selectedIds, setSelectedIds] = useState([])
   const [algorithm, setAlgorithm] = useState('')
   const [colorOverrides, setColorOverrides] = useState(() => new Map())
   const [clearSelectionSignal, setClearSelectionSignal] = useState(0)
@@ -97,13 +98,14 @@ export default function NaryadWorkspacePanel({
   const colorMenuAnchorRef = useRef(null)
   const recentColorsRef = useRef(recentColors)
   recentColorsRef.current = recentColors
-  const paramFilters = useMemo(() => nodeIdFilters(selectedId), [selectedId])
-  const treeStatusText = selectedNodeStatusText(selectedId)
-  const colorActionsEnabled = canChangeRowColor(selectedId, closed, mutationPending)
-  const selectedIdRef = useRef(selectedId)
+  const detailId = detailNodeId(selectedIds)
+  const paramFilters = useMemo(() => nodeIdFilters(detailId), [detailId])
+  const treeStatusText = treeSelectionStatusText(selectedIds)
+  const colorActionsEnabled = canChangeRowColor(selectedIds, closed, mutationPending)
+  const selectedIdsRef = useRef(selectedIds)
   const closedRef = useRef(closed)
   const colorOverridesRef = useRef(colorOverrides)
-  selectedIdRef.current = selectedId
+  selectedIdsRef.current = selectedIds
   closedRef.current = closed
   colorOverridesRef.current = colorOverrides
   const containerRef = useRef(null)
@@ -122,15 +124,15 @@ export default function NaryadWorkspacePanel({
   }
 
   useEffect(() => {
-    setSelectedId(null)
+    setSelectedIds([])
     setAlgorithm('')
     setColorOverrides(new Map())
     setColorMenu(null)
   }, [treeUrl])
 
   useEffect(() => {
-    if (selectedId == null || closed === true) setColorMenu(null)
-  }, [selectedId, closed])
+    if (selectedIds.length === 0 || closed === true) setColorMenu(null)
+  }, [selectedIds, closed])
 
   useEffect(() => {
     if (colorMenuAnchor || !colorActionsEnabled) closeColorTooltips()
@@ -145,11 +147,11 @@ export default function NaryadWorkspacePanel({
 
   useEffect(() => {
     let cancelled = false
-    if (selectedId == null || !algorithmUrl) {
+    if (detailId == null || !algorithmUrl) {
       setAlgorithm('')
       return undefined
     }
-    fetchNaryadAlgorithm(algorithmUrl, selectedId)
+    fetchNaryadAlgorithm(algorithmUrl, detailId)
       .then((data) => {
         if (!cancelled) setAlgorithm(data?.text ?? '')
       })
@@ -159,7 +161,7 @@ export default function NaryadWorkspacePanel({
     return () => {
       cancelled = true
     }
-  }, [algorithmUrl, selectedId])
+  }, [algorithmUrl, detailId])
 
   const persistColumns = useCallback(() => {
     persistTableColumnSizing(treeUrl, treeSizingKey)
@@ -245,14 +247,14 @@ export default function NaryadWorkspacePanel({
     const baseline = customPreviewBaselineRef.current
     customPreviewBaselineRef.current = null
     if (!baseline) return
-    setColorOverrides((current) => withoutUnsavedColorOverride(current, baseline))
+    setColorOverrides((current) => withoutUnsavedColorOverrides(current, baseline.baselines))
   }
 
   const drainColorSaves = async () => {
     if (mutationPendingRef.current) return false
     const job = desiredColorRef.current
     if (!job) return false
-    if (!canChangeRowColor(job.nodeId, closedRef.current, false)) {
+    if (!canChangeRowColor(job.nodeIds, closedRef.current, false)) {
       desiredColorRef.current = null
       return false
     }
@@ -262,20 +264,20 @@ export default function NaryadWorkspacePanel({
     closeColorTooltips()
     let saved = false
     try {
-      const updated = await updateNaryadRowColor(naryadId, part, job.nodeId, job.color)
+      const updated = await updateNaryadRowsColor(naryadId, part, job.nodeIds, job.color)
       setColorOverrides((current) => {
         if (desiredColorRef.current) return current
-        return withRowColorOverride(current, job.nodeId, updated.color)
+        return withRowColorOverrides(current, updated.nodeIds ?? job.nodeIds, updated.color)
       })
-      // Синяя подсветка скрывает фон, но строка остаётся целью кнопок:
-      // цвет можно подбирать повторно, не выбирая её заново.
+      // Синяя подсветка скрывает фон, но набор строк остаётся целью кнопок:
+      // цвет можно подбирать повторно, не выбирая их заново.
       setClearSelectionSignal((signal) => signal + 1)
       if (job.closeMenu) setColorMenu(null)
       if (!desiredColorRef.current) customPreviewBaselineRef.current = null
       saved = true
     } catch {
       if (!desiredColorRef.current) revertCustomPreview()
-      void showAlert('Не удалось изменить цвет строки.')
+      void showAlert('Не удалось изменить цвет выбранных строк.')
     } finally {
       mutationPendingRef.current = false
       setMutationPending(false)
@@ -287,16 +289,15 @@ export default function NaryadWorkspacePanel({
   drainColorSavesRef.current = drainColorSaves
 
   const changeSelectedRowColor = (color, { closeMenu = true } = {}) => {
-    if (!canChangeRowColor(selectedId, closed, false)) return Promise.resolve(false)
+    const nodeIds = [...selectedIdsRef.current]
+    if (!canChangeRowColor(nodeIds, closed, false)) return Promise.resolve(false)
     if (closeMenu) customPreviewBaselineRef.current = null
-    desiredColorRef.current = { color, closeMenu, nodeId: selectedId }
+    desiredColorRef.current = { color, closeMenu, nodeIds }
     return drainColorSaves()
   }
 
   const previewCustomColor = (css) => {
     if (ignoreCustomInputRef.current) return
-    const nodeId = selectedIdRef.current
-    if (!canChangeRowColor(nodeId, closedRef.current, false)) return
     let color
     try {
       color = cssColorToDelphi(css)
@@ -304,11 +305,17 @@ export default function NaryadWorkspacePanel({
       return
     }
     if (!customPreviewBaselineRef.current) {
-      customPreviewBaselineRef.current = colorOverrideBaseline(colorOverridesRef.current, nodeId)
+      const nodeIds = [...selectedIdsRef.current]
+      if (!canChangeRowColor(nodeIds, closedRef.current, false)) return
+      customPreviewBaselineRef.current = {
+        baselines: colorOverrideBaselines(colorOverridesRef.current, nodeIds),
+        nodeIds,
+      }
     }
-    setColorOverrides((current) => withRowColorOverride(current, nodeId, color))
+    const nodeIds = customPreviewBaselineRef.current.nodeIds
+    setColorOverrides((current) => withRowColorOverrides(current, nodeIds, color))
     setClearSelectionSignal((signal) => signal + 1)
-    desiredColorRef.current = { color, closeMenu: false, nodeId }
+    desiredColorRef.current = { color, closeMenu: false, nodeIds: [...nodeIds] }
     void drainColorSavesRef.current()
   }
 
@@ -343,10 +350,13 @@ export default function NaryadWorkspacePanel({
         writeRecentRowColors(nextRecent)
         setRecentColors(nextRecent)
       }
+      const preview = customPreviewBaselineRef.current
+      const nodeIds = preview?.nodeIds ? [...preview.nodeIds] : [...selectedIdsRef.current]
+      if (!canChangeRowColor(nodeIds, closedRef.current, false)) return
       desiredColorRef.current = {
         color,
         closeMenu: true,
-        nodeId: selectedIdRef.current,
+        nodeIds,
       }
       void drainColorSavesRef.current()
     }
@@ -623,7 +633,8 @@ export default function NaryadWorkspacePanel({
                 columns={treeColumns}
                 filters={treeFilters}
                 setFilters={setTreeFilters}
-                setSelectedId={setSelectedId}
+                multiSelect
+                setSelectedIds={setSelectedIds}
                 getRowBackgroundColor={(row) => rowBackgroundColor(row, colorOverrides)}
                 clearSelectionSignal={clearSelectionSignal}
                 initialState={{ pagination: { pageIndex: 0, pageSize: 10000 } }}

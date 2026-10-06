@@ -7,6 +7,7 @@ import {
   NARYAD_RECENT_ROW_COLOR_LIMIT,
   canChangeRowColor,
   colorOverrideBaseline,
+  colorOverrideBaselines,
   cssColorToDelphi,
   delphiColorToCss,
   parseRecentRowColors,
@@ -14,7 +15,9 @@ import {
   rememberRecentRowColor,
   rowBackgroundColor,
   withRowColorOverride,
+  withRowColorOverrides,
   withoutUnsavedColorOverride,
+  withoutUnsavedColorOverrides,
   writeRecentRowColors,
 } from './naryadRowColors.js'
 
@@ -184,5 +187,30 @@ describe('canChangeRowColor', () => {
     assert.equal(canChangeRowColor(7, false), true)
     assert.equal(canChangeRowColor(7, null), true)
     assert.equal(canChangeRowColor(7, false, false), true)
+  })
+
+  it('enables color actions for every selected row and disables an empty selection', () => {
+    assert.equal(canChangeRowColor([7, 8], false), true)
+    assert.equal(canChangeRowColor([], false), false)
+    assert.equal(canChangeRowColor([7, 8], true), false)
+    assert.equal(canChangeRowColor([7], false, true), false)
+  })
+})
+
+describe('row color overrides for several rows', () => {
+  it('stores the same color on every selected row', () => {
+    const overrides = withRowColorOverrides(new Map([[1, 255]]), [7, 8], 16711680)
+    assert.equal(overrides.get(1), 255)
+    assert.equal(overrides.get(7), 16711680)
+    assert.equal(overrides.get(8), 16711680)
+  })
+
+  it('restores every previewed row when a custom color is not saved', () => {
+    const original = new Map([[7, 255]])
+    const baselines = colorOverrideBaselines(original, [7, 8])
+    const preview = withRowColorOverrides(original, [7, 8], 16711680)
+    const restored = withoutUnsavedColorOverrides(preview, baselines)
+    assert.equal(restored.get(7), 255)
+    assert.equal(restored.has(8), false)
   })
 })
