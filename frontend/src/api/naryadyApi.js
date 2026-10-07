@@ -30,3 +30,12 @@ export function updateNaryadRowColor(id, part, nodeId, color) {
   })
 }
 
+/** Обновляет цвет всех переданных строк одной части наряда. */
+export function updateNaryadRowsColor(id, part, nodeIds, color) {
+  return requestJson(`/naryady/${id}/${part}/colors`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ color, nodeIds }),
+  })
+}
+

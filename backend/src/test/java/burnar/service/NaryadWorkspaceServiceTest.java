@@ -5,6 +5,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.sql.Timestamp;
 import java.time.LocalDateTime;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -155,5 +156,29 @@ class NaryadWorkspaceServiceTest {
     void vipolnenieDescriptorIsLockedBeforeColorUpdate() {
         String sql = NaryadWorkspaceService.VIPOLNENIE_DESCRIPTOR_SQL;
         assertTrue(sql.contains("FOR UPDATE"), sql);
+    }
+
+    @Test
+    void batchColorUpdatesAreScopedToTheNaryadAndRequestedNodes() {
+        String zadanie = NaryadWorkspaceService.UPDATE_ZADANIE_COLORS_SQL;
+        assertTrue(zadanie.contains("UPDATE burnar.zadanie_oper"), zadanie);
+        assertTrue(zadanie.contains("SET colorsel = :color"), zadanie);
+        assertTrue(zadanie.contains("narkey = :narkey"), zadanie);
+        assertTrue(zadanie.contains("key IN (:nodeIds)"), zadanie);
+
+        String vipolnenie = NaryadWorkspaceService.UPDATE_VIPOLNENIE_COLORS_SQL;
+        assertTrue(vipolnenie.contains("UPDATE burnar.vipolnenie_oper"), vipolnenie);
+        assertTrue(vipolnenie.contains("key IN (:nodeIds)"), vipolnenie);
+    }
+
+    @Test
+    void nodeIdsAreRequiredAndDuplicatesCollapseInRequestOrder() {
+        assertEquals(List.of(7L, 8L), NaryadWorkspaceService.requireNodeIds(List.of(7L, 7L, 8L)));
+        assertThrows(ResponseStatusException.class,
+                () -> NaryadWorkspaceService.requireNodeIds(null));
+        assertThrows(ResponseStatusException.class,
+                () -> NaryadWorkspaceService.requireNodeIds(List.of()));
+        assertThrows(ResponseStatusException.class,
+                () -> NaryadWorkspaceService.requireNodeIds(java.util.Arrays.asList(7L, null)));
     }
 }
