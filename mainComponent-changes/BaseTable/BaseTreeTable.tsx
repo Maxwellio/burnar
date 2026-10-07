@@ -6,6 +6,7 @@ import { DebouncedInput, DynamicDatePicker, DynamicSelect } from "../Input/Input
 import { FILTER_TYPES } from "../utils/types";
 import { ColumnFilter } from "./BaseTable";
 import { nextTreeSelection } from "./rowSelection.js";
+import { expandedChildRequests, indexTreeNodes } from "./restoreExpandedChildren.js";
 
 interface BaseTreeTableProps<TData> extends Partial<TableOptions<TData>>{
     url: string;
@@ -37,6 +38,12 @@ export const BaseTreeTable = <TData,>({url, columns, filters, setFilters, setSel
     const hasClearSelectionEffectMounted = useRef(false);
     const previousClearSelectionSignal = useRef(clearSelectionSignal);
     const anchorIdRef = useRef<string | null>(null);
+    const previousReloadSignal = useRef(reRenderSignal);
+    const restoreExpandedRef = useRef(false);
+    const dataAtReloadRef = useRef<TData[] | null>(null);
+    const restoringIdsRef = useRef(new Set<string>());
+    const dataRef = useRef(data);
+    dataRef.current = data;
     const [selectionHighlight, setSelectionHighlight] = useState(true);
     const table = useReactTable({
         data,
@@ -183,6 +190,33 @@ export const BaseTreeTable = <TData,>({url, columns, filters, setFilters, setSel
             setExpanded(allExpanded);
         }
     }, [data]);
+
+    useEffect(() => {
+        if (previousReloadSignal.current === reRenderSignal) return
+        previousReloadSignal.current = reRenderSignal
+        restoreExpandedRef.current = true
+        dataAtReloadRef.current = dataRef.current
+        restoringIdsRef.current = new Set()
+    }, [reRenderSignal])
+
+    useEffect(() => {
+        if (!restoreExpandedRef.current) return
+        // Сразу после сигнала data ещё прежнее дерево, дети на месте.
+        if (data === dataAtReloadRef.current) return
+        const openIds = Object.keys(expanded).filter((id) => expanded[id])
+        const { requestIds, pending } = expandedChildRequests(
+            openIds,
+            indexTreeNodes(data),
+            restoringIdsRef.current,
+        )
+        for (const id of requestIds) {
+            restoringIdsRef.current.add(String(id))
+            Promise.resolve(fetchChildren(id)).finally(() => {
+                restoringIdsRef.current.delete(String(id))
+            })
+        }
+        if (!pending) restoreExpandedRef.current = false
+    }, [data, expanded, reRenderSignal])
 
     useEffect(() => {
         setExpanded({});
