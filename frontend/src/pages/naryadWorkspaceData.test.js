@@ -2,8 +2,10 @@ import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 import {
   detailNodeId,
+  formatDuration,
   nodeIdFilters,
   selectedNodeStatusText,
+  treeFooterStatusText,
   treeSelectionStatusText,
 } from './naryadWorkspaceData.js'
 
@@ -56,5 +58,38 @@ describe('treeSelectionStatusText', () => {
   it('shows the code of a single row and the count of several rows', () => {
     assert.equal(treeSelectionStatusText([42]), 'Код: 42')
     assert.equal(treeSelectionStatusText([1, 2, 3]), 'Выбрано: 3')
+  })
+})
+
+describe('formatDuration', () => {
+  it('shows zero for an empty total and trims trailing hundredths', () => {
+    assert.equal(formatDuration(null), '0')
+    assert.equal(formatDuration(0), '0')
+    assert.equal(formatDuration('12.50'), '12.5')
+    assert.equal(formatDuration(3), '3')
+    assert.equal(formatDuration(1.2), '1.2')
+  })
+})
+
+describe('treeFooterStatusText', () => {
+  it('shows the assignment total even when nothing is selected', () => {
+    assert.equal(
+      treeFooterStatusText([], 'zadanie', { duration: 4.5 }),
+      'Общая продолжительность: 4.5',
+    )
+  })
+
+  it('places both execution totals after the selected row code', () => {
+    assert.equal(
+      treeFooterStatusText([42], 'vipolnenie', { normDuration: 8, factDuration: 3.25 }),
+      'Код: 42    Общая нормативная продолжительность: 8    Общая фактическая продолжительность: 3.25',
+    )
+  })
+
+  it('keeps the selection count ahead of the totals', () => {
+    assert.equal(
+      treeFooterStatusText([1, 2], 'zadanie', { duration: 0 }),
+      'Выбрано: 2    Общая продолжительность: 0',
+    )
   })
 })

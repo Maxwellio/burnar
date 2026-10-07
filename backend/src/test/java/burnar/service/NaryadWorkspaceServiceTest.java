@@ -172,6 +172,15 @@ class NaryadWorkspaceServiceTest {
     }
 
     @Test
+    void vipolnenieLockFlagsStayInsideTheNaryad() {
+        String sql = NaryadWorkspaceService.VIPOLNENIE_LOCK_FLAGS_SQL;
+        assertTrue(sql.contains("SELECT o.key, o.locked"), sql);
+        assertTrue(sql.contains("burnar.vipolnenie_oper"), sql);
+        assertTrue(sql.contains("narkey = :narkey"), sql);
+        assertFalse(sql.contains("nodeIds"), sql);
+    }
+
+    @Test
     void nodeIdsAreRequiredAndDuplicatesCollapseInRequestOrder() {
         assertEquals(List.of(7L, 8L), NaryadWorkspaceService.requireNodeIds(List.of(7L, 7L, 8L)));
         assertThrows(ResponseStatusException.class,

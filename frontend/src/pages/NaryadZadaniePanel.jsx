@@ -6,13 +6,14 @@ import {
 } from './naryadWorkspaceColumns.jsx'
 
 /** Вкладка «Задание»: своё дерево, свои колонки и своя таблица параметров. */
-export default function NaryadZadaniePanel({ naryadId, closed }) {
+export default function NaryadZadaniePanel({ naryadId, closed, onClosedChange }) {
   return (
     <NaryadWorkspacePanel
       actionBarAriaLabel="Панель действий задания"
       naryadId={naryadId}
       part="zadanie"
       closed={closed}
+      onClosedChange={onClosedChange}
       treeUrl={`/naryady/${naryadId}/zadanie`}
       treeColumns={naryadZadanieColumns}
       paramsUrl={`/naryady/${naryadId}/zadanie/params`}

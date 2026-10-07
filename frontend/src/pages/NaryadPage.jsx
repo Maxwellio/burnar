@@ -287,12 +287,20 @@ export default function NaryadPage() {
       >
         {mountedPanels.zad ? (
           <Box sx={paneSx(showZad, bothOpen, bothOpen ? (horizontalSplit ? 'bottom' : 'right') : null)}>
-            <NaryadZadaniePanel naryadId={id} closed={zadanieClosed} />
+            <NaryadZadaniePanel
+              naryadId={id}
+              closed={zadanieClosed}
+              onClosedChange={setZadanieClosed}
+            />
           </Box>
         ) : null}
         {mountedPanels.vip ? (
           <Box sx={paneSx(showVip, bothOpen, null)}>
-            <NaryadVipolneniePanel naryadId={id} closed={vipolnenieClosed} />
+            <NaryadVipolneniePanel
+              naryadId={id}
+              closed={vipolnenieClosed}
+              onClosedChange={setVipolnenieClosed}
+            />
           </Box>
         ) : null}
       </Box>

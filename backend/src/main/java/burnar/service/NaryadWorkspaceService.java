@@ -1,10 +1,15 @@
 package burnar.service;
 
 import burnar.dto.NaryadAlgorithmDto;
+import burnar.dto.NaryadClosedDto;
+import burnar.dto.NaryadDurationTotalsDto;
+import burnar.dto.NaryadLockTargetDto;
+import burnar.dto.NaryadWorkLockDto;
 import burnar.dto.NaryadOperNodeDto;
 import burnar.dto.NaryadOperParamDto;
 import burnar.dto.NaryadRowColorDto;
 import burnar.dto.NaryadRowsColorDto;
+import org.springframework.dao.DataAccessException;
 import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
@@ -13,6 +18,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.math.BigDecimal;
+import java.sql.CallableStatement;
+import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
@@ -246,6 +254,77 @@ public class NaryadWorkspaceService {
             "UPDATE burnar.vipolnenie_oper SET colorsel = :color "
                     + "WHERE narkey = :narkey AND key IN (:nodeIds)";
 
+    /** Листья задания: своя n2 родителя в сумму не входит, как CalcItogsNS. */
+    static final String ZADANIE_TOTAL_SQL =
+            "SELECT COALESCE(SUM(leaf.n2), 0) FROM ("
+                    + "  SELECT CASE WHEN o.operlifetype IS NOT NULL THEN "
+                    + "    (SELECT round(y.norma / 60, 2) FROM burnar.zadanie_norm y "
+                    + "     WHERE y.zad_key = o.key AND y.prnum = 2) END AS n2 "
+                    + "  FROM burnar.zadanie_oper o "
+                    + "  WHERE o.narkey = :narkey "
+                    + "    AND NOT EXISTS (SELECT 1 FROM burnar.zadanie_oper c WHERE c.parent = o.key)"
+                    + ") leaf";
+
+    static final String VIPOLNENIE_NORM_TOTAL_SQL =
+            "SELECT COALESCE(SUM(leaf.n2), 0) FROM ("
+                    + "  SELECT CASE WHEN o.operlifetype IS NOT NULL THEN "
+                    + "    (SELECT round(y.norma / 60, 2) FROM burnar.vipolnenie_norm y "
+                    + "     WHERE y.vip_key = o.key AND y.prnum = 2) END AS n2 "
+                    + "  FROM burnar.vipolnenie_oper o "
+                    + "  WHERE o.narkey = :narkey "
+                    + "    AND NOT EXISTS (SELECT 1 FROM burnar.vipolnenie_oper c WHERE c.parent = o.key)"
+                    + ") leaf";
+
+    static final String VIPOLNENIE_FACT_TOTAL_SQL =
+            "SELECT COALESCE(SUM(leaf.fact), 0) FROM ("
+                    + "  SELECT CASE WHEN o.operlifetype IS NOT NULL THEN "
+                    + "    (SELECT round(y.fact / 60, 2) FROM burnar.vipolnenie_norm y "
+                    + "     WHERE y.vip_key = o.key AND y.prnum = 2) END AS fact "
+                    + "  FROM burnar.vipolnenie_oper o "
+                    + "  WHERE o.narkey = :narkey "
+                    + "    AND NOT EXISTS (SELECT 1 FROM burnar.vipolnenie_oper c WHERE c.parent = o.key)"
+                    + ") leaf";
+
+    static final String VIPOLNENIE_UNLOCKED_COUNT_SQL =
+            "SELECT count(*) FROM burnar.vipolnenie_oper o "
+                    + "WHERE o.locked = 0 AND o.narkey = :narkey";
+
+    static final String OPEN_ZADANIE_SQL =
+            "UPDATE burnar.defnarzad SET closed = 0 WHERE narkey = :narkey";
+
+    static final String OPEN_VIPOLNENIE_SQL =
+            "UPDATE burnar.defnarvip SET closed = 0 WHERE narkey = :narkey";
+
+    static final String CLOSE_VIPOLNENIE_SQL =
+            "UPDATE burnar.defnarvip SET closed = 1 WHERE narkey = :narkey";
+
+    /**
+     * Тот же обход, что у vipolnenie_lock_oper: родитель, затем дети по prnum.
+     * Первая строка — самая ранняя, последняя — самая поздняя.
+     */
+    static final String VIPOLNENIE_SELECTION_ORDER_SQL =
+            "WITH RECURSIVE walk AS ("
+                    + "  SELECT vo.key, vo.locked, "
+                    + "         ARRAY[(row_number() OVER (PARTITION BY vo.parent ORDER BY vo.prnum))::integer] AS ord "
+                    + "  FROM burnar.vipolnenie_oper vo "
+                    + "  WHERE vo.parent IS NULL AND vo.narkey = :narkey "
+                    + "  UNION ALL "
+                    + "  SELECT vo.key, vo.locked, "
+                    + "         walk.ord || ARRAY[(row_number() OVER (PARTITION BY vo.parent ORDER BY vo.prnum))::integer] "
+                    + "  FROM burnar.vipolnenie_oper vo "
+                    + "  INNER JOIN walk ON walk.key = vo.parent"
+                    + ") "
+                    + "SELECT walk.key, walk.locked FROM walk "
+                    + "WHERE walk.key IN (:nodeIds) "
+                    + "ORDER BY walk.ord";
+
+    /** Признак locked всех работ наряда. Кнопки смотрят в этот список, не в таблицу. */
+    static final String VIPOLNENIE_LOCK_FLAGS_SQL =
+            "SELECT o.key, o.locked FROM burnar.vipolnenie_oper o "
+                    + "WHERE o.narkey = :narkey";
+
+    static final String NOT_ALL_LOCKED_MESSAGE = "Не все работы заблокированы!";
+
     private static final RowMapper<NaryadOperParamDto> PARAM_MAPPER = (rs, rowNum) -> {
         NaryadOperParamDto dto = new NaryadOperParamDto();
         dto.setNm(rs.getString("nm"));
@@ -342,6 +421,54 @@ public class NaryadWorkspaceService {
     public NaryadRowsColorDto updateVipolnenieColors(int naryadId, Integer color, List<Long> nodeIds) {
         return updateColors(
                 naryadId, color, nodeIds, VIPOLNENIE_DESCRIPTOR_SQL, UPDATE_VIPOLNENIE_COLORS_SQL);
+    }
+
+    public NaryadDurationTotalsDto zadanieTotals(int naryadId) {
+        naryadListService.findHeader(naryadId);
+        NaryadDurationTotalsDto dto = new NaryadDurationTotalsDto();
+        dto.setDuration(sumHours(ZADANIE_TOTAL_SQL, naryadId));
+        return dto;
+    }
+
+    public NaryadDurationTotalsDto vipolnenieTotals(int naryadId) {
+        naryadListService.findHeader(naryadId);
+        NaryadDurationTotalsDto dto = new NaryadDurationTotalsDto();
+        dto.setNormDuration(sumHours(VIPOLNENIE_NORM_TOTAL_SQL, naryadId));
+        dto.setFactDuration(sumHours(VIPOLNENIE_FACT_TOTAL_SQL, naryadId));
+        return dto;
+    }
+
+    /**
+     * Закрытие задания — burnar.zadanie_closenar. Закрытие выполнения — только когда
+     * нет работ с locked = 0, затем defnarvip.closed = 1. Открытие — closed = 0.
+     */
+    public NaryadClosedDto setZadanieClosed(int naryadId, Boolean closed) {
+        return setPartClosed(naryadId, closed, true);
+    }
+
+    public NaryadClosedDto setVipolnenieClosed(int naryadId, Boolean closed) {
+        return setPartClosed(naryadId, closed, false);
+    }
+
+    /**
+     * Один вызов процедуры по краю выделения в порядке обхода дерева.
+     * Блокировка — самая поздняя выбранная, разблокировка — самая ранняя.
+     */
+    public NaryadLockTargetDto lockVipolnenie(int naryadId, List<Long> nodeIds) {
+        return changeVipolnenieLock(naryadId, nodeIds, true);
+    }
+
+    public NaryadLockTargetDto unlockVipolnenie(int naryadId, List<Long> nodeIds) {
+        return changeVipolnenieLock(naryadId, nodeIds, false);
+    }
+
+    /** Признаки блокировки всех работ выполнения этого наряда. */
+    public List<NaryadWorkLockDto> vipolnenieLockFlags(int naryadId) {
+        naryadListService.findHeader(naryadId);
+        return jdbc.query(
+                VIPOLNENIE_LOCK_FLAGS_SQL,
+                new MapSqlParameterSource("narkey", naryadId),
+                (rs, rowNum) -> new NaryadWorkLockDto(getLong(rs, "key"), getInteger(rs, "locked")));
     }
 
     static List<Long> requireNodeIds(List<Long> nodeIds) {
@@ -467,6 +594,118 @@ public class NaryadWorkspaceService {
         return rows.isEmpty() ? null : rows.get(0);
     }
 
+    private NaryadClosedDto setPartClosed(int naryadId, Boolean closed, boolean zadanie) {
+        naryadListService.findHeader(naryadId);
+        if (closed == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "closed is required");
+        }
+        String descriptorSql = zadanie ? ZADANIE_DESCRIPTOR_SQL : VIPOLNENIE_DESCRIPTOR_SQL;
+        boolean alreadyClosed = readClosed(descriptorSql, naryadId);
+        if (closed) {
+            if (alreadyClosed) {
+                throw new ResponseStatusException(HttpStatus.CONFLICT, "Naryad part is closed");
+            }
+            if (zadanie) {
+                callProcedure("CALL burnar.zadanie_closenar(?)", naryadId, null);
+            } else {
+                closeVipolnenie(naryadId);
+            }
+            return new NaryadClosedDto(true);
+        }
+        String updateSql = zadanie ? OPEN_ZADANIE_SQL : OPEN_VIPOLNENIE_SQL;
+        int updated = jdbc.update(updateSql, new MapSqlParameterSource("narkey", naryadId));
+        if (updated == 0) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Naryad descriptor not found");
+        }
+        return new NaryadClosedDto(false);
+    }
+
+    private void closeVipolnenie(int naryadId) {
+        Long unlocked = jdbc.queryForObject(
+                VIPOLNENIE_UNLOCKED_COUNT_SQL,
+                new MapSqlParameterSource("narkey", naryadId),
+                Long.class);
+        if (unlocked != null && unlocked > 0) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, NOT_ALL_LOCKED_MESSAGE);
+        }
+        int updated = jdbc.update(CLOSE_VIPOLNENIE_SQL, new MapSqlParameterSource("narkey", naryadId));
+        if (updated == 0) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Naryad descriptor not found");
+        }
+    }
+
+    private NaryadLockTargetDto changeVipolnenieLock(int naryadId, List<Long> nodeIds, boolean lock) {
+        naryadListService.findHeader(naryadId);
+        if (readClosed(VIPOLNENIE_DESCRIPTOR_SQL, naryadId)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Naryad part is closed");
+        }
+        List<Long> ids = requireNodeIds(nodeIds);
+        List<OrderedWork> ordered = jdbc.query(
+                VIPOLNENIE_SELECTION_ORDER_SQL,
+                new MapSqlParameterSource()
+                        .addValue("narkey", naryadId)
+                        .addValue("nodeIds", ids),
+                (rs, rowNum) -> new OrderedWork(getLong(rs, "key"), getInteger(rs, "locked")));
+        if (ordered.size() != ids.size()) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Naryad row not found");
+        }
+        OrderedWork target = lock ? ordered.get(ordered.size() - 1) : ordered.get(0);
+        if (lock && target.locked != null && target.locked == 1) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Работа уже заблокирована");
+        }
+        String sql = lock
+                ? "CALL burnar.vipolnenie_lock_oper(?, ?)"
+                : "CALL burnar.vipolnenie_un_lock_oper(?, ?)";
+        callProcedure(sql, naryadId, target.key);
+        return new NaryadLockTargetDto(target.key);
+    }
+
+    private BigDecimal sumHours(String sql, int naryadId) {
+        BigDecimal sum = jdbc.queryForObject(sql, new MapSqlParameterSource("narkey", naryadId), BigDecimal.class);
+        return sum == null ? BigDecimal.ZERO : sum;
+    }
+
+    private boolean readClosed(String descriptorSql, int naryadId) {
+        List<Integer> descriptors = jdbc.query(
+                descriptorSql,
+                new MapSqlParameterSource("narkey", naryadId),
+                (rs, rowNum) -> rs.getInt("closed"));
+        if (descriptors.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Naryad descriptor not found");
+        }
+        return descriptors.get(0) == 1;
+    }
+
+    /**
+     * Процедуры содержат COMMIT, поэтому вызов идёт при autocommit, вне транзакции Spring.
+     */
+    private void callProcedure(String sql, int naryadId, Long nodeId) {
+        try {
+            jdbc.getJdbcTemplate().execute((Connection con) -> {
+                boolean previousAutoCommit = con.getAutoCommit();
+                con.setAutoCommit(true);
+                try (CallableStatement cs = con.prepareCall(sql)) {
+                    if (nodeId == null) {
+                        cs.setInt(1, naryadId);
+                    } else {
+                        cs.setLong(1, nodeId);
+                        cs.setInt(2, naryadId);
+                    }
+                    cs.execute();
+                } finally {
+                    try {
+                        con.setAutoCommit(previousAutoCommit);
+                    } catch (SQLException ignored) {
+                        // Процедура уже завершила свою транзакцию.
+                    }
+                }
+                return null;
+            });
+        } catch (DataAccessException ex) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, NaryadProcedureMessages.from(ex));
+        }
+    }
+
     private List<NaryadOperNodeDto> queryTree(
             String sqlTemplate, int naryadId, Long parentId, boolean vip) {
         String levelWhere = parentId == null ? TREE_ROOTS_WHERE : TREE_CHILDREN_WHERE;
@@ -517,6 +756,16 @@ public class NaryadWorkspaceService {
     private static Long getLong(ResultSet rs, String column) throws SQLException {
         long value = rs.getLong(column);
         return rs.wasNull() ? null : value;
+    }
+
+    private static final class OrderedWork {
+        final Long key;
+        final Integer locked;
+
+        OrderedWork(Long key, Integer locked) {
+            this.key = key;
+            this.locked = locked;
+        }
     }
 
     private static final class OperRef {

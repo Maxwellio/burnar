@@ -6,13 +6,14 @@ import {
 } from './naryadWorkspaceColumns.jsx'
 
 /** Вкладка «Выполнение»: отдельный инстанс таблиц, колонки плюс «Факт» и «Период». */
-export default function NaryadVipolneniePanel({ naryadId, closed }) {
+export default function NaryadVipolneniePanel({ naryadId, closed, onClosedChange }) {
   return (
     <NaryadWorkspacePanel
       actionBarAriaLabel="Панель действий выполнения"
       naryadId={naryadId}
       part="vipolnenie"
       closed={closed}
+      onClosedChange={onClosedChange}
       treeUrl={`/naryady/${naryadId}/vipolnenie`}
       treeColumns={naryadVipolnenieColumns}
       paramsUrl={`/naryady/${naryadId}/vipolnenie/params`}

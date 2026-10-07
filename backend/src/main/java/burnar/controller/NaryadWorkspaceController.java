@@ -1,6 +1,12 @@
 package burnar.controller;
 
 import burnar.dto.NaryadAlgorithmDto;
+import burnar.dto.NaryadClosedDto;
+import burnar.dto.NaryadClosedRequest;
+import burnar.dto.NaryadDurationTotalsDto;
+import burnar.dto.NaryadLockTargetDto;
+import burnar.dto.NaryadNodeIdsRequest;
+import burnar.dto.NaryadWorkLockDto;
 import burnar.dto.NaryadOperNodeDto;
 import burnar.dto.NaryadOperParamDto;
 import burnar.dto.NaryadRowColorDto;
@@ -8,15 +14,22 @@ import burnar.dto.NaryadRowColorRequest;
 import burnar.dto.NaryadRowsColorDto;
 import burnar.dto.NaryadRowsColorRequest;
 import burnar.service.NaryadWorkspaceService;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.server.ResponseStatusException;
 
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Карточка наряда: дерево работ (BaseTreeTable), параметры операции (BaseTable, массив),
@@ -63,6 +76,18 @@ public class NaryadWorkspaceController {
                 id, nodeId, request == null ? null : request.getColor());
     }
 
+    @GetMapping("/{id:\\d+}/zadanie/totals")
+    public NaryadDurationTotalsDto zadanieTotals(@PathVariable int id) {
+        return naryadWorkspaceService.zadanieTotals(id);
+    }
+
+    @PostMapping("/{id:\\d+}/zadanie/closed")
+    public NaryadClosedDto setZadanieClosed(
+            @PathVariable int id,
+            @RequestBody(required = false) NaryadClosedRequest request) {
+        return naryadWorkspaceService.setZadanieClosed(id, request == null ? null : request.getClosed());
+    }
+
     @PatchMapping("/{id:\\d+}/zadanie/colors")
     public NaryadRowsColorDto updateZadanieColors(
             @PathVariable int id,
@@ -105,6 +130,37 @@ public class NaryadWorkspaceController {
                 id, nodeId, request == null ? null : request.getColor());
     }
 
+    @GetMapping("/{id:\\d+}/vipolnenie/totals")
+    public NaryadDurationTotalsDto vipolnenieTotals(@PathVariable int id) {
+        return naryadWorkspaceService.vipolnenieTotals(id);
+    }
+
+    @PostMapping("/{id:\\d+}/vipolnenie/closed")
+    public NaryadClosedDto setVipolnenieClosed(
+            @PathVariable int id,
+            @RequestBody(required = false) NaryadClosedRequest request) {
+        return naryadWorkspaceService.setVipolnenieClosed(id, request == null ? null : request.getClosed());
+    }
+
+    @GetMapping("/{id:\\d+}/vipolnenie/lock-flags")
+    public List<NaryadWorkLockDto> vipolnenieLockFlags(@PathVariable int id) {
+        return naryadWorkspaceService.vipolnenieLockFlags(id);
+    }
+
+    @PostMapping("/{id:\\d+}/vipolnenie/lock")
+    public NaryadLockTargetDto lockVipolnenie(
+            @PathVariable int id,
+            @RequestBody(required = false) NaryadNodeIdsRequest request) {
+        return naryadWorkspaceService.lockVipolnenie(id, request == null ? null : request.getNodeIds());
+    }
+
+    @PostMapping("/{id:\\d+}/vipolnenie/unlock")
+    public NaryadLockTargetDto unlockVipolnenie(
+            @PathVariable int id,
+            @RequestBody(required = false) NaryadNodeIdsRequest request) {
+        return naryadWorkspaceService.unlockVipolnenie(id, request == null ? null : request.getNodeIds());
+    }
+
     @PatchMapping("/{id:\\d+}/vipolnenie/colors")
     public NaryadRowsColorDto updateVipolnenieColors(
             @PathVariable int id,
@@ -113,5 +169,18 @@ public class NaryadWorkspaceController {
                 id,
                 request == null ? null : request.getColor(),
                 request == null ? null : request.getNodeIds());
+    }
+
+    /**
+     * Boot 2.7 по умолчанию скрывает message в JSON — без этого диалог
+     * покажет только «Request failed: 409».
+     */
+    @ExceptionHandler(ResponseStatusException.class)
+    public ResponseEntity<Map<String, Object>> handleStatus(ResponseStatusException ex) {
+        Map<String, Object> body = new LinkedHashMap<>();
+        HttpStatus status = ex.getStatus();
+        body.put("status", status.value());
+        body.put("message", ex.getReason() != null ? ex.getReason() : status.getReasonPhrase());
+        return ResponseEntity.status(status).body(body);
     }
 }
