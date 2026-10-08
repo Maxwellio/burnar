@@ -37,6 +37,12 @@ export const BaseTreeTable = <TData,>({url, columns, filters, setFilters, setSel
     const hasClearSelectionEffectMounted = useRef(false);
     const previousClearSelectionSignal = useRef(clearSelectionSignal);
     const anchorIdRef = useRef<string | null>(null);
+    const previousReloadSignal = useRef(reRenderSignal);
+    const restoreExpandedRef = useRef(false);
+    const dataAtReloadRef = useRef<TData[] | null>(null);
+    const restoringIdsRef = useRef(new Set<string>());
+    const dataRef = useRef(data);
+    dataRef.current = data;
     const [selectionHighlight, setSelectionHighlight] = useState(true);
     const table = useReactTable({
         data,
@@ -183,6 +189,43 @@ export const BaseTreeTable = <TData,>({url, columns, filters, setFilters, setSel
             setExpanded(allExpanded);
         }
     }, [data]);
+
+    useEffect(() => {
+        if (previousReloadSignal.current === reRenderSignal) return
+        previousReloadSignal.current = reRenderSignal
+        restoreExpandedRef.current = true
+        dataAtReloadRef.current = dataRef.current
+        restoringIdsRef.current = new Set()
+    }, [reRenderSignal])
+
+    useEffect(() => {
+        if (!restoreExpandedRef.current) return
+        // Сразу после сигнала data ещё прежнее дерево, дети на месте.
+        if (data === dataAtReloadRef.current) return
+        const byId = new Map()
+        const walk = (nodes) => {
+            for (const node of nodes ?? []) {
+                if (node?.id == null) continue
+                byId.set(String(node.id), node)
+                if (node.children) walk(node.children)
+            }
+        }
+        walk(data)
+        let pending = false
+        for (const rowId of Object.keys(expanded)) {
+            if (!expanded[rowId]) continue
+            const node = byId.get(rowId)
+            if (!node?.hasChildren || node.children || node.hasLoaded) continue
+            pending = true
+            const key = String(node.id)
+            if (restoringIdsRef.current.has(key)) continue
+            restoringIdsRef.current.add(key)
+            Promise.resolve(fetchChildren(node.id)).finally(() => {
+                restoringIdsRef.current.delete(key)
+            })
+        }
+        if (!pending) restoreExpandedRef.current = false
+    }, [data, expanded, reRenderSignal])
 
     useEffect(() => {
         setExpanded({});
