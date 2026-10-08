@@ -4,6 +4,7 @@ import burnar.dto.NaryadAlgorithmDto;
 import burnar.dto.NaryadClosedDto;
 import burnar.dto.NaryadDurationTotalsDto;
 import burnar.dto.NaryadLockTargetDto;
+import burnar.dto.NaryadWorkActionDto;
 import burnar.dto.NaryadWorkLockDto;
 import burnar.dto.NaryadOperNodeDto;
 import burnar.dto.NaryadOperParamDto;
@@ -24,6 +25,7 @@ import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
+import java.sql.Types;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.LinkedHashSet;
@@ -323,6 +325,32 @@ public class NaryadWorkspaceService {
             "SELECT o.key, o.locked FROM burnar.vipolnenie_oper o "
                     + "WHERE o.narkey = :narkey";
 
+    private static final String WORK_RS_SQL =
+            "(WITH vars(npi) AS ("
+                    + "  VALUES (ARRAY[13555,13556,13557,13558,13559,13560,13561,13562,13563,13564,13565,13566])"
+                    + ") SELECT CASE WHEN o.razdel = ANY(npi) THEN '1' ELSE '0' END FROM vars)";
+
+    static final String ZADANIE_WORK_ROWS_SQL =
+            "SELECT o.key AS id, o.parent AS parent_id, o.prnum, o.operlifetype, o.locked, "
+                    + WORK_RS_SQL + " AS rs FROM burnar.zadanie_oper o "
+                    + "WHERE o.narkey = :narkey AND o.key IN (:nodeIds)";
+
+    static final String VIPOLNENIE_WORK_ROWS_SQL =
+            "SELECT o.key AS id, o.parent AS parent_id, o.prnum, o.operlifetype, o.locked, "
+                    + WORK_RS_SQL + " AS rs FROM burnar.vipolnenie_oper o "
+                    + "WHERE o.narkey = :narkey AND o.key IN (:nodeIds)";
+
+    static final String ZADANIE_WORK_EXISTS_SQL =
+            "SELECT o.key FROM burnar.zadanie_oper o WHERE o.narkey = :narkey AND o.key = :nodeId";
+
+    static final String VIPOLNENIE_WORK_EXISTS_SQL =
+            "SELECT o.key FROM burnar.vipolnenie_oper o WHERE o.narkey = :narkey AND o.key = :nodeId";
+
+    static final String ZADANIE_DELETE_WORK_SQL = "CALL burnar.zadanie_operac_del(?, ?, ?, ?)";
+    static final String ZADANIE_DELETE_BLOCK_SQL = "CALL burnar.zadanie_operac_del_block(?, ?, ?, ?)";
+    static final String VIPOLNENIE_DELETE_WORK_SQL = "CALL burnar.vipolnenie_operac_del(?, ?, ?, ?)";
+    static final String VIPOLNENIE_DELETE_BLOCK_SQL = "CALL burnar.vipolnenie_operac_del_block(?, ?, ?, ?)";
+
     static final String NOT_ALL_LOCKED_MESSAGE = "Не все работы заблокированы!";
 
     private static final RowMapper<NaryadOperParamDto> PARAM_MAPPER = (rs, rowNum) -> {
@@ -460,6 +488,62 @@ public class NaryadWorkspaceService {
 
     public NaryadLockTargetDto unlockVipolnenie(int naryadId, List<Long> nodeIds) {
         return changeVipolnenieLock(naryadId, nodeIds, false);
+    }
+
+    public NaryadWorkActionDto zadanieWorkAction(int naryadId, long nodeId) {
+        return workAction(naryadId, nodeId, ZADANIE_WORK_ROWS_SQL);
+    }
+
+    public NaryadWorkActionDto vipolnenieWorkAction(int naryadId, long nodeId) {
+        return workAction(naryadId, nodeId, VIPOLNENIE_WORK_ROWS_SQL);
+    }
+
+    /** actDelSelOpers: burnar.zadanie_operac_del по выбранным, дети раньше родителей. */
+    public List<Long> deleteZadanieWorks(int naryadId, List<Long> nodeIds) {
+        return deleteWorks(
+                naryadId,
+                nodeIds,
+                false,
+                ZADANIE_DESCRIPTOR_SQL,
+                ZADANIE_WORK_ROWS_SQL,
+                ZADANIE_WORK_EXISTS_SQL,
+                ZADANIE_DELETE_WORK_SQL,
+                false);
+    }
+
+    /** actDelSelOpers выполнения: заблокированная строка отменяет весь набор. */
+    public List<Long> deleteVipolnenieWorks(int naryadId, List<Long> nodeIds) {
+        return deleteWorks(
+                naryadId,
+                nodeIds,
+                true,
+                VIPOLNENIE_DESCRIPTOR_SQL,
+                VIPOLNENIE_WORK_ROWS_SQL,
+                VIPOLNENIE_WORK_EXISTS_SQL,
+                VIPOLNENIE_DELETE_WORK_SQL,
+                true);
+    }
+
+    /** actZadanie_del_block: снять оболочку блока, вложенные работы поднять. */
+    public void deleteZadanieBlock(int naryadId, long nodeId) {
+        deleteBlock(
+                naryadId,
+                nodeId,
+                ZADANIE_DESCRIPTOR_SQL,
+                ZADANIE_WORK_ROWS_SQL,
+                ZADANIE_DELETE_BLOCK_SQL,
+                false);
+    }
+
+    /** actVipolnenie_del_block. */
+    public void deleteVipolnenieBlock(int naryadId, long nodeId) {
+        deleteBlock(
+                naryadId,
+                nodeId,
+                VIPOLNENIE_DESCRIPTOR_SQL,
+                VIPOLNENIE_WORK_ROWS_SQL,
+                VIPOLNENIE_DELETE_BLOCK_SQL,
+                true);
     }
 
     /** Признаки блокировки всех работ выполнения этого наряда. */
@@ -674,6 +758,132 @@ public class NaryadWorkspaceService {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Naryad descriptor not found");
         }
         return descriptors.get(0) == 1;
+    }
+
+    private NaryadWorkActionDto workAction(int naryadId, long nodeId, String rowsSql) {
+        naryadListService.findHeader(naryadId);
+        List<NaryadWorkDeletion.Node> nodes = loadWorkNodes(rowsSql, naryadId, List.of(nodeId));
+        if (nodes.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Naryad row not found");
+        }
+        NaryadWorkDeletion.Node node = nodes.get(0);
+        return new NaryadWorkActionDto(node.id, node.operlifetype, node.locked, node.rs);
+    }
+
+    private List<Long> deleteWorks(
+            int naryadId,
+            List<Long> nodeIds,
+            boolean refuseLocked,
+            String descriptorSql,
+            String rowsSql,
+            String existsSql,
+            String procedureSql,
+            boolean bigintKeys) {
+        naryadListService.findHeader(naryadId);
+        if (readClosed(descriptorSql, naryadId)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Naryad part is closed");
+        }
+        List<Long> ids = requireNodeIds(nodeIds);
+        List<NaryadWorkDeletion.Node> nodes = loadWorkNodes(rowsSql, naryadId, ids);
+        if (nodes.size() != ids.size()) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Naryad row not found");
+        }
+        return NaryadWorkDeletion.deleteMarked(
+                nodes,
+                refuseLocked,
+                id -> workExists(existsSql, naryadId, id),
+                node -> callDeleteProcedure(procedureSql, node, naryadId, bigintKeys));
+    }
+
+    private void deleteBlock(
+            int naryadId,
+            long nodeId,
+            String descriptorSql,
+            String rowsSql,
+            String procedureSql,
+            boolean bigintKeys) {
+        naryadListService.findHeader(naryadId);
+        if (readClosed(descriptorSql, naryadId)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Naryad part is closed");
+        }
+        List<NaryadWorkDeletion.Node> nodes = loadWorkNodes(rowsSql, naryadId, List.of(nodeId));
+        if (nodes.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Naryad row not found");
+        }
+        NaryadWorkDeletion.Node node = nodes.get(0);
+        String refusal = NaryadWorkDeletion.blockDeleteRefusal(node);
+        if (refusal != null) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, refusal);
+        }
+        try {
+            callDeleteProcedure(procedureSql, node, naryadId, bigintKeys);
+        } catch (DataAccessException ex) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, NaryadProcedureMessages.from(ex));
+        }
+    }
+
+    private List<NaryadWorkDeletion.Node> loadWorkNodes(String sql, int naryadId, List<Long> nodeIds) {
+        return jdbc.query(
+                sql,
+                new MapSqlParameterSource("narkey", naryadId).addValue("nodeIds", nodeIds),
+                (rs, rowNum) -> new NaryadWorkDeletion.Node(
+                        rs.getLong("id"),
+                        getLong(rs, "parent_id"),
+                        rs.getBigDecimal("prnum"),
+                        getInteger(rs, "operlifetype"),
+                        getInteger(rs, "locked"),
+                        rs.getString("rs")));
+    }
+
+    private boolean workExists(String sql, int naryadId, long nodeId) {
+        List<Long> found = jdbc.query(
+                sql,
+                new MapSqlParameterSource("narkey", naryadId).addValue("nodeId", nodeId),
+                (rs, rowNum) -> rs.getLong("key"));
+        return !found.isEmpty();
+    }
+
+    /**
+     * Каждый вызов со своим autocommit: успешные удаления остаются, как ExecProc в Delphi.
+     * Ошибку не прячем — её разбирает цикл удаления или deleteBlock.
+     */
+    private void callDeleteProcedure(
+            String sql, NaryadWorkDeletion.Node node, int naryadId, boolean bigintKeys) {
+        jdbc.getJdbcTemplate().execute((Connection con) -> {
+            boolean previousAutoCommit = con.getAutoCommit();
+            con.setAutoCommit(true);
+            try (CallableStatement cs = con.prepareCall(sql)) {
+                bindWorkKey(cs, 1, node.id, bigintKeys);
+                if (node.parentId == null) {
+                    cs.setNull(2, bigintKeys ? Types.BIGINT : Types.INTEGER);
+                } else {
+                    bindWorkKey(cs, 2, node.parentId, bigintKeys);
+                }
+                if (node.prnum == null) {
+                    cs.setNull(3, Types.NUMERIC);
+                } else {
+                    cs.setBigDecimal(3, node.prnum);
+                }
+                cs.setInt(4, naryadId);
+                cs.execute();
+            } finally {
+                try {
+                    con.setAutoCommit(previousAutoCommit);
+                } catch (SQLException ignored) {
+                    // Процедура уже завершила свою транзакцию.
+                }
+            }
+            return null;
+        });
+    }
+
+    private static void bindWorkKey(CallableStatement cs, int index, long value, boolean bigintKeys)
+            throws SQLException {
+        if (bigintKeys) {
+            cs.setLong(index, value);
+        } else {
+            cs.setInt(index, Math.toIntExact(value));
+        }
     }
 
     /**

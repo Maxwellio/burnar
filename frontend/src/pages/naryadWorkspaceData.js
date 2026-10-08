@@ -43,7 +43,7 @@ const FOOTER_GAP = '    '
  * Итоги CalcItogsNS всегда стоят в футере. Текст выбора, если он есть, идёт перед ними.
  * Задание — одна общая продолжительность, выполнение — норматив и факт.
  */
-export function treeFooterStatusText(selectedIds, part, totals) {
+export function treeFooterStatusParts(selectedIds, part, totals) {
   const chunks = []
   const selection = treeSelectionStatusText(selectedIds)
   if (selection) chunks.push(selection)
@@ -55,5 +55,17 @@ export function treeFooterStatusText(selectedIds, part, totals) {
       chunks.push(`Общая продолжительность: ${formatDuration(totals.duration)}`)
     }
   }
-  return chunks.join(FOOTER_GAP)
+  return chunks
+}
+
+/** Между соседними кусками футера рисуется вертикальный разделитель. */
+export function treeFooterStatusItems(selectedIds, part, totals) {
+  return treeFooterStatusParts(selectedIds, part, totals).map((text, index) => ({
+    text,
+    divider: index > 0,
+  }))
+}
+
+export function treeFooterStatusText(selectedIds, part, totals) {
+  return treeFooterStatusParts(selectedIds, part, totals).join(FOOTER_GAP)
 }
