@@ -5,6 +5,7 @@ import {
   formatDuration,
   nodeIdFilters,
   selectedNodeStatusText,
+  treeFooterStatusItems,
   treeFooterStatusText,
   treeSelectionStatusText,
 } from './naryadWorkspaceData.js'
@@ -68,6 +69,26 @@ describe('formatDuration', () => {
     assert.equal(formatDuration('12.50'), '12.5')
     assert.equal(formatDuration(3), '3')
     assert.equal(formatDuration(1.2), '1.2')
+  })
+})
+
+describe('treeFooterStatusItems', () => {
+  it('puts a divider before every chunk after the first', () => {
+    assert.deepEqual(
+      treeFooterStatusItems([42], 'vipolnenie', { normDuration: 8, factDuration: 3.25 }),
+      [
+        { text: 'Код: 42', divider: false },
+        { text: 'Общая нормативная продолжительность: 8', divider: true },
+        { text: 'Общая фактическая продолжительность: 3.25', divider: true },
+      ],
+    )
+  })
+
+  it('has no divider when the footer is a single total', () => {
+    assert.deepEqual(
+      treeFooterStatusItems([], 'zadanie', { duration: 4.5 }),
+      [{ text: 'Общая продолжительность: 4.5', divider: false }],
+    )
   })
 })
 

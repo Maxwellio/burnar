@@ -20,13 +20,15 @@ interface BaseTreeTableProps<TData> extends Partial<TableOptions<TData>>{
     disabled?: boolean;
     getRowBackgroundColor?: (row: TData) => string | undefined;
     clearSelectionSignal?: number;
+    /** Сбрасывает и подсветку, и набор выбранных строк. Для удаления работ. */
+    resetSelectionSignal?: number;
     /** Ctrl/Cmd переключает строку, Shift выделяет видимый диапазон. Без пропа клик остаётся однострочным. */
     multiSelect?: boolean;
     setSelectedIds?: (ids: any[]) => void;
 }
 
 
-export const BaseTreeTable = <TData,>({url, columns, filters, setFilters, setSelectedId, setSelectedCol, setIsLeaf, defColumnVisibility, reRenderSignal, disabled=false, getRowBackgroundColor, clearSelectionSignal, multiSelect=false, setSelectedIds, ...props}: BaseTreeTableProps<TData>) =>{
+export const BaseTreeTable = <TData,>({url, columns, filters, setFilters, setSelectedId, setSelectedCol, setIsLeaf, defColumnVisibility, reRenderSignal, disabled=false, getRowBackgroundColor, clearSelectionSignal, resetSelectionSignal, multiSelect=false, setSelectedIds, ...props}: BaseTreeTableProps<TData>) =>{
     const {data, loading, setData, fetchChildren} = useFetchData<TData>(url, filters || [], reRenderSignal);
     const [expanded, setExpanded] = useState({});
     const [columnVisibility, setColumnVisibility] = useState<VisibilityState>(defColumnVisibility || {})
@@ -36,6 +38,8 @@ export const BaseTreeTable = <TData,>({url, columns, filters, setFilters, setSel
     });
     const hasClearSelectionEffectMounted = useRef(false);
     const previousClearSelectionSignal = useRef(clearSelectionSignal);
+    const hasResetSelectionEffectMounted = useRef(false);
+    const previousResetSelectionSignal = useRef(resetSelectionSignal);
     const anchorIdRef = useRef<string | null>(null);
     const previousReloadSignal = useRef(reRenderSignal);
     const restoreExpandedRef = useRef(false);
@@ -112,6 +116,21 @@ export const BaseTreeTable = <TData,>({url, columns, filters, setFilters, setSel
         }
         previousClearSelectionSignal.current = clearSelectionSignal
     }, [clearSelectionSignal, multiSelect])
+
+    useEffect(() => {
+        if (!hasResetSelectionEffectMounted.current) {
+            hasResetSelectionEffectMounted.current = true
+            previousResetSelectionSignal.current = resetSelectionSignal
+            return
+        }
+        if (resetSelectionSignal !== undefined && previousResetSelectionSignal.current !== resetSelectionSignal) {
+            anchorIdRef.current = null
+            setSelectionHighlight(true)
+            table.resetRowSelection()
+            setSelectedIds?.([])
+        }
+        previousResetSelectionSignal.current = resetSelectionSignal
+    }, [resetSelectionSignal, multiSelect])
 
     useEffect(() => {
         if (!multiSelect) return
