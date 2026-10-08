@@ -198,7 +198,6 @@ CSS `#RRGGBB` перед отправкой
 | `frontend/src/pages/naryadRowColors.js` | преобразование CSS RGB / Delphi BGR, фон с локальным override, доступность кнопок |
 | `frontend/src/pages/naryadWorkspaceData.js` | фильтр `nodeId`, текст футера с итогами; детали только для одной выбранной строки |
 | `mainComponent-changes/BaseTable/rowSelection.js` | расчёт набора строк для `Ctrl`/`Cmd` и `Shift` |
-| `mainComponent-changes/BaseTable/restoreExpandedChildren.js` | после `reRenderSignal` снова запрашивает детей раскрытых узлов |
 | `frontend/src/App.jsx` | маршрут `/naryad/:id` |
 | `frontend/src/components/Navigation.jsx` | active для `/naryad/...` |
 | `NaryadListController` `GET /{id}` | заголовок (id, nm, hasZadanie, hasVipolnenie, zadanieClosed, vipolnenieClosed) |

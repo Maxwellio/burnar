@@ -6,7 +6,6 @@ import { DebouncedInput, DynamicDatePicker, DynamicSelect } from "../Input/Input
 import { FILTER_TYPES } from "../utils/types";
 import { ColumnFilter } from "./BaseTable";
 import { nextTreeSelection } from "./rowSelection.js";
-import { expandedChildRequests, indexTreeNodes } from "./restoreExpandedChildren.js";
 
 interface BaseTreeTableProps<TData> extends Partial<TableOptions<TData>>{
     url: string;
@@ -203,16 +202,26 @@ export const BaseTreeTable = <TData,>({url, columns, filters, setFilters, setSel
         if (!restoreExpandedRef.current) return
         // Сразу после сигнала data ещё прежнее дерево, дети на месте.
         if (data === dataAtReloadRef.current) return
-        const openIds = Object.keys(expanded).filter((id) => expanded[id])
-        const { requestIds, pending } = expandedChildRequests(
-            openIds,
-            indexTreeNodes(data),
-            restoringIdsRef.current,
-        )
-        for (const id of requestIds) {
-            restoringIdsRef.current.add(String(id))
-            Promise.resolve(fetchChildren(id)).finally(() => {
-                restoringIdsRef.current.delete(String(id))
+        const byId = new Map()
+        const walk = (nodes) => {
+            for (const node of nodes ?? []) {
+                if (node?.id == null) continue
+                byId.set(String(node.id), node)
+                if (node.children) walk(node.children)
+            }
+        }
+        walk(data)
+        let pending = false
+        for (const rowId of Object.keys(expanded)) {
+            if (!expanded[rowId]) continue
+            const node = byId.get(rowId)
+            if (!node?.hasChildren || node.children || node.hasLoaded) continue
+            pending = true
+            const key = String(node.id)
+            if (restoringIdsRef.current.has(key)) continue
+            restoringIdsRef.current.add(key)
+            Promise.resolve(fetchChildren(node.id)).finally(() => {
+                restoringIdsRef.current.delete(key)
             })
         }
         if (!pending) restoreExpandedRef.current = false
