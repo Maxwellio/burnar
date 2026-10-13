@@ -4,7 +4,9 @@ import IconButton from '@mui/material/IconButton'
 import Popover from '@mui/material/Popover'
 import TextField from '@mui/material/TextField'
 import Tooltip from '@mui/material/Tooltip'
+import AccountTreeOutlined from '@mui/icons-material/AccountTreeOutlined'
 import Colorize from '@mui/icons-material/Colorize'
+import DeleteOutline from '@mui/icons-material/DeleteOutline'
 import FormatColorReset from '@mui/icons-material/FormatColorReset'
 import LinkIcon from '@mui/icons-material/Link'
 import LinkOffIcon from '@mui/icons-material/LinkOff'
@@ -12,8 +14,11 @@ import Lock from '@mui/icons-material/Lock'
 import LockOpen from '@mui/icons-material/LockOpen'
 import { AxiosProvider, BaseTable, BaseTreeTable } from 'mainComponent'
 import {
+  deleteNaryadBlock,
+  deleteNaryadWorks,
   fetchNaryadAlgorithm,
   fetchNaryadTotals,
+  fetchNaryadWorkAction,
   fetchNaryadWorkLocks,
   lockNaryadWorks,
   setNaryadPartClosed,
@@ -33,9 +38,20 @@ import {
 import {
   detailNodeId,
   nodeIdFilters,
-  treeFooterStatusText,
+  treeFooterStatusItems,
 } from './naryadWorkspaceData.js'
-import { closeActionLabel, lockActionState, lockFlagMap, selectedLockRows } from './naryadPartActions.js'
+import {
+  DELETE_BLOCK_CONFIRM,
+  DELETE_LOCKED_MESSAGE,
+  DELETE_MARKED_CONFIRM,
+  canDeleteBlock,
+  canDeleteMarkedWorks,
+  closeActionLabel,
+  lockActionState,
+  lockFlagMap,
+  selectedLockRows,
+  selectionHasLockedWork,
+} from './naryadPartActions.js'
 import {
   NARYAD_COLOR_SWATCHES,
   NARYAD_DEFAULT_PICKER_COLOR,
@@ -108,6 +124,8 @@ export default function NaryadWorkspacePanel({
   const [algorithm, setAlgorithm] = useState('')
   const [colorOverrides, setColorOverrides] = useState(() => new Map())
   const [clearSelectionSignal, setClearSelectionSignal] = useState(0)
+  const [resetSelectionSignal, setResetSelectionSignal] = useState(0)
+  const [workAction, setWorkAction] = useState(null)
   const [mutationPending, setMutationPending] = useState(false)
   const [colorMenuAnchor, setColorMenuAnchor] = useState(null)
   const [colorTooltipOpen, setColorTooltipOpen] = useState(false)
@@ -118,7 +136,7 @@ export default function NaryadWorkspacePanel({
   recentColorsRef.current = recentColors
   const detailId = detailNodeId(selectedIds)
   const paramFilters = useMemo(() => nodeIdFilters(detailId), [detailId])
-  const treeStatusText = treeFooterStatusText(selectedIds, part, totals)
+  const treeStatusItems = treeFooterStatusItems(selectedIds, part, totals)
   const colorActionsEnabled = canChangeRowColor(selectedIds, closed, mutationPending)
   const closeLabel = closeActionLabel(part, closed === true)
   const closeDisabled = (closed !== true && closed !== false) || mutationPending
@@ -127,6 +145,12 @@ export default function NaryadWorkspacePanel({
     [part, selectedIds, lockFlags],
   )
   const lockActions = lockActionState(selectedRows, closed, mutationPending)
+  const deleteMarkedEnabled = canDeleteMarkedWorks(selectedIds, closed, mutationPending)
+  const deleteBlockEnabled = canDeleteBlock(
+    selectedIds.length === 1 ? workAction : null,
+    closed,
+    mutationPending,
+  )
   const selectedIdsRef = useRef(selectedIds)
   const closedRef = useRef(closed)
   const colorOverridesRef = useRef(colorOverrides)
@@ -151,6 +175,7 @@ export default function NaryadWorkspacePanel({
   useEffect(() => {
     setSelectedIds([])
     setLockFlags(null)
+    setWorkAction(null)
     setAlgorithm('')
     setColorOverrides(new Map())
     setColorMenu(null)
@@ -193,7 +218,32 @@ export default function NaryadWorkspacePanel({
     }
   }, [part, naryadId, treeReload])
 
+  useEffect(() => {
+    if (detailId == null) {
+      setWorkAction(null)
+      return undefined
+    }
+    let cancelled = false
+    setWorkAction(null)
+    fetchNaryadWorkAction(naryadId, part, detailId)
+      .then((data) => {
+        if (!cancelled) setWorkAction(data ?? null)
+      })
+      .catch(() => {
+        if (!cancelled) setWorkAction(null)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [naryadId, part, detailId, treeReload])
+
   const reloadTree = () => setTreeReload((value) => value + 1)
+
+  const resetTreeSelection = () => {
+    setSelectedIds([])
+    setWorkAction(null)
+    setResetSelectionSignal((value) => value + 1)
+  }
 
   const runMutation = async (work, { reloadOnSuccess = false, reloadOnError = false } = {}) => {
     if (mutationPendingRef.current) return
@@ -236,6 +286,36 @@ export default function NaryadWorkspacePanel({
     if (lock) await lockNaryadWorks(naryadId, nodeIds)
     else await unlockNaryadWorks(naryadId, nodeIds)
   }, { reloadOnSuccess: true, reloadOnError: true })
+
+  const deleteMarkedWorks = async () => {
+    const nodeIds = [...selectedIdsRef.current]
+    if (!canDeleteMarkedWorks(nodeIds, closedRef.current, mutationPendingRef.current)) return
+    if (part === 'vipolnenie' && selectionHasLockedWork(selectedLockRows(nodeIds, lockFlags))) {
+      resetTreeSelection()
+      await showAlert(DELETE_LOCKED_MESSAGE)
+      return
+    }
+    const accepted = await confirm(DELETE_MARKED_CONFIRM, { action: 'удаление', confirmLabel: 'Удалить' })
+    if (!accepted) return
+    await runMutation(async () => {
+      try {
+        await deleteNaryadWorks(naryadId, part, nodeIds)
+      } finally {
+        resetTreeSelection()
+      }
+    }, { reloadOnSuccess: true, reloadOnError: true })
+  }
+
+  const deleteBlock = async () => {
+    const nodeId = detailNodeId(selectedIdsRef.current)
+    if (!canDeleteBlock(workAction, closedRef.current, mutationPendingRef.current) || nodeId == null) return
+    const accepted = await confirm(DELETE_BLOCK_CONFIRM, { action: 'удаление', confirmLabel: 'Удалить' })
+    if (!accepted) return
+    await runMutation(async () => {
+      await deleteNaryadBlock(naryadId, part, nodeId)
+      resetTreeSelection()
+    }, { reloadOnSuccess: true, reloadOnError: true })
+  }
 
   useEffect(() => {
     if (selectedIds.length === 0 || closed === true) setColorMenu(null)
@@ -494,6 +574,34 @@ export default function NaryadWorkspacePanel({
           borderColor: 'divider',
         }}
       >
+        <Tooltip title="Удалить помеченные работы">
+          <Box component="span" sx={{ display: 'inline-flex' }}>
+            <IconButton
+              aria-label="Удалить помеченные работы"
+              disabled={!deleteMarkedEnabled}
+              onClick={() => {
+                void deleteMarkedWorks()
+              }}
+              sx={actionButtonSx}
+            >
+              <DeleteOutline />
+            </IconButton>
+          </Box>
+        </Tooltip>
+        <Tooltip title="Удаление блока без удаления входящих работ">
+          <Box component="span" sx={{ display: 'inline-flex' }}>
+            <IconButton
+              aria-label="Удаление блока без удаления входящих работ"
+              disabled={!deleteBlockEnabled}
+              onClick={() => {
+                void deleteBlock()
+              }}
+              sx={actionButtonSx}
+            >
+              <AccountTreeOutlined />
+            </IconButton>
+          </Box>
+        </Tooltip>
         <Tooltip title={closeLabel}>
           <Box component="span" sx={{ display: 'inline-flex' }}>
             <IconButton
@@ -791,6 +899,7 @@ export default function NaryadWorkspacePanel({
                 reRenderSignal={treeReload}
                 getRowBackgroundColor={(row) => rowBackgroundColor(row, colorOverrides)}
                 clearSelectionSignal={clearSelectionSignal}
+                resetSelectionSignal={resetSelectionSignal}
                 initialState={{ pagination: { pageIndex: 0, pageSize: 10000 } }}
               />
             </Box>
@@ -801,7 +910,7 @@ export default function NaryadWorkspacePanel({
                 height: 32,
                 flexShrink: 0,
                 display: 'flex',
-                alignItems: 'center',
+                alignItems: 'stretch',
                 px: 1.5,
                 boxSizing: 'border-box',
                 borderTop: 1,
@@ -810,11 +919,25 @@ export default function NaryadWorkspacePanel({
                 color: '#364FC7',
                 fontSize: '0.875rem',
                 fontWeight: 600,
-                whiteSpace: 'nowrap',
                 overflowX: 'auto',
               }}
             >
-              {treeStatusText}
+              {treeStatusItems.map((item) => (
+                <Box
+                  key={item.text}
+                  sx={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    flexShrink: 0,
+                    whiteSpace: 'nowrap',
+                    pl: item.divider ? 1.5 : 0,
+                    ml: item.divider ? 1.5 : 0,
+                    borderLeft: item.divider ? '2px solid #364FC7' : 0,
+                  }}
+                >
+                  {item.text}
+                </Box>
+              ))}
             </Box>
           </Box>
 

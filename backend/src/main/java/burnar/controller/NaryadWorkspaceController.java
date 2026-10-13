@@ -6,6 +6,7 @@ import burnar.dto.NaryadClosedRequest;
 import burnar.dto.NaryadDurationTotalsDto;
 import burnar.dto.NaryadLockTargetDto;
 import burnar.dto.NaryadNodeIdsRequest;
+import burnar.dto.NaryadWorkActionDto;
 import burnar.dto.NaryadWorkLockDto;
 import burnar.dto.NaryadOperNodeDto;
 import burnar.dto.NaryadOperParamDto;
@@ -88,6 +89,24 @@ public class NaryadWorkspaceController {
         return naryadWorkspaceService.setZadanieClosed(id, request == null ? null : request.getClosed());
     }
 
+    @GetMapping("/{id:\\d+}/zadanie/nodes/{nodeId:\\d+}/action")
+    public NaryadWorkActionDto zadanieWorkAction(@PathVariable int id, @PathVariable long nodeId) {
+        return naryadWorkspaceService.zadanieWorkAction(id, nodeId);
+    }
+
+    @PostMapping("/{id:\\d+}/zadanie/works/delete")
+    public List<Long> deleteZadanieWorks(
+            @PathVariable int id,
+            @RequestBody(required = false) NaryadNodeIdsRequest request) {
+        return naryadWorkspaceService.deleteZadanieWorks(id, request == null ? null : request.getNodeIds());
+    }
+
+    @PostMapping("/{id:\\d+}/zadanie/blocks/{nodeId:\\d+}/delete")
+    public ResponseEntity<Void> deleteZadanieBlock(@PathVariable int id, @PathVariable long nodeId) {
+        naryadWorkspaceService.deleteZadanieBlock(id, nodeId);
+        return ResponseEntity.noContent().build();
+    }
+
     @PatchMapping("/{id:\\d+}/zadanie/colors")
     public NaryadRowsColorDto updateZadanieColors(
             @PathVariable int id,
@@ -152,6 +171,24 @@ public class NaryadWorkspaceController {
             @PathVariable int id,
             @RequestBody(required = false) NaryadNodeIdsRequest request) {
         return naryadWorkspaceService.lockVipolnenie(id, request == null ? null : request.getNodeIds());
+    }
+
+    @GetMapping("/{id:\\d+}/vipolnenie/nodes/{nodeId:\\d+}/action")
+    public NaryadWorkActionDto vipolnenieWorkAction(@PathVariable int id, @PathVariable long nodeId) {
+        return naryadWorkspaceService.vipolnenieWorkAction(id, nodeId);
+    }
+
+    @PostMapping("/{id:\\d+}/vipolnenie/works/delete")
+    public List<Long> deleteVipolnenieWorks(
+            @PathVariable int id,
+            @RequestBody(required = false) NaryadNodeIdsRequest request) {
+        return naryadWorkspaceService.deleteVipolnenieWorks(id, request == null ? null : request.getNodeIds());
+    }
+
+    @PostMapping("/{id:\\d+}/vipolnenie/blocks/{nodeId:\\d+}/delete")
+    public ResponseEntity<Void> deleteVipolnenieBlock(@PathVariable int id, @PathVariable long nodeId) {
+        naryadWorkspaceService.deleteVipolnenieBlock(id, nodeId);
+        return ResponseEntity.noContent().build();
     }
 
     @PostMapping("/{id:\\d+}/vipolnenie/unlock")

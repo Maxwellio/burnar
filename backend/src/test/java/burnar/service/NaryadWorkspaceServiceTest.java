@@ -181,6 +181,17 @@ class NaryadWorkspaceServiceTest {
     }
 
     @Test
+    void workDeleteProceduresMatchDelphiNames() {
+        assertTrue(NaryadWorkspaceService.ZADANIE_DELETE_WORK_SQL.contains("burnar.zadanie_operac_del"));
+        assertTrue(NaryadWorkspaceService.ZADANIE_DELETE_BLOCK_SQL.contains("burnar.zadanie_operac_del_block"));
+        assertTrue(NaryadWorkspaceService.VIPOLNENIE_DELETE_WORK_SQL.contains("burnar.vipolnenie_operac_del"));
+        assertTrue(NaryadWorkspaceService.VIPOLNENIE_DELETE_BLOCK_SQL.contains("burnar.vipolnenie_operac_del_block"));
+        assertTrue(NaryadWorkspaceService.ZADANIE_WORK_ROWS_SQL.contains("burnar.zadanie_oper"));
+        assertTrue(NaryadWorkspaceService.VIPOLNENIE_WORK_ROWS_SQL.contains("burnar.vipolnenie_oper"));
+        assertTrue(NaryadWorkspaceService.ZADANIE_WORK_ROWS_SQL.contains("key IN (:nodeIds)"));
+    }
+
+    @Test
     void nodeIdsAreRequiredAndDuplicatesCollapseInRequestOrder() {
         assertEquals(List.of(7L, 8L), NaryadWorkspaceService.requireNodeIds(List.of(7L, 7L, 8L)));
         assertThrows(ResponseStatusException.class,

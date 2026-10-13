@@ -89,6 +89,27 @@ export function unlockNaryadWorks(id, nodeIds) {
   })
 }
 
+/** Поля единственной строки для кнопки «удалить блок без вложенных работ». */
+export function fetchNaryadWorkAction(id, part, nodeId) {
+  return requestJson(`/naryady/${id}/${part}/nodes/${nodeId}/action`)
+}
+
+/** actDelSelOpers: одна или несколько выбранных работ, вместе с вложенными. */
+export function deleteNaryadWorks(id, part, nodeIds) {
+  return requestAction(`/naryady/${id}/${part}/works/delete`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ nodeIds }),
+  })
+}
+
+/** act*_del_block: снять блок и поднять вложенные работы на его уровень. */
+export function deleteNaryadBlock(id, part, nodeId) {
+  return requestAction(`/naryady/${id}/${part}/blocks/${nodeId}/delete`, {
+    method: 'POST',
+  })
+}
+
 /** Обновляет цвет всех переданных строк одной части наряда. */
 export function updateNaryadRowsColor(id, part, nodeIds, color) {
   return requestJson(`/naryady/${id}/${part}/colors`, {
