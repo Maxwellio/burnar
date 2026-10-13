@@ -4,7 +4,7 @@ import IconButton from '@mui/material/IconButton'
 import Popover from '@mui/material/Popover'
 import TextField from '@mui/material/TextField'
 import Tooltip from '@mui/material/Tooltip'
-import AccountTreeOutlined from '@mui/icons-material/AccountTreeOutlined'
+import FolderDelete from '@mui/icons-material/FolderDelete'
 import Colorize from '@mui/icons-material/Colorize'
 import DeleteOutline from '@mui/icons-material/DeleteOutline'
 import FormatColorReset from '@mui/icons-material/FormatColorReset'
@@ -598,7 +598,7 @@ export default function NaryadWorkspacePanel({
               }}
               sx={actionButtonSx}
             >
-              <AccountTreeOutlined />
+              <FolderDelete />
             </IconButton>
           </Box>
         </Tooltip>
@@ -612,7 +612,7 @@ export default function NaryadWorkspacePanel({
               }}
               sx={actionButtonSx}
             >
-              {closed === true ? <LockOpen /> : <Lock />}
+              {closed === true ? <Lock /> : <LockOpen />}
             </IconButton>
           </Box>
         </Tooltip>
