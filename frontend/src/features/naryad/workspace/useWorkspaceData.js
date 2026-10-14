@@ -4,7 +4,7 @@ import {
   fetchNaryadWorkAction,
   fetchNaryadWorkLocks,
 } from '../../../api/naryadyApi.js'
-import { lockFlagMap } from '../actions/naryadPartActions.js'
+import { lockFlagMap } from '../actions/lock/lockRules.js'
 import useAsyncValue from './useAsyncValue.js'
 
 /** Итоги CalcItogsNS всего дерева; на время перечитывания остаются прежние числа. */

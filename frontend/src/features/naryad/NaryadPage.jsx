@@ -13,8 +13,9 @@ import Tune from '@mui/icons-material/Tune'
 import VerticalSplit from '@mui/icons-material/VerticalSplit'
 import { fetchNaryadHeader } from '../../api/naryadyApi.js'
 import CatalogDialog from '../../pages/CatalogDialog.jsx'
-import NaryadZadaniePanel from './workspace/NaryadZadaniePanel.jsx'
-import NaryadVipolneniePanel from './workspace/NaryadVipolneniePanel.jsx'
+import NaryadWorkspacePanel from './workspace/NaryadWorkspacePanel.jsx'
+import { vipolneniePart } from './parts/vipolneniePart.js'
+import { zadaniePart } from './parts/zadaniePart.js'
 import {
   ACTION_BAR_HEIGHT,
   readStoredSplitOrientation,
@@ -287,7 +288,8 @@ export default function NaryadPage() {
       >
         {mountedPanels.zad ? (
           <Box sx={paneSx(showZad, bothOpen, bothOpen ? (horizontalSplit ? 'bottom' : 'right') : null)}>
-            <NaryadZadaniePanel
+            <NaryadWorkspacePanel
+              part={zadaniePart}
               naryadId={id}
               closed={zadanieClosed}
               onClosedChange={setZadanieClosed}
@@ -296,7 +298,8 @@ export default function NaryadPage() {
         ) : null}
         {mountedPanels.vip ? (
           <Box sx={paneSx(showVip, bothOpen, null)}>
-            <NaryadVipolneniePanel
+            <NaryadWorkspacePanel
+              part={vipolneniePart}
               naryadId={id}
               closed={vipolnenieClosed}
               onClosedChange={setVipolnenieClosed}

@@ -5,6 +5,7 @@ import Tooltip from '@mui/material/Tooltip'
 import Colorize from '@mui/icons-material/Colorize'
 import FormatColorReset from '@mui/icons-material/FormatColorReset'
 import { actionButtonSx } from '../../workspace/ActionButton.jsx'
+import { useNaryadWorkspace } from '../../workspace/NaryadWorkspaceContext.jsx'
 import RowColorPalette from './RowColorPalette.jsx'
 
 /**
@@ -19,8 +20,10 @@ const manualTooltipProps = {
   TransitionProps: { timeout: 0 },
 }
 
-/** «Выделить строку цветом» с палитрой и «Сбросить цвет». colors — useRowColorEditing. */
-export default function RowColorActions({ colors, isPending }) {
+/** «Выделить строку цветом» с палитрой и «Сбросить цвет». */
+export default function RowColorActions() {
+  const { colors, mutation } = useNaryadWorkspace()
+  const { isPending } = mutation
   const [colorTooltipOpen, setColorTooltipOpen] = useState(false)
   const [resetTooltipOpen, setResetTooltipOpen] = useState(false)
 

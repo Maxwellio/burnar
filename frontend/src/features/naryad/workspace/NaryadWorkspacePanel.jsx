@@ -1,290 +1,114 @@
 import { useMemo } from 'react'
 import Box from '@mui/material/Box'
-import FolderDelete from '@mui/icons-material/FolderDelete'
-import DeleteOutline from '@mui/icons-material/DeleteOutline'
-import LinkIcon from '@mui/icons-material/Link'
-import LinkOffIcon from '@mui/icons-material/LinkOff'
-import Lock from '@mui/icons-material/Lock'
-import LockOpen from '@mui/icons-material/LockOpen'
 import { AxiosProvider, BaseTreeTable } from 'mainComponent'
-import {
-  deleteNaryadBlock,
-  deleteNaryadWorks,
-  lockNaryadWorks,
-  setNaryadPartClosed,
-  unlockNaryadWorks,
-} from '../../../api/naryadyApi.js'
-import { useAlert, useConfirm } from '../../../context/ConfirmContext.jsx'
-import ActionButton from './ActionButton.jsx'
-import TreeStatusBar from './TreeStatusBar.jsx'
-import WorkDetailsPanel from './WorkDetailsPanel.jsx'
-import WorkspaceActionBar from './WorkspaceActionBar.jsx'
+import { RIGHT_PANEL_DEFAULT_RATIO } from '../naryadPageLayout.js'
 import PanelSplitter from './layout/PanelSplitter.jsx'
 import useColumnSizingPersistence from './layout/useColumnSizingPersistence.js'
 import useResizablePanel from './layout/useResizablePanel.js'
-import useLatest from './useLatest.js'
-import useMutationRunner from './useMutationRunner.js'
-import useWorkTree from './useWorkTree.js'
-import { useAlgorithm, useLockFlags, useTotals, useWorkAction } from './useWorkspaceData.js'
-import { RIGHT_PANEL_DEFAULT_RATIO } from '../naryadPageLayout.js'
-import {
-  detailNodeId,
-  nodeIdFilters,
-  treeFooterStatusItems,
-} from './naryadWorkspaceData.js'
-import {
-  DELETE_BLOCK_CONFIRM,
-  DELETE_LOCKED_MESSAGE,
-  DELETE_MARKED_CONFIRM,
-  canDeleteBlock,
-  canDeleteMarkedWorks,
-  closeActionLabel,
-  lockActionState,
-  selectedLockRows,
-  selectionHasLockedWork,
-} from '../actions/naryadPartActions.js'
-import RowColorActions from '../actions/color/RowColorActions.jsx'
-import useRowColorEditing from '../actions/color/useRowColorEditing.js'
+import { NaryadWorkspaceProvider } from './NaryadWorkspaceContext.jsx'
+import { nodeIdFilters, treeFooterStatusItems } from './naryadWorkspaceData.js'
+import TreeStatusBar from './TreeStatusBar.jsx'
+import useNaryadWorkspaceState from './useNaryadWorkspaceState.js'
+import WorkDetailsPanel from './WorkDetailsPanel.jsx'
+import WorkspaceActionBar from './WorkspaceActionBar.jsx'
+import WorkspaceActions from './WorkspaceActions.jsx'
+
+const TREE_INITIAL_STATE = { pagination: { pageIndex: 0, pageSize: 10000 } }
 
 /**
- * Раскладка одной вкладки: дерево / сплиттер / параметры + алгоритм.
+ * Вкладка карточки: панель действий / дерево / сплиттер / параметры + алгоритм.
  * Задание и выполнение — разные экземпляры, чтобы ресайз колонок не тёк.
- * Ширины колонок и правой панели — в localStorage (стабильные ключи, не id наряда).
- * Параметры и алгоритм — по выбранной строке (Delphi ReadOpParams, типы 79/80).
+ * Чем части отличаются (url, колонки, ключи storage, набор кнопок), задаёт part из parts/.
  */
-export default function NaryadWorkspacePanel({
-  actionBarAriaLabel,
-  naryadId,
-  part,
-  closed,
-  onClosedChange,
-  treeUrl,
-  treeColumns,
-  paramsUrl,
-  algorithmUrl,
-  paramColumns,
-  rightPanelStorageKey,
-  treeSizingKey,
-  paramsSizingKey,
-}) {
-  const showAlert = useAlert()
-  const confirm = useConfirm()
+export default function NaryadWorkspacePanel({ part, naryadId, closed, onClosedChange }) {
+  const workspace = useNaryadWorkspaceState({ naryadId, part, closed, onClosedChange })
+  const { urls, tree, colors } = workspace
   useColumnSizingPersistence([
-    [treeUrl, treeSizingKey],
-    [paramsUrl, paramsSizingKey],
+    [urls.tree, part.storage.treeSizing],
+    [urls.params, part.storage.paramsSizing],
   ])
-  const rightPanel = useResizablePanel(rightPanelStorageKey)
-  const tree = useWorkTree(treeUrl)
-  const mutation = useMutationRunner(showAlert)
-  const getClosed = useLatest(closed)
-  const colors = useRowColorEditing({
-    naryadId,
-    part,
-    resetKey: treeUrl,
-    tree,
-    closed,
-    mutation,
-    showAlert,
-  })
-
-  const { selectedIds, detailId, reloadSignal } = tree
-  const totals = useTotals(naryadId, part, reloadSignal)
-  const lockFlags = useLockFlags(naryadId, part === 'vipolnenie', reloadSignal)
-  const workAction = useWorkAction(naryadId, part, detailId, reloadSignal)
-  const algorithm = useAlgorithm(algorithmUrl, detailId)
-  const paramFilters = useMemo(() => nodeIdFilters(detailId), [detailId])
-  const treeStatusItems = treeFooterStatusItems(selectedIds, part, totals)
-  const closeLabel = closeActionLabel(part, closed === true)
-  const closeDisabled = (closed !== true && closed !== false) || mutation.pending
-  const selectedRows = useMemo(
-    () => (part === 'vipolnenie' ? selectedLockRows(selectedIds, lockFlags) : []),
-    [part, selectedIds, lockFlags],
-  )
-  const lockActions = lockActionState(selectedRows, closed, mutation.pending)
-  const deleteMarkedEnabled = canDeleteMarkedWorks(selectedIds, closed, mutation.pending)
-  const deleteBlockEnabled = canDeleteBlock(
-    selectedIds.length === 1 ? workAction : null,
-    closed,
-    mutation.pending,
-  )
-
-  const runMutation = (work, { reload = false } = {}) => (
-    mutation.run(work, { onDone: reload ? tree.reload : undefined })
-  )
-
-  const changeClosed = async () => {
-    const closing = closed !== true
-    if (closing) {
-      const message = part === 'vipolnenie'
-        ? 'Наряд-выполнение будет закрыто!'
-        : 'Наряд-задание будет закрыто!'
-      const accepted = await confirm(message, { action: 'закрытие', confirmLabel: 'Закрыть' })
-      if (!accepted) return
-    }
-    await runMutation(async () => {
-      const result = await setNaryadPartClosed(naryadId, part, closing)
-      onClosedChange?.(result?.closed === true)
-      if (closing && part === 'vipolnenie') {
-        await showAlert('Изменения успешно сохранены!')
-      }
-    }, { reload: closing && part === 'zadanie' })
-  }
-
-  const changeWorkLock = (lock) => runMutation(async () => {
-    const nodeIds = [...tree.getSelectedIds()]
-    if (lock) await lockNaryadWorks(naryadId, nodeIds)
-    else await unlockNaryadWorks(naryadId, nodeIds)
-  }, { reload: true })
-
-  const deleteMarkedWorks = async () => {
-    const nodeIds = [...tree.getSelectedIds()]
-    if (!canDeleteMarkedWorks(nodeIds, getClosed(), mutation.isPending())) return
-    if (part === 'vipolnenie' && selectionHasLockedWork(selectedLockRows(nodeIds, lockFlags))) {
-      tree.resetSelection()
-      await showAlert(DELETE_LOCKED_MESSAGE)
-      return
-    }
-    const accepted = await confirm(DELETE_MARKED_CONFIRM, { action: 'удаление', confirmLabel: 'Удалить' })
-    if (!accepted) return
-    await runMutation(async () => {
-      try {
-        await deleteNaryadWorks(naryadId, part, nodeIds)
-      } finally {
-        tree.resetSelection()
-      }
-    }, { reload: true })
-  }
-
-  const deleteBlock = async () => {
-    const nodeId = detailNodeId(tree.getSelectedIds())
-    if (!canDeleteBlock(workAction, getClosed(), mutation.isPending()) || nodeId == null) return
-    const accepted = await confirm(DELETE_BLOCK_CONFIRM, { action: 'удаление', confirmLabel: 'Удалить' })
-    if (!accepted) return
-    await runMutation(async () => {
-      await deleteNaryadBlock(naryadId, part, nodeId)
-      tree.resetSelection()
-    }, { reload: true })
-  }
+  const rightPanel = useResizablePanel(part.storage.rightPanel)
+  const paramFilters = useMemo(() => nodeIdFilters(tree.detailId), [tree.detailId])
 
   return (
-    <Box
-      sx={{
-        flex: 1,
-        minHeight: 0,
-        minWidth: 0,
-        display: 'flex',
-        flexDirection: 'column',
-        overflow: 'hidden',
-      }}
-    >
-      <WorkspaceActionBar ariaLabel={actionBarAriaLabel}>
-        <ActionButton
-          label="Удалить помеченные работы"
-          icon={DeleteOutline}
-          disabled={!deleteMarkedEnabled}
-          onClick={() => {
-            void deleteMarkedWorks()
-          }}
-        />
-        <ActionButton
-          label="Удаление блока без удаления входящих работ"
-          icon={FolderDelete}
-          disabled={!deleteBlockEnabled}
-          onClick={() => {
-            void deleteBlock()
-          }}
-        />
-        <ActionButton
-          label={closeLabel}
-          icon={closed === true ? Lock : LockOpen}
-          disabled={closeDisabled}
-          onClick={() => {
-            void changeClosed()
-          }}
-        />
-        {part === 'vipolnenie' ? (
-          <>
-            <ActionButton
-              label="Блокировать текущую работу"
-              icon={LinkIcon}
-              disabled={!lockActions.canLock}
-              onClick={() => {
-                void changeWorkLock(true)
-              }}
-            />
-            <ActionButton
-              label="Разблокировать работу"
-              icon={LinkOffIcon}
-              disabled={!lockActions.canUnlock}
-              onClick={() => {
-                void changeWorkLock(false)
-              }}
-            />
-          </>
-        ) : null}
-        <RowColorActions colors={colors} isPending={mutation.isPending} />
-      </WorkspaceActionBar>
-
+    <NaryadWorkspaceProvider value={workspace}>
       <Box
-        ref={rightPanel.containerRef}
         sx={{
           flex: 1,
           minHeight: 0,
           minWidth: 0,
           display: 'flex',
+          flexDirection: 'column',
           overflow: 'hidden',
         }}
       >
-        <AxiosProvider baseapi="/api">
-          <Box
-            sx={{
-              flex: '1 1 0',
-              minWidth: 0,
-              minHeight: 0,
-              display: 'flex',
-              flexDirection: 'column',
-              overflow: 'hidden',
-            }}
-          >
-            <Box sx={{ flex: 1, minHeight: 0, minWidth: 0, overflow: 'hidden' }}>
-              <BaseTreeTable
-                url={treeUrl}
-                columns={treeColumns}
-                multiSelect
-                {...tree.tableProps}
-                getRowBackgroundColor={colors.getRowBackgroundColor}
-                initialState={{ pagination: { pageIndex: 0, pageSize: 10000 } }}
+        <WorkspaceActionBar ariaLabel={part.actionBarLabel}>
+          <WorkspaceActions actions={part.actions} />
+        </WorkspaceActionBar>
+
+        <Box
+          ref={rightPanel.containerRef}
+          sx={{
+            flex: 1,
+            minHeight: 0,
+            minWidth: 0,
+            display: 'flex',
+            overflow: 'hidden',
+          }}
+        >
+          <AxiosProvider baseapi="/api">
+            <Box
+              sx={{
+                flex: '1 1 0',
+                minWidth: 0,
+                minHeight: 0,
+                display: 'flex',
+                flexDirection: 'column',
+                overflow: 'hidden',
+              }}
+            >
+              <Box sx={{ flex: 1, minHeight: 0, minWidth: 0, overflow: 'hidden' }}>
+                <BaseTreeTable
+                  url={urls.tree}
+                  columns={part.treeColumns}
+                  multiSelect
+                  {...tree.tableProps}
+                  getRowBackgroundColor={colors.getRowBackgroundColor}
+                  initialState={TREE_INITIAL_STATE}
+                />
+              </Box>
+              <TreeStatusBar
+                items={treeFooterStatusItems(tree.selectedIds, part.id, workspace.totals)}
               />
             </Box>
-            <TreeStatusBar items={treeStatusItems} />
-          </Box>
 
-          <PanelSplitter
-            ariaLabel="Ширина панели параметров"
-            dragging={rightPanel.dragging}
-            onPointerDown={rightPanel.onSplitterPointerDown}
-          />
-
-          <Box
-            sx={{
-              width: rightPanel.width ?? `${RIGHT_PANEL_DEFAULT_RATIO * 100}%`,
-              flexShrink: 0,
-              minWidth: 0,
-              minHeight: 0,
-              display: 'flex',
-              flexDirection: 'column',
-              overflow: 'hidden',
-            }}
-          >
-            <WorkDetailsPanel
-              paramsUrl={paramsUrl}
-              paramColumns={paramColumns}
-              paramFilters={paramFilters}
-              algorithm={algorithm}
+            <PanelSplitter
+              ariaLabel="Ширина панели параметров"
+              dragging={rightPanel.dragging}
+              onPointerDown={rightPanel.onSplitterPointerDown}
             />
-          </Box>
-        </AxiosProvider>
+
+            <Box
+              sx={{
+                width: rightPanel.width ?? `${RIGHT_PANEL_DEFAULT_RATIO * 100}%`,
+                flexShrink: 0,
+                minWidth: 0,
+                minHeight: 0,
+                display: 'flex',
+                flexDirection: 'column',
+                overflow: 'hidden',
+              }}
+            >
+              <WorkDetailsPanel
+                paramsUrl={urls.params}
+                paramColumns={part.paramColumns}
+                paramFilters={paramFilters}
+                algorithm={workspace.algorithm}
+              />
+            </Box>
+          </AxiosProvider>
+        </Box>
       </Box>
-    </Box>
+    </NaryadWorkspaceProvider>
   )
 }
