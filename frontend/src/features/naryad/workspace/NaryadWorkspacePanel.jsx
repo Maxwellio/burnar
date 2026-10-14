@@ -29,14 +29,10 @@ import ActionButton, { actionButtonSx } from './ActionButton.jsx'
 import TreeStatusBar from './TreeStatusBar.jsx'
 import WorkDetailsPanel from './WorkDetailsPanel.jsx'
 import WorkspaceActionBar from './WorkspaceActionBar.jsx'
-import {
-  RIGHT_PANEL_DEFAULT_RATIO,
-  clampRightPanelWidth,
-  persistTableColumnSizing,
-  readStoredRightPanelWidth,
-  seedTableColumnSizing,
-  writeStoredRightPanelWidth,
-} from '../naryadPageLayout.js'
+import PanelSplitter from './layout/PanelSplitter.jsx'
+import useColumnSizingPersistence from './layout/useColumnSizingPersistence.js'
+import useResizablePanel from './layout/useResizablePanel.js'
+import { RIGHT_PANEL_DEFAULT_RATIO } from '../naryadPageLayout.js'
 import {
   detailNodeId,
   nodeIdFilters,
@@ -97,13 +93,11 @@ export default function NaryadWorkspacePanel({
   const desiredColorRef = useRef(null)
   const customPreviewBaselineRef = useRef(null)
   const ignoreCustomInputRef = useRef(false)
-  const preferredWidthRef = useRef(readStoredRightPanelWidth(rightPanelStorageKey))
-  const seededRef = useRef(false)
-  if (!seededRef.current) {
-    seedTableColumnSizing(treeUrl, treeSizingKey)
-    seedTableColumnSizing(paramsUrl, paramsSizingKey)
-    seededRef.current = true
-  }
+  useColumnSizingPersistence([
+    [treeUrl, treeSizingKey],
+    [paramsUrl, paramsSizingKey],
+  ])
+  const rightPanel = useResizablePanel(rightPanelStorageKey)
 
   const [treeFilters, setTreeFilters] = useState([])
   const [selectedIds, setSelectedIds] = useState([])
@@ -146,10 +140,6 @@ export default function NaryadWorkspacePanel({
   selectedIdsRef.current = selectedIds
   closedRef.current = closed
   colorOverridesRef.current = colorOverrides
-  const containerRef = useRef(null)
-  const dragRef = useRef(null)
-  const [rightWidth, setRightWidth] = useState(() => preferredWidthRef.current)
-  const [dragging, setDragging] = useState(false)
 
   const closeColorTooltips = () => {
     setColorTooltipOpen(false)
@@ -338,86 +328,6 @@ export default function NaryadWorkspacePanel({
       cancelled = true
     }
   }, [algorithmUrl, detailId])
-
-  const persistColumns = useCallback(() => {
-    persistTableColumnSizing(treeUrl, treeSizingKey)
-    persistTableColumnSizing(paramsUrl, paramsSizingKey)
-  }, [treeUrl, treeSizingKey, paramsUrl, paramsSizingKey])
-
-  const applyWidth = useCallback((width) => {
-    const containerWidth = containerRef.current?.clientWidth ?? 0
-    if (!(containerWidth > 0)) return null
-    const next = clampRightPanelWidth(width, containerWidth)
-    preferredWidthRef.current = next
-    setRightWidth(next)
-    writeStoredRightPanelWidth(next, rightPanelStorageKey)
-    return next
-  }, [rightPanelStorageKey])
-
-  useEffect(() => {
-    const el = containerRef.current
-    if (!el) return undefined
-
-    const sync = () => {
-      const cw = el.clientWidth
-      if (!(cw > 0)) return
-      setRightWidth(() => {
-        const raw = preferredWidthRef.current ?? Math.round(cw * RIGHT_PANEL_DEFAULT_RATIO)
-        return clampRightPanelWidth(raw, cw)
-      })
-    }
-
-    sync()
-    const observer = new ResizeObserver(sync)
-    observer.observe(el)
-    return () => observer.disconnect()
-  }, [])
-
-  useEffect(() => {
-    const onPointerUp = () => persistColumns()
-    window.addEventListener('pointerup', onPointerUp)
-    return () => {
-      window.removeEventListener('pointerup', onPointerUp)
-      persistColumns()
-    }
-  }, [persistColumns])
-
-  useEffect(() => {
-    if (!dragging) return undefined
-    const prevCursor = document.body.style.cursor
-    const prevSelect = document.body.style.userSelect
-    document.body.style.cursor = 'col-resize'
-    document.body.style.userSelect = 'none'
-
-    const onMove = (event) => {
-      const drag = dragRef.current
-      if (!drag) return
-      applyWidth(drag.startWidth - (event.clientX - drag.startX))
-    }
-    const onUp = () => {
-      dragRef.current = null
-      setDragging(false)
-    }
-
-    window.addEventListener('pointermove', onMove)
-    window.addEventListener('pointerup', onUp)
-    return () => {
-      window.removeEventListener('pointermove', onMove)
-      window.removeEventListener('pointerup', onUp)
-      document.body.style.cursor = prevCursor
-      document.body.style.userSelect = prevSelect
-    }
-  }, [dragging, applyWidth])
-
-  const onSplitterPointerDown = (event) => {
-    if (event.button !== 0) return
-    event.preventDefault()
-    dragRef.current = {
-      startX: event.clientX,
-      startWidth: rightWidth ?? 0,
-    }
-    setDragging(true)
-  }
 
   const revertCustomPreview = () => {
     const baseline = customPreviewBaselineRef.current
@@ -816,7 +726,7 @@ export default function NaryadWorkspacePanel({
       </WorkspaceActionBar>
 
       <Box
-        ref={containerRef}
+        ref={rightPanel.containerRef}
         sx={{
           flex: 1,
           minHeight: 0,
@@ -854,24 +764,15 @@ export default function NaryadWorkspacePanel({
             <TreeStatusBar items={treeStatusItems} />
           </Box>
 
-          <Box
-            role="separator"
-            aria-orientation="vertical"
-            aria-label="Ширина панели параметров"
-            onPointerDown={onSplitterPointerDown}
-            sx={{
-              width: 6,
-              flexShrink: 0,
-              cursor: 'col-resize',
-              touchAction: 'none',
-              bgcolor: dragging ? 'action.selected' : 'divider',
-              '&:hover': { bgcolor: 'action.selected' },
-            }}
+          <PanelSplitter
+            ariaLabel="Ширина панели параметров"
+            dragging={rightPanel.dragging}
+            onPointerDown={rightPanel.onSplitterPointerDown}
           />
 
           <Box
             sx={{
-              width: rightWidth ?? `${RIGHT_PANEL_DEFAULT_RATIO * 100}%`,
+              width: rightPanel.width ?? `${RIGHT_PANEL_DEFAULT_RATIO * 100}%`,
               flexShrink: 0,
               minWidth: 0,
               minHeight: 0,
