@@ -2,7 +2,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Box from '@mui/material/Box'
 import IconButton from '@mui/material/IconButton'
 import Popover from '@mui/material/Popover'
-import TextField from '@mui/material/TextField'
 import Tooltip from '@mui/material/Tooltip'
 import FolderDelete from '@mui/icons-material/FolderDelete'
 import Colorize from '@mui/icons-material/Colorize'
@@ -12,7 +11,7 @@ import LinkIcon from '@mui/icons-material/Link'
 import LinkOffIcon from '@mui/icons-material/LinkOff'
 import Lock from '@mui/icons-material/Lock'
 import LockOpen from '@mui/icons-material/LockOpen'
-import { AxiosProvider, BaseTable, BaseTreeTable } from 'mainComponent'
+import { AxiosProvider, BaseTreeTable } from 'mainComponent'
 import {
   deleteNaryadBlock,
   deleteNaryadWorks,
@@ -26,8 +25,11 @@ import {
   updateNaryadRowsColor,
 } from '../../../api/naryadyApi.js'
 import { useAlert, useConfirm } from '../../../context/ConfirmContext.jsx'
+import ActionButton, { actionButtonSx } from './ActionButton.jsx'
+import TreeStatusBar from './TreeStatusBar.jsx'
+import WorkDetailsPanel from './WorkDetailsPanel.jsx'
+import WorkspaceActionBar from './WorkspaceActionBar.jsx'
 import {
-  ACTION_BAR_HEIGHT,
   RIGHT_PANEL_DEFAULT_RATIO,
   clampRightPanelWidth,
   persistTableColumnSizing,
@@ -66,19 +68,6 @@ import {
   withoutUnsavedColorOverrides,
   writeRecentRowColors,
 } from '../actions/color/naryadRowColors.js'
-
-/** Пустое поле — несколько строк; дальше высота растёт по тексту, лишнее прокручивается внутри рамки. */
-const ALG_FIELD_MIN_ROWS = 4
-const ALG_FIELD_MAX_ROWS = 12
-
-const actionButtonSx = {
-  height: '100%',
-  width: ACTION_BAR_HEIGHT,
-  borderRadius: 0,
-  borderRight: 1,
-  borderColor: 'divider',
-  color: 'text.secondary',
-}
 
 /**
  * Раскладка одной вкладки: дерево / сплиттер / параметры + алгоритм.
@@ -562,90 +551,49 @@ export default function NaryadWorkspacePanel({
         overflow: 'hidden',
       }}
     >
-      <Box
-        aria-label={actionBarAriaLabel}
-        sx={{
-          height: ACTION_BAR_HEIGHT,
-          flexShrink: 0,
-          display: 'flex',
-          alignItems: 'stretch',
-          bgcolor: 'background.paper',
-          borderBottom: 1,
-          borderColor: 'divider',
-        }}
-      >
-        <Tooltip title="Удалить помеченные работы">
-          <Box component="span" sx={{ display: 'inline-flex' }}>
-            <IconButton
-              aria-label="Удалить помеченные работы"
-              disabled={!deleteMarkedEnabled}
-              onClick={() => {
-                void deleteMarkedWorks()
-              }}
-              sx={actionButtonSx}
-            >
-              <DeleteOutline />
-            </IconButton>
-          </Box>
-        </Tooltip>
-        <Tooltip title="Удаление блока без удаления входящих работ">
-          <Box component="span" sx={{ display: 'inline-flex' }}>
-            <IconButton
-              aria-label="Удаление блока без удаления входящих работ"
-              disabled={!deleteBlockEnabled}
-              onClick={() => {
-                void deleteBlock()
-              }}
-              sx={actionButtonSx}
-            >
-              <FolderDelete />
-            </IconButton>
-          </Box>
-        </Tooltip>
-        <Tooltip title={closeLabel}>
-          <Box component="span" sx={{ display: 'inline-flex' }}>
-            <IconButton
-              aria-label={closeLabel}
-              disabled={closeDisabled}
-              onClick={() => {
-                void changeClosed()
-              }}
-              sx={actionButtonSx}
-            >
-              {closed === true ? <Lock /> : <LockOpen />}
-            </IconButton>
-          </Box>
-        </Tooltip>
+      <WorkspaceActionBar ariaLabel={actionBarAriaLabel}>
+        <ActionButton
+          label="Удалить помеченные работы"
+          icon={DeleteOutline}
+          disabled={!deleteMarkedEnabled}
+          onClick={() => {
+            void deleteMarkedWorks()
+          }}
+        />
+        <ActionButton
+          label="Удаление блока без удаления входящих работ"
+          icon={FolderDelete}
+          disabled={!deleteBlockEnabled}
+          onClick={() => {
+            void deleteBlock()
+          }}
+        />
+        <ActionButton
+          label={closeLabel}
+          icon={closed === true ? Lock : LockOpen}
+          disabled={closeDisabled}
+          onClick={() => {
+            void changeClosed()
+          }}
+        />
         {part === 'vipolnenie' ? (
           <>
-            <Tooltip title="Блокировать текущую работу">
-              <Box component="span" sx={{ display: 'inline-flex' }}>
-                <IconButton
-                  aria-label="Блокировать текущую работу"
-                  disabled={!lockActions.canLock}
-                  onClick={() => {
-                    void changeWorkLock(true)
-                  }}
-                  sx={actionButtonSx}
-                >
-                  <LinkIcon />
-                </IconButton>
-              </Box>
-            </Tooltip>
-            <Tooltip title="Разблокировать работу">
-              <Box component="span" sx={{ display: 'inline-flex' }}>
-                <IconButton
-                  aria-label="Разблокировать работу"
-                  disabled={!lockActions.canUnlock}
-                  onClick={() => {
-                    void changeWorkLock(false)
-                  }}
-                  sx={actionButtonSx}
-                >
-                  <LinkOffIcon />
-                </IconButton>
-              </Box>
-            </Tooltip>
+            <ActionButton
+              label="Блокировать текущую работу"
+              icon={LinkIcon}
+              disabled={!lockActions.canLock}
+              onClick={() => {
+                void changeWorkLock(true)
+              }}
+            />
+            <ActionButton
+              label="Разблокировать работу"
+              icon={LinkOffIcon}
+              disabled={!lockActions.canUnlock}
+              onClick={() => {
+                void changeWorkLock(false)
+              }}
+            />
           </>
         ) : null}
         <Tooltip
@@ -865,7 +813,7 @@ export default function NaryadWorkspacePanel({
             </IconButton>
           </Box>
         </Tooltip>
-      </Box>
+      </WorkspaceActionBar>
 
       <Box
         ref={containerRef}
@@ -903,42 +851,7 @@ export default function NaryadWorkspacePanel({
                 initialState={{ pagination: { pageIndex: 0, pageSize: 10000 } }}
               />
             </Box>
-            <Box
-              role="status"
-              aria-live="polite"
-              sx={{
-                height: 32,
-                flexShrink: 0,
-                display: 'flex',
-                alignItems: 'stretch',
-                px: 1.5,
-                boxSizing: 'border-box',
-                borderTop: 1,
-                borderColor: 'divider',
-                bgcolor: '#F1F3F5',
-                color: '#364FC7',
-                fontSize: '0.875rem',
-                fontWeight: 600,
-                overflowX: 'auto',
-              }}
-            >
-              {treeStatusItems.map((item) => (
-                <Box
-                  key={item.text}
-                  sx={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    flexShrink: 0,
-                    whiteSpace: 'nowrap',
-                    pl: item.divider ? 1.5 : 0,
-                    ml: item.divider ? 1.5 : 0,
-                    borderLeft: item.divider ? '2px solid #364FC7' : 0,
-                  }}
-                >
-                  {item.text}
-                </Box>
-              ))}
-            </Box>
+            <TreeStatusBar items={treeStatusItems} />
           </Box>
 
           <Box
@@ -967,47 +880,12 @@ export default function NaryadWorkspacePanel({
               overflow: 'hidden',
             }}
           >
-            <Box sx={{ flex: 1, minHeight: 0, minWidth: 0, overflow: 'hidden' }}>
-              <BaseTable
-                url={paramsUrl}
-                columns={paramColumns}
-                filters={paramFilters}
-                setFilters={() => {}}
-              />
-            </Box>
-            <Box
-              sx={{
-                flex: '0 1 auto',
-                minHeight: 0,
-                overflow: 'auto',
-                px: 1,
-                py: 0.75,
-                boxSizing: 'border-box',
-                borderTop: 1,
-                borderColor: 'divider',
-                bgcolor: 'background.paper',
-              }}
-            >
-              <TextField
-                value={algorithm}
-                multiline
-                fullWidth
-                size="small"
-                minRows={ALG_FIELD_MIN_ROWS}
-                maxRows={ALG_FIELD_MAX_ROWS}
-                InputProps={{ readOnly: true }}
-                inputProps={{ 'aria-label': 'Алгоритм', 'aria-readonly': true }}
-                sx={{
-                  '& .MuiInputBase-root': {
-                    alignItems: 'flex-start',
-                  },
-                  '& textarea': {
-                    overflow: 'auto !important',
-                    resize: 'none',
-                  },
-                }}
-              />
-            </Box>
+            <WorkDetailsPanel
+              paramsUrl={paramsUrl}
+              paramColumns={paramColumns}
+              paramFilters={paramFilters}
+              algorithm={algorithm}
+            />
           </Box>
         </AxiosProvider>
       </Box>
