@@ -11,10 +11,10 @@ import HorizontalSplit from '@mui/icons-material/HorizontalSplit'
 import MenuBook from '@mui/icons-material/MenuBook'
 import Tune from '@mui/icons-material/Tune'
 import VerticalSplit from '@mui/icons-material/VerticalSplit'
-import { fetchNaryadHeader } from '../api/naryadyApi.js'
-import CatalogDialog from './CatalogDialog.jsx'
-import NaryadZadaniePanel from './NaryadZadaniePanel.jsx'
-import NaryadVipolneniePanel from './NaryadVipolneniePanel.jsx'
+import { fetchNaryadHeader } from '../../api/naryadyApi.js'
+import CatalogDialog from '../../pages/CatalogDialog.jsx'
+import NaryadZadaniePanel from './workspace/NaryadZadaniePanel.jsx'
+import NaryadVipolneniePanel from './workspace/NaryadVipolneniePanel.jsx'
 import {
   ACTION_BAR_HEIGHT,
   readStoredSplitOrientation,

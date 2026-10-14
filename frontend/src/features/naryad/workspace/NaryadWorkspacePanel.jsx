@@ -24,8 +24,8 @@ import {
   setNaryadPartClosed,
   unlockNaryadWorks,
   updateNaryadRowsColor,
-} from '../api/naryadyApi.js'
-import { useAlert, useConfirm } from '../context/ConfirmContext.jsx'
+} from '../../../api/naryadyApi.js'
+import { useAlert, useConfirm } from '../../../context/ConfirmContext.jsx'
 import {
   ACTION_BAR_HEIGHT,
   RIGHT_PANEL_DEFAULT_RATIO,
@@ -34,7 +34,7 @@ import {
   readStoredRightPanelWidth,
   seedTableColumnSizing,
   writeStoredRightPanelWidth,
-} from './naryadPageLayout.js'
+} from '../naryadPageLayout.js'
 import {
   detailNodeId,
   nodeIdFilters,
@@ -51,7 +51,7 @@ import {
   lockFlagMap,
   selectedLockRows,
   selectionHasLockedWork,
-} from './naryadPartActions.js'
+} from '../actions/naryadPartActions.js'
 import {
   NARYAD_COLOR_SWATCHES,
   NARYAD_DEFAULT_PICKER_COLOR,
@@ -65,7 +65,7 @@ import {
   withRowColorOverrides,
   withoutUnsavedColorOverrides,
   writeRecentRowColors,
-} from './naryadRowColors.js'
+} from '../actions/color/naryadRowColors.js'
 
 /** Пустое поле — несколько строк; дальше высота растёт по тексту, лишнее прокручивается внутри рамки. */
 const ALG_FIELD_MIN_ROWS = 4

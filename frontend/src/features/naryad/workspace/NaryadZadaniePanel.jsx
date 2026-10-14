@@ -1,5 +1,5 @@
 import NaryadWorkspacePanel from './NaryadWorkspacePanel.jsx'
-import { COLUMN_SIZING_KEYS, RIGHT_PANEL_WIDTH_KEYS } from './naryadPageLayout.js'
+import { COLUMN_SIZING_KEYS, RIGHT_PANEL_WIDTH_KEYS } from '../naryadPageLayout.js'
 import {
   naryadZadanieColumns,
   naryadZadanieParamColumns,
