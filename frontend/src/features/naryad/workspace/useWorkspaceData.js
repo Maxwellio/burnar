@@ -1,0 +1,44 @@
+import {
+  fetchNaryadAlgorithm,
+  fetchNaryadTotals,
+  fetchNaryadWorkAction,
+  fetchNaryadWorkLocks,
+} from '../../../api/naryadyApi.js'
+import { lockFlagMap } from '../actions/naryadPartActions.js'
+import useAsyncValue from './useAsyncValue.js'
+
+/** Итоги CalcItogsNS всего дерева; на время перечитывания остаются прежние числа. */
+export function useTotals(naryadId, part, reloadSignal) {
+  return useAsyncValue(
+    () => fetchNaryadTotals(naryadId, part),
+    [naryadId, part, reloadSignal],
+    { clearOnRefetch: false, resetKey: `${naryadId}:${part}` },
+  )
+}
+
+/** id → locked всех работ выполнения. Один запрос на загрузку дерева, не на каждый выбор. */
+export function useLockFlags(naryadId, enabled, reloadSignal) {
+  return useAsyncValue(
+    async () => lockFlagMap(await fetchNaryadWorkLocks(naryadId)),
+    [naryadId, reloadSignal],
+    { enabled },
+  )
+}
+
+/** Поля единственной выбранной строки, от которых зависят кнопки (тип, блокировка, RS). */
+export function useWorkAction(naryadId, part, nodeId, reloadSignal) {
+  return useAsyncValue(
+    () => fetchNaryadWorkAction(naryadId, part, nodeId),
+    [naryadId, part, nodeId, reloadSignal],
+    { enabled: nodeId != null },
+  )
+}
+
+/** Текст алгоритма единственной выбранной строки (algs.ops, только тип 80). */
+export function useAlgorithm(algorithmUrl, nodeId) {
+  return useAsyncValue(
+    async () => (await fetchNaryadAlgorithm(algorithmUrl, nodeId))?.text ?? '',
+    [algorithmUrl, nodeId],
+    { enabled: nodeId != null && Boolean(algorithmUrl), empty: '', clearOnRefetch: false },
+  )
+}

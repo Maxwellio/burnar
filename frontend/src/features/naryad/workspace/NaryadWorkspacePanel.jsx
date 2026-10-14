@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo } from 'react'
 import Box from '@mui/material/Box'
 import FolderDelete from '@mui/icons-material/FolderDelete'
 import DeleteOutline from '@mui/icons-material/DeleteOutline'
@@ -10,10 +10,6 @@ import { AxiosProvider, BaseTreeTable } from 'mainComponent'
 import {
   deleteNaryadBlock,
   deleteNaryadWorks,
-  fetchNaryadAlgorithm,
-  fetchNaryadTotals,
-  fetchNaryadWorkAction,
-  fetchNaryadWorkLocks,
   lockNaryadWorks,
   setNaryadPartClosed,
   unlockNaryadWorks,
@@ -29,6 +25,7 @@ import useResizablePanel from './layout/useResizablePanel.js'
 import useLatest from './useLatest.js'
 import useMutationRunner from './useMutationRunner.js'
 import useWorkTree from './useWorkTree.js'
+import { useAlgorithm, useLockFlags, useTotals, useWorkAction } from './useWorkspaceData.js'
 import { RIGHT_PANEL_DEFAULT_RATIO } from '../naryadPageLayout.js'
 import {
   detailNodeId,
@@ -43,7 +40,6 @@ import {
   canDeleteMarkedWorks,
   closeActionLabel,
   lockActionState,
-  lockFlagMap,
   selectedLockRows,
   selectionHasLockedWork,
 } from '../actions/naryadPartActions.js'
@@ -92,10 +88,10 @@ export default function NaryadWorkspacePanel({
   })
 
   const { selectedIds, detailId, reloadSignal } = tree
-  const [lockFlags, setLockFlags] = useState(null)
-  const [totals, setTotals] = useState(null)
-  const [algorithm, setAlgorithm] = useState('')
-  const [workAction, setWorkAction] = useState(null)
+  const totals = useTotals(naryadId, part, reloadSignal)
+  const lockFlags = useLockFlags(naryadId, part === 'vipolnenie', reloadSignal)
+  const workAction = useWorkAction(naryadId, part, detailId, reloadSignal)
+  const algorithm = useAlgorithm(algorithmUrl, detailId)
   const paramFilters = useMemo(() => nodeIdFilters(detailId), [detailId])
   const treeStatusItems = treeFooterStatusItems(selectedIds, part, totals)
   const closeLabel = closeActionLabel(part, closed === true)
@@ -111,86 +107,6 @@ export default function NaryadWorkspacePanel({
     closed,
     mutation.pending,
   )
-
-  useEffect(() => {
-    setLockFlags(null)
-    setWorkAction(null)
-    setAlgorithm('')
-  }, [treeUrl])
-
-  useEffect(() => {
-    setTotals(null)
-  }, [naryadId, part])
-
-  useEffect(() => {
-    let cancelled = false
-    fetchNaryadTotals(naryadId, part)
-      .then((data) => {
-        if (!cancelled) setTotals(data ?? null)
-      })
-      .catch(() => {
-        if (!cancelled) setTotals(null)
-      })
-    return () => {
-      cancelled = true
-    }
-  }, [naryadId, part, reloadSignal])
-
-  useEffect(() => {
-    if (part !== 'vipolnenie') {
-      setLockFlags(null)
-      return undefined
-    }
-    let cancelled = false
-    setLockFlags(null)
-    fetchNaryadWorkLocks(naryadId)
-      .then((rows) => {
-        if (!cancelled) setLockFlags(lockFlagMap(rows))
-      })
-      .catch(() => {
-        if (!cancelled) setLockFlags(null)
-      })
-    return () => {
-      cancelled = true
-    }
-  }, [part, naryadId, reloadSignal])
-
-  useEffect(() => {
-    if (detailId == null) {
-      setWorkAction(null)
-      return undefined
-    }
-    let cancelled = false
-    setWorkAction(null)
-    fetchNaryadWorkAction(naryadId, part, detailId)
-      .then((data) => {
-        if (!cancelled) setWorkAction(data ?? null)
-      })
-      .catch(() => {
-        if (!cancelled) setWorkAction(null)
-      })
-    return () => {
-      cancelled = true
-    }
-  }, [naryadId, part, detailId, reloadSignal])
-
-  useEffect(() => {
-    let cancelled = false
-    if (detailId == null || !algorithmUrl) {
-      setAlgorithm('')
-      return undefined
-    }
-    fetchNaryadAlgorithm(algorithmUrl, detailId)
-      .then((data) => {
-        if (!cancelled) setAlgorithm(data?.text ?? '')
-      })
-      .catch(() => {
-        if (!cancelled) setAlgorithm('')
-      })
-    return () => {
-      cancelled = true
-    }
-  }, [algorithmUrl, detailId])
 
   const runMutation = (work, { reload = false } = {}) => (
     mutation.run(work, { onDone: reload ? tree.reload : undefined })
