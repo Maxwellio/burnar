@@ -184,18 +184,18 @@ function VipNormVolumeCell({ row, getValue }) {
  */
 function makePlanTreeColumns(prefix, { vipMarks = false } = {}) {
   return [
-    col(prefix, 'id', 'Код', 70),
+    //col(prefix, 'id', 'Код', 70),
     col(prefix, 'ord', '№ п/п', vipMarks ? 120 : 80, vipMarks ? { cell: VipOrdCell } : {}),
     col(prefix, 'nm', 'Название работы', 250, { cell: WorkNameCell }),
-    col(prefix, 'begoperdate', 'Время начала', 140),
-    col(prefix, 'istnorm', 'Источник норм.', 140),
+    col(prefix, 'begoperdate', 'Время начала работы', 140),
+    col(prefix, 'istnorm', 'Источник нормирования', 140),
     group(prefix, 'interval', 'Интервал', [
       col(prefix, 'ot', 'от', 50),
       col(prefix, 'do_', 'до', 50),
     ]),
     group(prefix, 'norm', 'Норма времени', [
-      col(prefix, 'n1', 'Н.в. на ед.', 90),
-      col(prefix, 'n2', 'Н.в. на объём', vipMarks ? 150 : 110, vipMarks ? { cell: VipNormVolumeCell } : {}),
+      col(prefix, 'n1', 'на ед. измер.', 90),
+      col(prefix, 'n2', 'на объём раб.', vipMarks ? 150 : 110, vipMarks ? { cell: VipNormVolumeCell } : {}),
     ]),
   ]
 }
