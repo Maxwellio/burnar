@@ -3,6 +3,7 @@ package burnar.service;
 import burnar.dto.NaryadAlgorithmDto;
 import burnar.dto.NaryadClosedDto;
 import burnar.dto.NaryadDurationTotalsDto;
+import burnar.dto.NaryadHeaderDto;
 import burnar.dto.NaryadLockTargetDto;
 import burnar.dto.NaryadWorkActionDto;
 import burnar.dto.NaryadWorkLockDto;
@@ -352,6 +353,23 @@ public class NaryadWorkspaceService {
     static final String VIPOLNENIE_DELETE_BLOCK_SQL = "CALL burnar.vipolnenie_operac_del_block(?, ?, ?, ?)";
 
     static final String NOT_ALL_LOCKED_MESSAGE = "Не все работы заблокированы!";
+    static final String VIPOLNENIE_ALREADY_EXISTS = "Наряд-выполнение уже создано";
+    static final String ZADANIE_NOT_CLOSED = "Наряд-задание не закрыто";
+    static final String ZADANIE_HAS_NO_WORKS = "В задании нет работ";
+    static final String VIPOLNENIE_HAS_WORKS = "В выполнении уже есть работы";
+    static final String VIPOLNENIE_HAS_LOCKED = "Импорт недоступен: есть заблокированные работы";
+    static final String REPLACE_NOT_ALLOWED = "Замена задания недоступна";
+
+    static final String ZADANIE_HAS_ROOTS_SQL =
+            "SELECT EXISTS (SELECT 1 FROM burnar.zadanie_oper o "
+                    + "WHERE o.narkey = :narkey AND o.parent IS NULL)";
+
+    static final String VIPOLNENIE_LOCKED_COUNT_SQL =
+            "SELECT count(*) FROM burnar.vipolnenie_oper o "
+                    + "WHERE o.locked = 1 AND o.narkey = :narkey";
+
+    static final String VIPOLNENIE_WORK_COUNT_SQL =
+            "SELECT count(*) FROM burnar.vipolnenie_oper o WHERE o.narkey = :narkey";
 
     private static final RowMapper<NaryadOperParamDto> PARAM_MAPPER = (rs, rowNum) -> {
         NaryadOperParamDto dto = new NaryadOperParamDto();
@@ -455,6 +473,7 @@ public class NaryadWorkspaceService {
         naryadListService.findHeader(naryadId);
         NaryadDurationTotalsDto dto = new NaryadDurationTotalsDto();
         dto.setDuration(sumHours(ZADANIE_TOTAL_SQL, naryadId));
+        dto.setHasRoots(hasZadanieRoots(naryadId));
         return dto;
     }
 
@@ -476,6 +495,61 @@ public class NaryadWorkspaceService {
 
     public NaryadClosedDto setVipolnenieClosed(int naryadId, Boolean closed) {
         return setPartClosed(naryadId, closed, false);
+    }
+
+    /**
+     * actCreateCopyNarVip. Повторный вызов не делается: процедура стёрла бы работы выполнения.
+     */
+    public NaryadHeaderDto createEmptyVipolnenie(int naryadId) {
+        NaryadHeaderDto header = naryadListService.findHeader(naryadId);
+        if (!Boolean.TRUE.equals(header.getHasZadanie())) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Naryad descriptor not found");
+        }
+        if (Boolean.TRUE.equals(header.getHasVipolnenie())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, VIPOLNENIE_ALREADY_EXISTS);
+        }
+        if (!Boolean.TRUE.equals(header.getZadanieClosed())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, ZADANIE_NOT_CLOSED);
+        }
+        if (!hasZadanieRoots(naryadId)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, ZADANIE_HAS_NO_WORKS);
+        }
+        callProcedure("CALL burnar.vipolnenie_create(?)", naryadId, null);
+        return naryadListService.findHeader(naryadId);
+    }
+
+    /**
+     * actImportRabZad. datein = null: процедура берёт defnarvip.begdate.
+     * Непустое или заблокированное выполнение не трогаем — процедура сначала удаляет работы.
+     */
+    public void importZadanieWorks(int naryadId) {
+        NaryadHeaderDto header = naryadListService.findHeader(naryadId);
+        if (!Boolean.TRUE.equals(header.getHasVipolnenie())) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Naryad descriptor not found");
+        }
+        if (Boolean.TRUE.equals(header.getVipolnenieClosed())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Naryad part is closed");
+        }
+        if (count(VIPOLNENIE_LOCKED_COUNT_SQL, naryadId) > 0) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, VIPOLNENIE_HAS_LOCKED);
+        }
+        if (count(VIPOLNENIE_WORK_COUNT_SQL, naryadId) > 0) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, VIPOLNENIE_HAS_WORKS);
+        }
+        callZadanieToVipolnenie(naryadId);
+    }
+
+    /** ToolButton23. Закрытие выполнения не мешает замене. Орг. единица — 1 или 8. */
+    public NaryadHeaderDto replaceZadanieFromVipolnenie(int naryadId) {
+        NaryadHeaderDto header = naryadListService.findHeader(naryadId);
+        if (!naryadListService.mayReplaceZadanie()) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, REPLACE_NOT_ALLOWED);
+        }
+        if (!Boolean.TRUE.equals(header.getHasZadanie()) || !Boolean.TRUE.equals(header.getHasVipolnenie())) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Naryad descriptor not found");
+        }
+        callProcedure("CALL burnar.copy_vip_to_zad(?)", naryadId, null);
+        return naryadListService.findHeader(naryadId);
     }
 
     /**
@@ -889,6 +963,43 @@ public class NaryadWorkspaceService {
     /**
      * Процедуры содержат COMMIT, поэтому вызов идёт при autocommit, вне транзакции Spring.
      */
+    private boolean hasZadanieRoots(int naryadId) {
+        Boolean exists = jdbc.queryForObject(
+                ZADANIE_HAS_ROOTS_SQL,
+                new MapSqlParameterSource("narkey", naryadId),
+                Boolean.class);
+        return Boolean.TRUE.equals(exists);
+    }
+
+    private long count(String sql, int naryadId) {
+        Long value = jdbc.queryForObject(sql, new MapSqlParameterSource("narkey", naryadId), Long.class);
+        return value == null ? 0L : value;
+    }
+
+    /** datein = null, как ParamByname('Datein').value := null. */
+    private void callZadanieToVipolnenie(int naryadId) {
+        try {
+            jdbc.getJdbcTemplate().execute((Connection con) -> {
+                boolean previousAutoCommit = con.getAutoCommit();
+                con.setAutoCommit(true);
+                try (CallableStatement cs = con.prepareCall("CALL burnar.zadanie_to_vipolnenie(?, ?)")) {
+                    cs.setInt(1, naryadId);
+                    cs.setNull(2, Types.DATE);
+                    cs.execute();
+                } finally {
+                    try {
+                        con.setAutoCommit(previousAutoCommit);
+                    } catch (SQLException ignored) {
+                        // Процедура уже завершила свою транзакцию.
+                    }
+                }
+                return null;
+            });
+        } catch (DataAccessException ex) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, NaryadProcedureMessages.from(ex));
+        }
+    }
+
     private void callProcedure(String sql, int naryadId, Long nodeId) {
         try {
             jdbc.getJdbcTemplate().execute((Connection con) -> {

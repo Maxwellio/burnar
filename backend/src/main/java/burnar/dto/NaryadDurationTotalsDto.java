@@ -11,6 +11,8 @@ public class NaryadDurationTotalsDto {
     private BigDecimal duration;
     private BigDecimal normDuration;
     private BigDecimal factDuration;
+    /** В задании есть корневая работа. У выполнения поле не заполняется. */
+    private Boolean hasRoots;
 
     public BigDecimal getDuration() {
         return duration;
@@ -34,5 +36,13 @@ public class NaryadDurationTotalsDto {
 
     public void setFactDuration(BigDecimal factDuration) {
         this.factDuration = factDuration;
+    }
+
+    public Boolean getHasRoots() {
+        return hasRoots;
+    }
+
+    public void setHasRoots(Boolean hasRoots) {
+        this.hasRoots = hasRoots;
     }
 }

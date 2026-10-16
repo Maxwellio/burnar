@@ -4,6 +4,7 @@ import burnar.dto.NaryadAlgorithmDto;
 import burnar.dto.NaryadClosedDto;
 import burnar.dto.NaryadClosedRequest;
 import burnar.dto.NaryadDurationTotalsDto;
+import burnar.dto.NaryadHeaderDto;
 import burnar.dto.NaryadLockTargetDto;
 import burnar.dto.NaryadNodeIdsRequest;
 import burnar.dto.NaryadWorkActionDto;
@@ -115,6 +116,22 @@ public class NaryadWorkspaceController {
                 id,
                 request == null ? null : request.getColor(),
                 request == null ? null : request.getNodeIds());
+    }
+
+    @PostMapping("/{id:\\d+}/vipolnenie")
+    public NaryadHeaderDto createEmptyVipolnenie(@PathVariable int id) {
+        return naryadWorkspaceService.createEmptyVipolnenie(id);
+    }
+
+    @PostMapping("/{id:\\d+}/vipolnenie/import-zadanie")
+    public ResponseEntity<Void> importZadanieWorks(@PathVariable int id) {
+        naryadWorkspaceService.importZadanieWorks(id);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/{id:\\d+}/vipolnenie/replace-zadanie")
+    public NaryadHeaderDto replaceZadanieFromVipolnenie(@PathVariable int id) {
+        return naryadWorkspaceService.replaceZadanieFromVipolnenie(id);
     }
 
     @GetMapping("/{id:\\d+}/vipolnenie")

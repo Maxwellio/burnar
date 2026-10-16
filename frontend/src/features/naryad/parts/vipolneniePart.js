@@ -1,4 +1,6 @@
 import { closePartAction } from '../actions/close/closePartAction.js'
+import { importZadanieWorksAction } from '../actions/import/importZadanieWorksAction.js'
+import { replaceZadanieAction } from '../actions/replace/replaceZadanieAction.js'
 import { rowColorAction } from '../actions/color/rowColorAction.js'
 import { deleteBlockAction } from '../actions/delete/deleteBlockAction.js'
 import { deleteMarkedWorksAction } from '../actions/delete/deleteMarkedWorksAction.js'
@@ -32,6 +34,8 @@ export const vipolneniePart = {
     locks: true,
   },
   actions: [
+    importZadanieWorksAction,
+    replaceZadanieAction,
     deleteMarkedWorksAction,
     deleteBlockAction,
     closePartAction,

@@ -13,6 +13,8 @@ public class NaryadHeaderDto {
     private Boolean hasVipolnenie;
     private Boolean zadanieClosed;
     private Boolean vipolnenieClosed;
+    /** ToolButton23: орг. единица текущего пользователя 1 или 8. */
+    private Boolean replaceZadanieAllowed;
 
     public Integer getId() {
         return id;
@@ -60,5 +62,13 @@ public class NaryadHeaderDto {
 
     public void setVipolnenieClosed(Boolean vipolnenieClosed) {
         this.vipolnenieClosed = vipolnenieClosed;
+    }
+
+    public Boolean getReplaceZadanieAllowed() {
+        return replaceZadanieAllowed;
+    }
+
+    public void setReplaceZadanieAllowed(Boolean replaceZadanieAllowed) {
+        this.replaceZadanieAllowed = replaceZadanieAllowed;
     }
 }
