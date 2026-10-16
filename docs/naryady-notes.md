@@ -59,7 +59,7 @@
 
 ## 2. Страница карточки
 
-`frontend/src/pages/NaryadPage.jsx` — action bar под шапкой приложения:
+`frontend/src/features/naryad/NaryadPage.jsx` — action bar под шапкой приложения:
 
 | Элемент | Поведение |
 |---------|-----------|
@@ -86,7 +86,7 @@
 
 ### Вкладка «Задание»
 
-`NaryadZadaniePanel` → `NaryadWorkspacePanel`:
+`NaryadWorkspacePanel` с `part={zadaniePart}`:
 
 | Элемент | Поведение |
 |---------|-----------|
@@ -105,7 +105,7 @@
 
 ### Вкладка «Выполнение»
 
-Отдельный экземпляр (`NaryadVipolneniePanel`):
+Отдельный экземпляр `NaryadWorkspacePanel` с `part={vipolneniePart}`:
 
 | Элемент | Поведение |
 |---------|-----------|
@@ -196,23 +196,53 @@ CSS `#RRGGBB` перед отправкой
 
 Пока `resetSelectionSignal` не перенесён в пакет `mainComponent` из `mainComponent-changes/BaseTable/BaseTreeTable.tsx`, после удаления синяя подсветка в дереве может остаться до следующего обычного клика. Набор для футера и кнопок при этом уже пустой.
 
-## 6. Файлы
+## 6. Устройство кода карточки
+
+Карточка лежит в `frontend/src/features/naryad/`. Список нарядов (`pages/Home.jsx`) и каталог (`pages/CatalogDialog.jsx`) остаются в `pages/`.
+
+Вкладка задания и вкладка выполнения — один компонент `NaryadWorkspacePanel` с разным описанием части (`parts/zadaniePart.js`, `parts/vipolneniePart.js`). В описании всё, чем части отличаются: url, колонки, ключи `localStorage`, флаг `features.locks` и список кнопок `actions` в порядке показа. Проверок `part === 'vipolnenie'` в общем коде нет.
+
+`useNaryadWorkspaceState` собирает состояние вкладки: выбор и сигналы дерева (`useWorkTree`), общую блокировку «идёт запрос» (`useMutationRunner`), итоги, признаки блокировки, поля строки и алгоритм (`useWorkspaceData`), цвет (`useRowColorEditing`). Результат лежит в `NaryadWorkspaceProvider`, кнопки читают его через `useNaryadWorkspace()`. Контекст свой у каждой вкладки: обе живут одновременно и не видят выбор друг друга.
+
+Одна кнопка Delphi (`TAction`) — один модуль в `actions/<тема>/`:
+
+```js
+export const deleteBlockAction = {
+  id: 'delete-block',
+  label: 'Удаление блока без удаления входящих работ', // или getLabel(ctx)
+  icon: FolderDelete,                                  // или getIcon(ctx)
+  isEnabled: (ctx) => canDeleteBlock(...),             // аналог ActionList1Update
+  async run(ctx) { ... },
+}
+```
+
+Если у действия свой интерфейс (палитра, диалог ввода), модуль отдаёт `{ id, Component }`, и компонент сам берёт контекст. Правила доступности и тексты сообщений — чистые функции в `*Rules.js` рядом, с тестами на `node:test`. Обработчик, который продолжает работу после `await` (подтверждение, запрос), читает выбор и флаг закрытия через `ctx.tree.getSelectedIds()` / `ctx.getClosed()`, а не из замыкания. Изменения идут через `ctx.runMutation(work, { reload })`: пока запрос в полёте, остальные кнопки и очередь цвета ждут.
+
+Новое действие: модуль в `actions/`, правила и тест рядом, строка в `actions` нужных частей. Если действию нужны данные с сервера, хук загрузки добавляется в `useWorkspaceData.js` и в контекст.
 
 | Файл | Роль |
 |------|------|
 | `frontend/src/pages/Home.jsx` | список, выбор строки, открытие |
-| `frontend/src/pages/NaryadPage.jsx` | карточка: action bar + две панели + CatalogDialog |
 | `frontend/src/pages/CatalogDialog.jsx` | модальный каталог тематических разделов |
-| `frontend/src/pages/naryadTabs.js` | стартовый набор и запрет снять последнюю вкладку |
-| `frontend/src/pages/NaryadZadaniePanel.jsx` | вкладка задания |
-| `frontend/src/pages/NaryadVipolneniePanel.jsx` | вкладка выполнения |
-| `frontend/src/pages/NaryadWorkspacePanel.jsx` | раскладка одной вкладки |
-| `frontend/src/pages/naryadPageLayout.js` | сплиттер и localStorage ширин колонок/панели |
-| `frontend/src/pages/naryadWorkspaceColumns.jsx` | колонки деревьев и параметров (раздельные объекты) |
+| `features/naryad/NaryadPage.jsx` | карточка: action bar + две вкладки + CatalogDialog |
+| `features/naryad/naryadTabs.js` | стартовый набор и запрет снять последнюю вкладку |
+| `features/naryad/naryadPageLayout.js` | ключи и чтение/запись ширин в localStorage, ограничения сплиттера |
+| `features/naryad/parts/*Part.js` | описание задания и выполнения |
+| `features/naryad/workspace/NaryadWorkspacePanel.jsx` | раскладка одной вкладки |
+| `features/naryad/workspace/useNaryadWorkspaceState.js`, `NaryadWorkspaceContext.jsx` | состояние вкладки и контекст для кнопок |
+| `features/naryad/workspace/WorkspaceActions.jsx`, `ActionButton.jsx`, `WorkspaceActionBar.jsx` | панель кнопок по списку `actions` |
+| `features/naryad/workspace/useWorkTree.js` | выбор, фильтры и сигналы `BaseTreeTable` (`reload`, `clearHighlight`, `resetSelection`) |
+| `features/naryad/workspace/useMutationRunner.js` | общая блокировка «идёт запрос» и показ ошибки сервера |
+| `features/naryad/workspace/useAsyncValue.js`, `useWorkspaceData.js` | загрузка итогов, признаков блокировки, полей строки и алгоритма |
+| `features/naryad/workspace/TreeStatusBar.jsx`, `WorkDetailsPanel.jsx` | строка итогов, параметры и алгоритм |
+| `features/naryad/workspace/layout/` | сплиттер правой панели и сохранение ширин колонок |
+| `features/naryad/workspace/naryadWorkspaceColumns.jsx`, `naryadOperIcons.js` | колонки деревьев и параметров, значки типов |
+| `features/naryad/workspace/naryadWorkspaceData.js` | фильтр `nodeId`, текст футера с итогами; детали только для одной выбранной строки |
+| `features/naryad/actions/delete/` | удалить помеченные работы, удалить блок; `deleteRules.js` |
+| `features/naryad/actions/close/` | закрыть и открыть часть; `closeRules.js` |
+| `features/naryad/actions/lock/` | блокировка и разблокировка; `lockRules.js` |
+| `features/naryad/actions/color/` | палитра (`RowColorActions`, `RowColorPalette`), очередь сохранений (`useRowColorEditing`), `naryadRowColors.js` |
 | `frontend/src/api/naryadyApi.js` | заголовок, итоги, закрытие, блокировка, удаление работ, цвет, алгоритм |
-| `frontend/src/pages/naryadPartActions.js` | подпись закрытия, блокировка и доступность удаления работ и блока |
-| `frontend/src/pages/naryadRowColors.js` | преобразование CSS RGB / Delphi BGR, фон с локальным override, доступность кнопок |
-| `frontend/src/pages/naryadWorkspaceData.js` | фильтр `nodeId`, текст футера с итогами; детали только для одной выбранной строки |
 | `mainComponent-changes/BaseTable/rowSelection.js` | расчёт набора строк для `Ctrl`/`Cmd` и `Shift` |
 | `frontend/src/App.jsx` | маршрут `/naryad/:id` |
 | `frontend/src/components/Navigation.jsx` | active для `/naryad/...` |
