@@ -89,7 +89,7 @@ public class NaryadListController {
     }
 
     /**
-     * Заголовок карточки /naryad/:id (id, nameNar, hasZadanie, hasVipolnenie).
+     * Заголовок карточки /naryad/:id (id, nameNar, описатели, replaceZadanieAllowed).
      * Только цифры, чтобы не перехватить /periods и /brigades.
      */
     @GetMapping("/{id:\\d+}")

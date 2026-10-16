@@ -21,7 +21,7 @@ import {
   readStoredSplitOrientation,
   writeStoredSplitOrientation,
 } from './naryadPageLayout.js'
-import { initialOpenPanels, toggleOpenPanels } from './naryadTabs.js'
+import { PANEL_ORDER, initialOpenPanels, isVipolneniePanelEnabled, toggleOpenPanels } from './naryadTabs.js'
 
 /** Вкладки карточки наряда — Delphi TfrmComNarZad / TfrmComNarVip. */
 const PANELS = [
@@ -44,7 +44,7 @@ const toggleGroupSx = {
     borderLeft: '1px solid',
     borderColor: 'divider',
   },
-  '& .MuiToggleButton-root': {
+    '& .MuiToggleButton-root': {
     height: '100%',
     px: 2.5,
     py: 0,
@@ -52,6 +52,10 @@ const toggleGroupSx = {
     color: 'text.primary',
     borderColor: 'divider',
     borderRadius: 0,
+    '&.Mui-disabled': {
+      color: 'text.disabled',
+      borderColor: 'divider',
+    },
   },
   '& .MuiToggleButton-root.Mui-selected': {
     color: '#1976d2',
@@ -105,7 +109,7 @@ function paneSx(visible, bothOpen, dividerSide) {
 /**
  * Карточка наряда /naryad/:id.
  * Action bar: включаемые вкладки (повторный клик по единственной переключает
- * на другую), кнопка деления, подпись наряда,
+ * на другую, если она есть), кнопка деления, подпись наряда,
  * заглушка параметров, модальный каталог и выход на список.
  * Обе вкладки при включении делят область пополам: слева-направо или
  * сверху-вниз. Направление хранится в localStorage. Панели остаются
@@ -120,13 +124,27 @@ export default function NaryadPage() {
   const [nameNar, setNameNar] = useState('')
   const [zadanieClosed, setZadanieClosed] = useState(null)
   const [vipolnenieClosed, setVipolnenieClosed] = useState(null)
+  const [hasVipolnenie, setHasVipolnenie] = useState(false)
+  const [replaceZadanieAllowed, setReplaceZadanieAllowed] = useState(false)
+  const [zadanieReloadSignal, setZadanieReloadSignal] = useState(0)
   const [catalogOpen, setCatalogOpen] = useState(false)
+
+  function applyHeader(header) {
+    setNameNar(header?.nameNar ?? '')
+    setZadanieClosed(header?.zadanieClosed ?? null)
+    setVipolnenieClosed(header?.vipolnenieClosed ?? null)
+    setHasVipolnenie(Boolean(header?.hasVipolnenie))
+    setReplaceZadanieAllowed(header?.replaceZadanieAllowed === true)
+  }
 
   useEffect(() => {
     let cancelled = false
     setNameNar('')
     setZadanieClosed(null)
     setVipolnenieClosed(null)
+    setHasVipolnenie(false)
+    setReplaceZadanieAllowed(false)
+    setZadanieReloadSignal(0)
     setOpenPanels([])
     setMountedPanels({ zad: false, vip: false })
     setCatalogOpen(false)
@@ -134,9 +152,7 @@ export default function NaryadPage() {
     fetchNaryadHeader(id)
       .then((header) => {
         if (cancelled) return
-        setNameNar(header?.nameNar ?? '')
-        setZadanieClosed(header?.zadanieClosed ?? null)
-        setVipolnenieClosed(header?.vipolnenieClosed ?? null)
+        applyHeader(header)
         const next = initialOpenPanels({
           hasZadanie: Boolean(header?.hasZadanie),
           hasVipolnenie: Boolean(header?.hasVipolnenie),
@@ -152,6 +168,8 @@ export default function NaryadPage() {
         setNameNar('')
         setZadanieClosed(null)
         setVipolnenieClosed(null)
+        setHasVipolnenie(false)
+        setReplaceZadanieAllowed(false)
         setOpenPanels(['zad'])
         setMountedPanels({ zad: true, vip: false })
       })
@@ -167,6 +185,7 @@ export default function NaryadPage() {
     }))
   }, [openPanels])
 
+  const vipEnabled = isVipolneniePanelEnabled(hasVipolnenie)
   const showZad = openPanels.includes('zad')
   const showVip = openPanels.includes('vip')
   const bothOpen = showZad && showVip
@@ -203,12 +222,18 @@ export default function NaryadPage() {
         <ToggleButtonGroup
           value={openPanels}
           onChange={(_e, next) => {
-            setOpenPanels((prev) => toggleOpenPanels(prev, next))
+            setOpenPanels((prev) => toggleOpenPanels(prev, next, {
+              available: vipEnabled ? PANEL_ORDER : ['zad'],
+            }))
           }}
           sx={toggleGroupSx}
         >
           {PANELS.map((item) => (
-            <ToggleButton key={item.value} value={item.value}>
+            <ToggleButton
+              key={item.value}
+              value={item.value}
+              disabled={item.value === 'vip' && !vipEnabled}
+            >
               {item.label}
             </ToggleButton>
           ))}
@@ -293,6 +318,12 @@ export default function NaryadPage() {
               naryadId={id}
               closed={zadanieClosed}
               onClosedChange={setZadanieClosed}
+              hasVipolnenie={hasVipolnenie}
+              externalReloadSignal={zadanieReloadSignal}
+              onVipolnenieCreated={(header) => {
+                applyHeader(header)
+                setOpenPanels(['zad', 'vip'])
+              }}
             />
           </Box>
         ) : null}
@@ -303,6 +334,11 @@ export default function NaryadPage() {
               naryadId={id}
               closed={vipolnenieClosed}
               onClosedChange={setVipolnenieClosed}
+              replaceZadanieAllowed={replaceZadanieAllowed}
+              onZadanieReplaced={(header) => {
+                applyHeader(header)
+                setZadanieReloadSignal((value) => value + 1)
+              }}
             />
           </Box>
         ) : null}

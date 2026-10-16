@@ -33,7 +33,7 @@ export function fetchNaryadyPeriods(dateMode = 0, orgUnitId) {
   )
 }
 
-/** Заголовок карточки: { id, nameNar, hasZadanie, hasVipolnenie, zadanieClosed, vipolnenieClosed }. */
+/** Заголовок карточки: id, nameNar, флаги описателей и replaceZadanieAllowed. */
 export function fetchNaryadHeader(id) {
   return requestJson(`/naryady/${id}`)
 }
@@ -101,6 +101,21 @@ export function deleteNaryadWorks(id, part, nodeIds) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ nodeIds }),
   })
+}
+
+/** actCreateCopyNarVip: пустой описатель выполнения и копия сквозных параметров. */
+export function createEmptyVipolnenie(id) {
+  return requestAction(`/naryady/${id}/vipolnenie`, { method: 'POST' })
+}
+
+/** actImportRabZad: перенос работ задания, datein остаётся пустой. */
+export function importZadanieWorks(id) {
+  return requestAction(`/naryady/${id}/vipolnenie/import-zadanie`, { method: 'POST' })
+}
+
+/** ToolButton23: заменить работы задания работами выполнения. */
+export function replaceZadanieFromVipolnenie(id) {
+  return requestAction(`/naryady/${id}/vipolnenie/replace-zadanie`, { method: 'POST' })
 }
 
 /** act*_del_block: снять блок и поднять вложенные работы на его уровень. */

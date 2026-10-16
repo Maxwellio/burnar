@@ -20,8 +20,28 @@ const TREE_INITIAL_STATE = { pagination: { pageIndex: 0, pageSize: 10000 } }
  * Задание и выполнение — разные экземпляры, чтобы ресайз колонок не тёк.
  * Чем части отличаются (url, колонки, ключи storage, набор кнопок), задаёт part из parts/.
  */
-export default function NaryadWorkspacePanel({ part, naryadId, closed, onClosedChange }) {
-  const workspace = useNaryadWorkspaceState({ naryadId, part, closed, onClosedChange })
+export default function NaryadWorkspacePanel({
+  part,
+  naryadId,
+  closed,
+  onClosedChange,
+  hasVipolnenie,
+  onVipolnenieCreated,
+  replaceZadanieAllowed,
+  onZadanieReplaced,
+  externalReloadSignal,
+}) {
+  const workspace = useNaryadWorkspaceState({
+    naryadId,
+    part,
+    closed,
+    onClosedChange,
+    hasVipolnenie,
+    onVipolnenieCreated,
+    replaceZadanieAllowed,
+    onZadanieReplaced,
+    externalReloadSignal,
+  })
   const { urls, tree, colors } = workspace
   useColumnSizingPersistence([
     [urls.tree, part.storage.treeSizing],

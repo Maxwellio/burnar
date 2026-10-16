@@ -14,14 +14,29 @@ export function initialOpenPanels({ hasZadanie, hasVipolnenie }) {
 }
 
 /**
- * Пустой next при одной открытой вкладке переключает на другую.
- * Иначе последнюю вкладку снять нельзя; порядок всегда zad → vip.
+ * Вкладка «Выполнение» включается только когда есть строка defnarvip.
+ * Пока её нет, повторный клик по заданию не переключает на выполнение.
  */
-export function toggleOpenPanels(prev, next) {
+export function isVipolneniePanelEnabled(hasVipolnenie) {
+  return hasVipolnenie === true
+}
+
+/**
+ * Пустой next при одной открытой вкладке переключает на другую,
+ * если та доступна. Иначе последнюю вкладку снять нельзя; порядок всегда zad → vip.
+ * available ограничивает вкладки, которых у наряда ещё нет.
+ */
+export function toggleOpenPanels(prev, next, options = {}) {
+  const available = Array.isArray(options.available) ? options.available : PANEL_ORDER
+  const allowed = PANEL_ORDER.filter((id) => available.includes(id))
   if (!Array.isArray(next)) return prev
   if (next.length === 0 && Array.isArray(prev) && prev.length === 1) {
-    return prev[0] === 'zad' ? ['vip'] : ['zad']
+    const other = prev[0] === 'zad' ? 'vip' : 'zad'
+    if (!allowed.includes(other)) return prev
+    return [other]
   }
   if (next.length === 0) return prev
-  return PANEL_ORDER.filter((id) => next.includes(id))
+  const picked = allowed.filter((id) => next.includes(id))
+  if (picked.length === 0) return prev
+  return picked
 }
