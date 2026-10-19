@@ -178,8 +178,9 @@ public class NaryadListService {
         params.addValue("limit", pageable.getPageSize());
         params.addValue("offset", pageable.getOffset());
 
+        // Колонка «Код» — d.key. На главной по умолчанию по возрастанию.
         String listSql = SELECT_SQL + FROM_SQL + where
-                + "ORDER BY d.key DESC "
+                + "ORDER BY d.key ASC "
                 + "LIMIT :limit OFFSET :offset";
         List<NaryadListDto> content = jdbc.query(listSql, params, ROW_MAPPER);
         return new PageImpl<>(content, pageable, total);
