@@ -72,6 +72,17 @@ export default function NaryadWorkspacePanel({
             minWidth: 0,
             display: 'flex',
             overflow: 'hidden',
+            // BaseTreeTable/BaseTable ставят таблице min-width: 100% (min-w-full).
+            // При table-layout: fixed свободная ширина панели делится между колонками,
+            // поэтому заданная ширина не сжимается ниже доли панели. min-width: 0
+            // оставляет ширину равной сумме колонок; дальше ресайз упирается только
+            // в minSize пакета (30px).
+            '& table': {
+              minWidth: 0,
+            },
+            '& th, & td': {
+              minWidth: 0,
+            },
           }}
         >
           <AxiosProvider baseapi="/api">
