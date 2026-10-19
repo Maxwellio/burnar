@@ -14,6 +14,12 @@ const LEVEL_INDENT = 4
 const EXPANDER_SIZE = 30
 const OPER_ICON_SIZE = 24
 
+/**
+ * Потолок ресайза. В mainComponent defaultColumn.maxSize = 500.
+ * minSize не задаём: остаётся пакетный минимум 30.
+ */
+const COLUMN_MAX_SIZE = 4000
+
 /** Имена из naryadOperIconName → компоненты lucide-react 0.469.0. */
 const OPER_TYPE_ICONS = {
   calculator: Calculator,
@@ -110,6 +116,7 @@ function col(prefix, accessorKey, header, size, extra = {}) {
     accessorKey,
     header,
     size,
+    maxSize: COLUMN_MAX_SIZE,
     enableColumnFilter: false,
     ...extra,
   }
@@ -121,6 +128,7 @@ function group(prefix, id, header, columns) {
     id: `${prefix}_${id}`,
     header,
     columns,
+    maxSize: COLUMN_MAX_SIZE,
   }
 }
 
