@@ -42,7 +42,7 @@
 | Двойной клик по строке | тот же `handleOpen`; `BaseTable` передаёт `row.original.id` |
 | «Удалить» | `disabled` без выбранной строки; обработчика пока нет |
 
-`id` = `defnar.key` = `NaryadListDto.id` / `codNar`.
+`id` = `defnar.key` = `NaryadListDto.id` / `codNar`. Список на главной по умолчанию идёт по этому коду по возрастанию.
 
 Маршрут: `/naryad/:id`. Прямой URL в монолите отдаёт SPA через `SpaForwardController` (`/naryad`, `/naryad/**`).
 Заголовок карточки: `GET /api/naryady/{id}` → `{ id, nameNar, hasZadanie, hasVipolnenie, zadanieClosed, vipolnenieClosed }` (тот же ACL, что у списка; 404 если нет доступа). Флаги закрытия nullable и управляют действиями только своей части.
