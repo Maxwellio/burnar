@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
-import { initialOpenPanels, toggleOpenPanels } from './naryadTabs.js'
+import { initialOpenPanels, isVipolneniePanelEnabled, toggleOpenPanels } from './naryadTabs.js'
 
 describe('initialOpenPanels', () => {
   it('opens both when defnarzad and defnarvip exist', () => {
@@ -49,5 +49,21 @@ describe('toggleOpenPanels', () => {
 
   it('allows closing one panel when both are open', () => {
     assert.deepEqual(toggleOpenPanels(['zad', 'vip'], ['vip']), ['vip'])
+  })
+
+  it('does not open vipolnenie while that part does not exist', () => {
+    const onlyZadanie = { available: ['zad'] }
+    assert.deepEqual(toggleOpenPanels(['zad'], [], onlyZadanie), ['zad'])
+    assert.deepEqual(toggleOpenPanels(['zad'], ['zad', 'vip'], onlyZadanie), ['zad'])
+    assert.deepEqual(toggleOpenPanels(['zad'], ['vip'], onlyZadanie), ['zad'])
+  })
+})
+
+describe('isVipolneniePanelEnabled', () => {
+  it('enables the vipolnenie tab only after defnarvip exists', () => {
+    assert.equal(isVipolneniePanelEnabled(true), true)
+    assert.equal(isVipolneniePanelEnabled(false), false)
+    assert.equal(isVipolneniePanelEnabled(null), false)
+    assert.equal(isVipolneniePanelEnabled(undefined), false)
   })
 })

@@ -132,7 +132,7 @@ burnar.spr_eks (id, parent_id, name, name_short)       справочник ЭК
 | `burnar.VIPOLNENIE_UN_LOCK_OPER` | `akey bigint, anarkey int` | разблокировка работы | `actUnLockOper` | **нет** |
 | `burnar.ZADANIE_TO_VIPOLNENIE` | `nkey int, datein date` | перенос всех работ из задания в выполнение | `actImportRabZad` | **нет** |
 | `burnar.SetNextDateOperVIP` | `key, narkey` (вызов строкой `CALL ...`) | пересчёт дат начала последующих работ → `burnar.tkeydate` | `actCalcOperAndSaveRes`, шаг 4 | **нет** |
-| `burnar.Copy_Vip_to_Zad` | `nkey int` (именованный вызов `nkey => ...`) | замена наряда-задания наряд-выполнением | `ToolButton23Click`, только при `frmMain.Org ∈ {1, 8}` | **нет** |
+| `burnar.Copy_Vip_to_Zad` | `nkey int` (именованный вызов `nkey => ...`) | замена наряда-задания наряд-выполнением | `ToolButton23Click`; клик и процедура орг. единицу не проверяют. В работающем Delphi кнопку видят админ и обычный пользователь (`FormCreate` в исходнике ставит `Visible` при `frmMain.Org ∈ {1, 8}`) | **нет** |
 
 ### Объявлены в `.dfm`, но не вызываются
 
