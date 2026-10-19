@@ -358,7 +358,6 @@ public class NaryadWorkspaceService {
     static final String ZADANIE_HAS_NO_WORKS = "В задании нет работ";
     static final String VIPOLNENIE_HAS_WORKS = "В выполнении уже есть работы";
     static final String VIPOLNENIE_HAS_LOCKED = "Импорт недоступен: есть заблокированные работы";
-    static final String REPLACE_NOT_ALLOWED = "Замена задания недоступна";
 
     static final String ZADANIE_HAS_ROOTS_SQL =
             "SELECT EXISTS (SELECT 1 FROM burnar.zadanie_oper o "
@@ -539,12 +538,12 @@ public class NaryadWorkspaceService {
         callZadanieToVipolnenie(naryadId);
     }
 
-    /** ToolButton23. Закрытие выполнения не мешает замене. Орг. единица — 1 или 8. */
+    /**
+     * ToolButton23. Кнопкой пользуются админ и обычный пользователь.
+     * copy_vip_to_zad орг. единицу не проверяет. Закрытие выполнения замене не мешает.
+     */
     public NaryadHeaderDto replaceZadanieFromVipolnenie(int naryadId) {
         NaryadHeaderDto header = naryadListService.findHeader(naryadId);
-        if (!naryadListService.mayReplaceZadanie()) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, REPLACE_NOT_ALLOWED);
-        }
         if (!Boolean.TRUE.equals(header.getHasZadanie()) || !Boolean.TRUE.equals(header.getHasVipolnenie())) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Naryad descriptor not found");
         }

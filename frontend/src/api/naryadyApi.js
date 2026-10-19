@@ -33,7 +33,7 @@ export function fetchNaryadyPeriods(dateMode = 0, orgUnitId) {
   )
 }
 
-/** Заголовок карточки: id, nameNar, флаги описателей и replaceZadanieAllowed. */
+/** Заголовок карточки: id, nameNar, флаги описателей и закрытия. */
 export function fetchNaryadHeader(id) {
   return requestJson(`/naryady/${id}`)
 }

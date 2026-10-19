@@ -186,32 +186,11 @@ public class NaryadListService {
     }
 
     /**
-     * frmMain.Org ∈ {1, 8}: кнопка замены задания выполнением.
-     * Пустой id и любая другая орг. единица кнопку не получают.
-     */
-    static boolean orgMayReplaceZadanie(Integer orgId) {
-        return orgId != null && (orgId == 1 || orgId == 8);
-    }
-
-    /** Та же орг. единица, что qrUser.org при логине: активная карьера. */
-    public boolean mayReplaceZadanie() {
-        String username = currentUsername();
-        if (!StringUtils.hasText(username)) {
-            return false;
-        }
-        return orgAccessService.resolveUserOrgId(username)
-                .map(NaryadListService::orgMayReplaceZadanie)
-                .orElse(false);
-    }
-
-    /**
      * Карточка: код, имя и флаги описателей с тем же ACL, что у списка (без cut по orgUnitId).
      * hasZadanie / hasVipolnenie — EXISTS в defnarzad / defnarvip (как qrCountDefNarZad / Vip = 1).
      * Нет строки / нет доступа — 404, без различия «не существует» и «чужой».
-     * replaceZadanieAllowed — орг. единица текущего пользователя 1 или 8.
      */
     public NaryadHeaderDto findHeader(int id) {
-        boolean replaceAllowed = mayReplaceZadanie();
         MapSqlParameterSource params = new MapSqlParameterSource("id", id);
         StringBuilder where = new StringBuilder("WHERE d.nartype = 1 AND d.key = :id ");
         appendAcl(where, params, null);
@@ -227,7 +206,6 @@ public class NaryadListService {
             dto.setHasVipolnenie(rs.getBoolean("has_vipolnenie"));
             dto.setZadanieClosed((Boolean) rs.getObject("zadanie_closed"));
             dto.setVipolnenieClosed((Boolean) rs.getObject("vipolnenie_closed"));
-            dto.setReplaceZadanieAllowed(replaceAllowed);
             return dto;
         });
         if (rows.isEmpty()) {

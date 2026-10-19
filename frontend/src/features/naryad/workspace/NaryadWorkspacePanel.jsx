@@ -27,7 +27,6 @@ export default function NaryadWorkspacePanel({
   onClosedChange,
   hasVipolnenie,
   onVipolnenieCreated,
-  replaceZadanieAllowed,
   onZadanieReplaced,
   externalReloadSignal,
 }) {
@@ -38,7 +37,6 @@ export default function NaryadWorkspacePanel({
     onClosedChange,
     hasVipolnenie,
     onVipolnenieCreated,
-    replaceZadanieAllowed,
     onZadanieReplaced,
     externalReloadSignal,
   })

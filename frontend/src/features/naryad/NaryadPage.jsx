@@ -125,7 +125,6 @@ export default function NaryadPage() {
   const [zadanieClosed, setZadanieClosed] = useState(null)
   const [vipolnenieClosed, setVipolnenieClosed] = useState(null)
   const [hasVipolnenie, setHasVipolnenie] = useState(false)
-  const [replaceZadanieAllowed, setReplaceZadanieAllowed] = useState(false)
   const [zadanieReloadSignal, setZadanieReloadSignal] = useState(0)
   const [catalogOpen, setCatalogOpen] = useState(false)
 
@@ -134,7 +133,6 @@ export default function NaryadPage() {
     setZadanieClosed(header?.zadanieClosed ?? null)
     setVipolnenieClosed(header?.vipolnenieClosed ?? null)
     setHasVipolnenie(Boolean(header?.hasVipolnenie))
-    setReplaceZadanieAllowed(header?.replaceZadanieAllowed === true)
   }
 
   useEffect(() => {
@@ -143,7 +141,6 @@ export default function NaryadPage() {
     setZadanieClosed(null)
     setVipolnenieClosed(null)
     setHasVipolnenie(false)
-    setReplaceZadanieAllowed(false)
     setZadanieReloadSignal(0)
     setOpenPanels([])
     setMountedPanels({ zad: false, vip: false })
@@ -169,7 +166,6 @@ export default function NaryadPage() {
         setZadanieClosed(null)
         setVipolnenieClosed(null)
         setHasVipolnenie(false)
-        setReplaceZadanieAllowed(false)
         setOpenPanels(['zad'])
         setMountedPanels({ zad: true, vip: false })
       })
@@ -334,7 +330,6 @@ export default function NaryadPage() {
               naryadId={id}
               closed={vipolnenieClosed}
               onClosedChange={setVipolnenieClosed}
-              replaceZadanieAllowed={replaceZadanieAllowed}
               onZadanieReplaced={(header) => {
                 applyHeader(header)
                 setZadanieReloadSignal((value) => value + 1)

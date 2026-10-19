@@ -20,7 +20,6 @@ import { useAlgorithm, useLockFlags, useTotals, useWorkAction } from './useWorks
  * @param {(closed: boolean) => void} [args.onClosedChange]
  * @param {boolean} [args.hasVipolnenie]
  * @param {(header: object) => void} [args.onVipolnenieCreated]
- * @param {boolean} [args.replaceZadanieAllowed]
  * @param {(header: object) => void} [args.onZadanieReplaced]
  * @param {number} [args.externalReloadSignal] страница просит перечитать дерево
  */
@@ -31,7 +30,6 @@ export default function useNaryadWorkspaceState({
   onClosedChange,
   hasVipolnenie = false,
   onVipolnenieCreated,
-  replaceZadanieAllowed = false,
   onZadanieReplaced,
   externalReloadSignal = 0,
 }) {
@@ -42,7 +40,6 @@ export default function useNaryadWorkspaceState({
   const mutation = useMutationRunner(showAlert)
   const getClosed = useLatest(closed)
   const getHasVipolnenie = useLatest(hasVipolnenie === true)
-  const getReplaceZadanieAllowed = useLatest(replaceZadanieAllowed === true)
   const { detailId, reloadSignal } = tree
 
   const totals = useTotals(naryadId, part.id, reloadSignal)
@@ -84,8 +81,6 @@ export default function useNaryadWorkspaceState({
     hasVipolnenie: hasVipolnenie === true,
     getHasVipolnenie,
     onVipolnenieCreated,
-    replaceZadanieAllowed: replaceZadanieAllowed === true,
-    getReplaceZadanieAllowed,
     onZadanieReplaced,
     getLockFlags,
     getTotals,

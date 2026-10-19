@@ -7,7 +7,7 @@ import { useNaryadWorkspace } from './NaryadWorkspaceContext.jsx'
  * Действие — либо кнопка { id, label | getLabel, icon | getIcon, isEnabled, run },
  * где функции получают контекст вкладки, либо { id, Component } со своим
  * интерфейсом (палитра, диалог), который сам берёт контекст.
- * isVisible скрывает кнопку целиком (замена задания видна только org 1 и 8).
+ * isVisible прячет кнопку целиком.
  */
 export default function WorkspaceActions({ actions }) {
   const ctx = useNaryadWorkspace()
