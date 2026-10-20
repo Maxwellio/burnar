@@ -4,12 +4,10 @@ import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.sql.Timestamp;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
-import java.time.temporal.ChronoUnit;
 import java.util.Objects;
 
 /**
@@ -54,14 +52,14 @@ public final class NaryadSkvParams {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, BEG_DATE_REQUIRED);
         }
         try {
-            return LocalDateTime.parse(raw.trim()).truncatedTo(ChronoUnit.MINUTES);
+            return toMinutes(LocalDateTime.parse(raw.trim()));
         } catch (DateTimeParseException ex) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, BEG_DATE_INVALID);
         }
     }
 
     public static String formatBegDate(Timestamp value) {
-        return value == null ? null : value.toLocalDateTime().truncatedTo(ChronoUnit.MINUTES).format(ISO_MINUTES);
+        return value == null ? null : toMinutes(value.toLocalDateTime()).format(ISO_MINUTES);
     }
 
     public static String formatClosedDate(Timestamp value) {
@@ -72,14 +70,15 @@ public final class NaryadSkvParams {
         if (current == null) {
             return false;
         }
-        return current.toLocalDateTime().truncatedTo(ChronoUnit.MINUTES).equals(next);
+        return toMinutes(current.toLocalDateTime()).equals(next);
     }
 
+    @SuppressWarnings("deprecation") // константа BigDecimal: округление half-up до 4 знаков
     public static BigDecimal normalizeVal(BigDecimal value) {
         if (value == null) {
             return null;
         }
-        BigDecimal scaled = value.setScale(VAL_SCALE, RoundingMode.HALF_UP);
+        BigDecimal scaled = value.setScale(VAL_SCALE, BigDecimal.ROUND_HALF_UP);
         if (scaled.abs().compareTo(VAL_LIMIT) >= 0) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, VAL_OUT_OF_RANGE);
         }
@@ -118,6 +117,11 @@ public final class NaryadSkvParams {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, PARAM_NOT_FOUND);
         }
         return parcode.stripTrailingZeros().toPlainString() + ":" + prnum.stripTrailingZeros().toPlainString();
+    }
+
+    /** Секунды и доли секунды отбрасываются: маска даты в Delphi хранит минуты. */
+    private static LocalDateTime toMinutes(LocalDateTime value) {
+        return value.withSecond(0).withNano(0);
     }
 
     private static boolean sameNumber(BigDecimal a, BigDecimal b) {
