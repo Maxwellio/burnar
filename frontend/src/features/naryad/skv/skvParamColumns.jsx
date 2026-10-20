@@ -1,6 +1,8 @@
+import { useEffect, useState } from 'react'
 import Box from '@mui/material/Box'
+import MenuItem from '@mui/material/MenuItem'
+import Select from '@mui/material/Select'
 import TextField from '@mui/material/TextField'
-import { DynamicSelect } from 'mainComponent'
 import { useSkvEditor } from './SkvEditorContext.jsx'
 import { sanitizeSkvNumberInput, skvCellValue } from './skvRules.js'
 
@@ -19,21 +21,48 @@ function CellEditor({ children }) {
   )
 }
 
+/**
+ * Список значений грузится через loadValues окна, а не DynamicSelect: тот отменяет
+ * запрос при размонтировании, и перехватчик AxiosProvider принимает отмену
+ * за сетевую ошибку и уводит на /#/login.
+ */
 function ZnvalCell({ row }) {
-  const { readOnly, draft, setCell, valuesUrl } = useSkvEditor()
+  const { readOnly, draft, setCell, loadValues } = useSkvEditor()
   const original = row.original
+  const [options, setOptions] = useState(null)
+
+  useEffect(() => {
+    if (readOnly) return undefined
+    let active = true
+    loadValues(original.parcode)
+      .then((items) => { if (active) setOptions(items) })
+      .catch(() => { if (active) setOptions([]) })
+    return () => { active = false }
+  }, [readOnly, loadValues, original.parcode])
+
   if (readOnly) return original.znnm ?? ''
-  const value = skvCellValue(draft, original, 'znval')
+  const value = skvCellValue(draft, original, 'znval') ?? ''
+  const known = options?.some((item) => String(item.id) === value) ?? false
   return (
     <CellEditor>
-      <DynamicSelect
-        contentApi={valuesUrl}
-        params={{ parcode: original.parcode }}
-        value={value ?? ''}
-        onChange={(next) => setCell(original, 'znval', next === '' ? null : next)}
+      <Select
+        value={known ? value : ''}
+        onChange={(event) => setCell(original, 'znval', event.target.value === '' ? null : event.target.value)}
+        variant="standard"
         size="small"
-        aria-label={`Значение: ${original.nm ?? ''}`}
-      />
+        fullWidth
+        displayEmpty
+        disabled={options == null}
+        inputProps={{ 'aria-label': `Значение: ${original.nm ?? ''}` }}
+        sx={inputSx}
+      >
+        <MenuItem value="">
+          <em>{options == null ? 'Загрузка…' : 'Не задано'}</em>
+        </MenuItem>
+        {(options ?? []).map((item) => (
+          <MenuItem key={item.id} value={String(item.id)}>{item.nm}</MenuItem>
+        ))}
+      </Select>
     </CellEditor>
   )
 }

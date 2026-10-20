@@ -140,6 +140,11 @@ export function fetchNaryadSkvHeader(id, part) {
   return requestAction(`/naryady/${id}/${part}/skv`)
 }
 
+/** Пункты справочного значения параметра [{ id, nm }]; сохранённое значение всегда в списке. */
+export function fetchNaryadSkvValues(id, part, parcode) {
+  return requestAction(`/naryady/${id}/${part}/skv/values${buildQuery({ parcode })}`)
+}
+
 /** Дата начала работ и изменённые строки сквозных параметров: { dateChanged, paramsChanged }. */
 export function saveNaryadSkv(id, part, payload) {
   return requestAction(`/naryady/${id}/${part}/skv`, {
