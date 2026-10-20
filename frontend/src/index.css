@@ -9,12 +9,3 @@ body,
   margin: 0;
   overflow: hidden;
 }
-
-/* Колонки часов и минут DateTimePicker прокручиваются, полоса не рисуется. */
-.MuiMultiSectionDigitalClockSection-root {
-  scrollbar-width: none;
-}
-
-.MuiMultiSectionDigitalClockSection-root::-webkit-scrollbar {
-  display: none;
-}

@@ -15,8 +15,15 @@ import Typography from '@mui/material/Typography'
 import Close from '@mui/icons-material/Close'
 import InfoOutlined from '@mui/icons-material/InfoOutlined'
 import OpenInNew from '@mui/icons-material/OpenInNew'
-import { AxiosProvider, BaseTable, DynamicDatePicker } from 'mainComponent'
+import { LocalizationProvider } from '@mui/x-date-pickers'
+import { DesktopDateTimePicker } from '@mui/x-date-pickers/DesktopDateTimePicker'
+import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns'
+import { ruRU } from '@mui/x-date-pickers/locales'
+import { format, isValid, parseISO } from 'date-fns'
+import { ru } from 'date-fns/locale'
+import { AxiosProvider, BaseTable } from 'mainComponent'
 import { fetchNaryadSkvHeader, fetchNaryadSkvValues, saveNaryadSkv } from '../../../api/naryadyApi.js'
+import useColumnSizingPersistence from '../workspace/layout/useColumnSizingPersistence.js'
 import DraggableDialog from '../../../components/DraggableDialog'
 import { useAlert, useConfirm } from '../../../context/ConfirmContext.jsx'
 import { SkvEditorProvider } from './SkvEditorContext.jsx'
@@ -38,6 +45,51 @@ export const SKV_DIALOG_WIDTH = 1100
 export const SKV_DIALOG_HEIGHT_RATIO = 0.7
 
 const noopSetFilters = () => {}
+
+/** ::after в колонке MUI добавляет пустую прокрутку почти на высоту списка. */
+const clockSectionSx = {
+  '& .MuiMultiSectionDigitalClockSection-root': {
+    scrollbarWidth: 'none',
+    msOverflowStyle: 'none',
+    '&::-webkit-scrollbar': { display: 'none' },
+    '&::after': { content: 'none', height: 0 },
+  },
+}
+
+function SkvBegDateField({ value, onChange, readOnly }) {
+  return (
+    <LocalizationProvider
+      dateAdapter={AdapterDateFns}
+      adapterLocale={ru}
+      localeText={ruRU.components.MuiLocalizationProvider.defaultProps.localeText}
+    >
+      <DesktopDateTimePicker
+        label="Дата и время начала работ"
+        value={value ? parseISO(value) : null}
+        onChange={(next) => {
+          onChange(next && isValid(next) ? format(next, "yyyy-MM-dd'T'HH:mm:ss") : null)
+        }}
+        format="dd.MM.yyyy HH:mm"
+        ampm={false}
+        views={['year', 'month', 'day', 'hours', 'minutes']}
+        timeSteps={{ hours: 1, minutes: 1 }}
+        readOnly={readOnly}
+        disabled={readOnly}
+        minDateTime={new Date(2000, 0, 1)}
+        maxDateTime={new Date(2101, 0, 1)}
+        slotProps={{
+          textField: {
+            size: 'small',
+            fullWidth: true,
+            InputLabelProps: { shrink: true },
+          },
+          popper: { sx: clockSectionSx },
+          desktopPaper: { sx: clockSectionSx },
+        }}
+      />
+    </LocalizationProvider>
+  )
+}
 
 const titleButtonSx = { color: 'text.secondary' }
 
@@ -75,6 +127,7 @@ export default function SkvParamsDialog({
   const partId = part.id
   const titleId = `skv-dialog-title-${partId}`
   const paramsUrl = `/naryady/${naryadId}/${partId}/skv/params`
+  useColumnSizingPersistence([[paramsUrl, part.skv.columnSizing]])
   const valueRequests = useRef(new Map())
   const readOnly = header?.readOnly === true
   const dirty = isSkvDirty({ savedBegDate: header?.begDate, begDate, draft })
@@ -220,16 +273,10 @@ export default function SkvParamsDialog({
           <>
             <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2, flexWrap: 'wrap', pt: 1, flexShrink: 0 }}>
               <Box sx={{ width: 240 }}>
-                <DynamicDatePicker
-                  label="Дата и время начала работ"
+                <SkvBegDateField
                   value={begDate}
                   onChange={setBegDate}
-                  format="dd.MM.yyyy HH:mm"
-                  ampm={false}
-                  views={['year', 'month', 'day', 'hours', 'minutes']}
-                  size="small"
                   readOnly={readOnly || saving}
-                  disabled={readOnly || saving}
                 />
                 {!begDate && !readOnly ? (
                   <Typography variant="caption" color="error" sx={{ display: 'block', mt: 0.5, ml: 1.5 }}>

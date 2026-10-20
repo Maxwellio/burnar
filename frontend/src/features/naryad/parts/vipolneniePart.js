@@ -37,6 +37,7 @@ export const vipolneniePart = {
   skv: {
     title: 'Сквозные параметры выполнения (факт)',
     openLabel: 'Сквозные параметры выполнения',
+    columnSizing: COLUMN_SIZING_KEYS.skvVipolnenie,
   },
   actions: [
     openSkvParamsAction,

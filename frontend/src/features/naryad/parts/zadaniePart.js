@@ -32,6 +32,7 @@ export const zadaniePart = {
   skv: {
     title: 'Сквозные параметры задания (план)',
     openLabel: 'Сквозные параметры задания',
+    columnSizing: COLUMN_SIZING_KEYS.skvZadanie,
   },
   actions: [
     openSkvParamsAction,
