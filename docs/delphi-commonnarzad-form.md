@@ -174,7 +174,7 @@ lookup-комбо), плюс 8 `TPgQuery` и 15 `TPgStoredProc` (см. db-фай
 
 | Action | Hint / ShortCut | Обработчик | Что делает |
 |--------|-----------------|------------|------------|
-| `actOpenSkvZad` | Сквозные параметры, `Ctrl+Y` | `actOpenSkvZadExecute` | `TfrmSkvZadVar.CreateEx(Self, keynar)`, MDI-child |
+| `actOpenSkvZad` | Сквозные параметры, `Ctrl+Y` | `actOpenSkvZadExecute` | `TfrmSkvZadVar.CreateEx(Self, keynar)`, MDI-child; веб — окно сквозных параметров, см. [naryady-notes.md §7](./naryady-notes.md#7-сквозные-параметры) |
 | `actCreateCopyNarVip` | Создать пустое наряд-выполнение, `Ctrl+D` | `tbCreateCopyNarVipClick` | `CALL burnar.VIPOLNENIE_CREATE(keynar)` → открывает `TfrmComNarVip.OpenNar` |
 | `actExpandNodes` | Свернуть/развернуть все узлы, `Ctrl+E` | `tbExpandNodesClick` | `FullExpand` / `FullCollapse` (кнопка-переключатель) |
 | `actAutoWidthCols` | Подобрать ширины колонок, `Ctrl+L` | `tbAutoWidthColsClick` | `SetAutoWidthAllColumns` |
