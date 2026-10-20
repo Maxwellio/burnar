@@ -33,7 +33,7 @@ import {
   skvNeedsResetConfirm,
 } from './skvRules.js'
 
-export const SKV_DIALOG_WIDTH = 760
+export const SKV_DIALOG_WIDTH = 1100
 export const SKV_DIALOG_HEIGHT_RATIO = 0.7
 
 const noopSetFilters = () => {}
@@ -187,16 +187,14 @@ export default function SkvParamsDialog({
           {`${part.skv.title}: ${naryadId}`}
         </Typography>
         {otherPart ? (
-          <Tooltip title={`Открыть рядом: ${otherPart.skv.openLabel.toLowerCase()}`}>
-            <Button
-              size="small"
-              variant="outlined"
-              startIcon={<OpenInNew />}
+          <Tooltip title={otherPart.skv.openLabel}>
+            <IconButton
+              aria-label={otherPart.skv.openLabel}
               onClick={onOpenOther}
-              sx={{ textTransform: 'none', flexShrink: 0 }}
+              sx={titleButtonSx}
             >
-              {otherPart.skv.openLabel}
-            </Button>
+              <OpenInNew />
+            </IconButton>
           </Tooltip>
         ) : null}
         <Tooltip title="Закрыть">
@@ -262,7 +260,17 @@ export default function SkvParamsDialog({
                 Числовое значение введено неверно
               </Alert>
             ) : null}
-            <Box sx={{ flex: 1, minHeight: 0 }}>
+            <Box
+              sx={{
+                flex: 1,
+                minHeight: 0,
+                minWidth: 0,
+                width: '100%',
+                overflow: 'hidden',
+                display: 'flex',
+                '& > div': { flex: 1, minWidth: 0, minHeight: 0 },
+              }}
+            >
               <SkvEditorProvider value={editor}>
                 <AxiosProvider baseapi="/api">
                   <BaseTable

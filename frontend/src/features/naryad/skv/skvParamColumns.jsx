@@ -53,12 +53,13 @@ function ZnvalCell({ row }) {
         fullWidth
         displayEmpty
         disabled={options == null}
+        renderValue={(selected) => (
+          options?.find((item) => String(item.id) === String(selected))?.nm ?? ''
+        )}
         inputProps={{ 'aria-label': `Значение: ${original.nm ?? ''}` }}
         sx={inputSx}
       >
-        <MenuItem value="">
-          <em>{options == null ? 'Загрузка…' : 'Не задано'}</em>
-        </MenuItem>
+        <MenuItem value="">{'\u00a0'}</MenuItem>
         {(options ?? []).map((item) => (
           <MenuItem key={item.id} value={String(item.id)}>{item.nm}</MenuItem>
         ))}
@@ -80,6 +81,7 @@ function ValCell({ row }) {
         variant="standard"
         size="small"
         fullWidth
+        InputProps={{ disableUnderline: true }}
         inputProps={{ inputMode: 'decimal', 'aria-label': `Числовое: ${original.nm ?? ''}` }}
         sx={inputSx}
       />
@@ -100,6 +102,7 @@ function ValstrCell({ row }) {
         variant="standard"
         size="small"
         fullWidth
+        InputProps={{ disableUnderline: true }}
         inputProps={{ maxLength: VALSTR_MAX_LENGTH, 'aria-label': `Строковое: ${original.nm ?? ''}` }}
         sx={inputSx}
       />
