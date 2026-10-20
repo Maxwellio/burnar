@@ -14,7 +14,7 @@ const WINDOWS_BELOW_MODAL = 20
  * @param {Record<string, object>} props.parts описания частей по id
  * @param {(partId: string) => string|null} props.otherPartId чьё окно можно открыть рядом
  */
-export default function SkvParamsWindows({ naryadId, skvWindows, parts, otherPartId, onSaved }) {
+export default function SkvParamsWindows({ naryadId, nameNar, skvWindows, parts, otherPartId, onSaved }) {
   const theme = useTheme()
   const base = theme.zIndex.modal - WINDOWS_BELOW_MODAL
   const { windows, open, close, activate, paperRef } = skvWindows
@@ -29,6 +29,7 @@ export default function SkvParamsWindows({ naryadId, skvWindows, parts, otherPar
           <SkvParamsDialog
             key={item.partId}
             naryadId={naryadId}
+            nameNar={nameNar}
             part={part}
             otherPart={otherId ? parts[otherId] : null}
             initialPosition={item.position}

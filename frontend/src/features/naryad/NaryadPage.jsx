@@ -379,6 +379,7 @@ export default function NaryadPage() {
 
       <SkvParamsWindows
         naryadId={id}
+        nameNar={nameNar}
         skvWindows={skvWindows}
         parts={PARTS_BY_ID}
         otherPartId={skvOtherPartId}

@@ -13,6 +13,7 @@ import TextField from '@mui/material/TextField'
 import Tooltip from '@mui/material/Tooltip'
 import Typography from '@mui/material/Typography'
 import Close from '@mui/icons-material/Close'
+import InfoOutlined from '@mui/icons-material/InfoOutlined'
 import OpenInNew from '@mui/icons-material/OpenInNew'
 import { AxiosProvider, BaseTable, DynamicDatePicker } from 'mainComponent'
 import { fetchNaryadSkvHeader, fetchNaryadSkvValues, saveNaryadSkv } from '../../../api/naryadyApi.js'
@@ -51,6 +52,7 @@ const titleButtonSx = { color: 'text.secondary' }
  */
 export default function SkvParamsDialog({
   naryadId,
+  nameNar,
   part,
   otherPart,
   initialPosition,
@@ -184,7 +186,7 @@ export default function SkvParamsDialog({
         sx={{ display: 'flex', alignItems: 'center', gap: 1, pr: 1, py: 1.25 }}
       >
         <Typography component="span" variant="h6" noWrap sx={{ flex: 1, minWidth: 0, fontSize: '1.1rem' }}>
-          {`${part.skv.title}: ${naryadId}`}
+          {`${part.skv.title}: ${nameNar || naryadId}`}
         </Typography>
         {otherPart ? (
           <Tooltip title={otherPart.skv.openLabel}>
@@ -247,14 +249,20 @@ export default function SkvParamsDialog({
               <FormControlLabel
                 control={<Checkbox checked={header.closed === true} disabled size="small" />}
                 label="Закрыто от изменений"
-                sx={{ mt: 0.5 }}
+                sx={{ mt: 0.5, mr: 0 }}
               />
+              {readOnly ? (
+                <Tooltip title={`${header.readOnlyReason}. Сквозные параметры доступны только для просмотра.`}>
+                  <IconButton
+                    aria-label={header.readOnlyReason}
+                    size="small"
+                    sx={{ mt: 0.5, color: 'text.secondary' }}
+                  >
+                    <InfoOutlined fontSize="small" />
+                  </IconButton>
+                </Tooltip>
+              ) : null}
             </Box>
-            {readOnly ? (
-              <Alert severity="info" sx={{ flexShrink: 0, py: 0 }}>
-                {`${header.readOnlyReason}. Сквозные параметры доступны только для просмотра.`}
-              </Alert>
-            ) : null}
             {badNumbers ? (
               <Alert severity="warning" sx={{ flexShrink: 0, py: 0 }}>
                 Числовое значение введено неверно

@@ -99,6 +99,15 @@ export function skvCellValue(draft, row, field) {
   return (draft[key]?.values ?? skvRowValues(row))[field]
 }
 
+const UNCHANGED = { znval: false, val: false, valstr: false }
+
+/** Какие поля строки отличаются от исходных. Пустой черновик — ни одно. */
+export function skvChangedFields(draft, row) {
+  const entry = draft[skvRowKey(row)]
+  if (!entry) return UNCHANGED
+  return changedFields(entry)
+}
+
 function changedFields(entry) {
   const { original, values } = entry
   return {

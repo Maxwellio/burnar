@@ -12,6 +12,7 @@ import {
   sideBySidePosition,
   skvBegDateChanged,
   skvCellValue,
+  skvChangedFields,
   skvNeedsResetConfirm,
 } from './skvRules.js'
 
@@ -52,6 +53,16 @@ describe('draft', () => {
     assert.equal(changedSkvRows(draft).length, 1)
     draft = applySkvEdit(draft, row, 'val', '12,50')
     assert.equal(changedSkvRows(draft).length, 0)
+  })
+
+  it('marks only the fields that differ from the original', () => {
+    assert.deepEqual(skvChangedFields({}, row), { znval: false, val: false, valstr: false })
+    const draft = applySkvEdit({}, row, 'val', '13')
+    assert.deepEqual(skvChangedFields(draft, row), { znval: false, val: true, valstr: false })
+    assert.deepEqual(
+      skvChangedFields(applySkvEdit(draft, row, 'val', '12,50'), row),
+      { znval: false, val: false, valstr: false },
+    )
   })
 
   it('asks about zeroed norms only for znval and val', () => {
