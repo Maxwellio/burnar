@@ -268,7 +268,8 @@ export default function SkvParamsDialog({
                 width: '100%',
                 overflow: 'hidden',
                 display: 'flex',
-                '& > div': { flex: 1, minWidth: 0, minHeight: 0 },
+                flexDirection: 'column',
+                '& .overflow-y-auto': { overflowX: 'auto' },
               }}
             >
               <SkvEditorProvider value={editor}>
@@ -279,6 +280,13 @@ export default function SkvParamsDialog({
                     filters={[]}
                     setFilters={noopSetFilters}
                     reRenderSignal={tableSignal}
+                    defaultColumn={{
+                      enableColumnFilter: false,
+                      size: 150,
+                      minSize: 40,
+                      maxSize: 4000,
+                    }}
+                    style={{ flex: 1, minWidth: 0, minHeight: 0, width: '100%' }}
                   />
                 </AxiosProvider>
               </SkvEditorProvider>

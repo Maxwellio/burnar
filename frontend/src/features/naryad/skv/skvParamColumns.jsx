@@ -51,6 +51,7 @@ function ZnvalCell({ row }) {
         variant="standard"
         size="small"
         fullWidth
+        disableUnderline
         displayEmpty
         disabled={options == null}
         renderValue={(selected) => (
