@@ -16,6 +16,8 @@ import CatalogDialog from '../../pages/CatalogDialog.jsx'
 import NaryadWorkspacePanel from './workspace/NaryadWorkspacePanel.jsx'
 import { vipolneniePart } from './parts/vipolneniePart.js'
 import { zadaniePart } from './parts/zadaniePart.js'
+import SkvParamsWindows from './skv/SkvParamsWindows.jsx'
+import useSkvWindows from './skv/useSkvWindows.js'
 import {
   ACTION_BAR_HEIGHT,
   readStoredSplitOrientation,
@@ -28,6 +30,11 @@ const PANELS = [
   { value: 'zad', label: 'Задание' },
   { value: 'vip', label: 'Выполнение' },
 ]
+
+const PARTS_BY_ID = {
+  [zadaniePart.id]: zadaniePart,
+  [vipolneniePart.id]: vipolneniePart,
+}
 
 const toggleGroupSx = {
   alignSelf: 'stretch',
@@ -124,15 +131,34 @@ export default function NaryadPage() {
   const [nameNar, setNameNar] = useState('')
   const [zadanieClosed, setZadanieClosed] = useState(null)
   const [vipolnenieClosed, setVipolnenieClosed] = useState(null)
+  const [hasZadanie, setHasZadanie] = useState(false)
   const [hasVipolnenie, setHasVipolnenie] = useState(false)
   const [zadanieReloadSignal, setZadanieReloadSignal] = useState(0)
+  const [vipolnenieReloadSignal, setVipolnenieReloadSignal] = useState(0)
   const [catalogOpen, setCatalogOpen] = useState(false)
+  const skvWindows = useSkvWindows()
+  const { closeAll: closeAllSkvWindows, open: openSkvWindow } = skvWindows
 
   function applyHeader(header) {
     setNameNar(header?.nameNar ?? '')
     setZadanieClosed(header?.zadanieClosed ?? null)
     setVipolnenieClosed(header?.vipolnenieClosed ?? null)
+    setHasZadanie(Boolean(header?.hasZadanie))
     setHasVipolnenie(Boolean(header?.hasVipolnenie))
+  }
+
+  function skvOtherPartId(partId) {
+    if (partId === zadaniePart.id) return hasVipolnenie ? vipolneniePart.id : null
+    return hasZadanie ? zadaniePart.id : null
+  }
+
+  function handleSkvSaved(partId, result) {
+    if (!result?.dateChanged && !(result?.paramsChanged > 0)) return
+    if (partId === zadaniePart.id) {
+      setZadanieReloadSignal((value) => value + 1)
+    } else {
+      setVipolnenieReloadSignal((value) => value + 1)
+    }
   }
 
   useEffect(() => {
@@ -140,11 +166,14 @@ export default function NaryadPage() {
     setNameNar('')
     setZadanieClosed(null)
     setVipolnenieClosed(null)
+    setHasZadanie(false)
     setHasVipolnenie(false)
     setZadanieReloadSignal(0)
+    setVipolnenieReloadSignal(0)
     setOpenPanels([])
     setMountedPanels({ zad: false, vip: false })
     setCatalogOpen(false)
+    closeAllSkvWindows()
     if (id == null || id === '') return undefined
     fetchNaryadHeader(id)
       .then((header) => {
@@ -172,7 +201,7 @@ export default function NaryadPage() {
     return () => {
       cancelled = true
     }
-  }, [id])
+  }, [id, closeAllSkvWindows])
 
   useEffect(() => {
     setMountedPanels((mounted) => ({
@@ -316,6 +345,7 @@ export default function NaryadPage() {
               onClosedChange={setZadanieClosed}
               hasVipolnenie={hasVipolnenie}
               externalReloadSignal={zadanieReloadSignal}
+              onOpenSkv={openSkvWindow}
               onVipolnenieCreated={(header) => {
                 applyHeader(header)
                 setOpenPanels(['zad', 'vip'])
@@ -330,6 +360,8 @@ export default function NaryadPage() {
               naryadId={id}
               closed={vipolnenieClosed}
               onClosedChange={setVipolnenieClosed}
+              externalReloadSignal={vipolnenieReloadSignal}
+              onOpenSkv={openSkvWindow}
               onZadanieReplaced={(header) => {
                 applyHeader(header)
                 setZadanieReloadSignal((value) => value + 1)
@@ -343,6 +375,14 @@ export default function NaryadPage() {
         key={id}
         open={catalogOpen}
         onClose={() => setCatalogOpen(false)}
+      />
+
+      <SkvParamsWindows
+        naryadId={id}
+        skvWindows={skvWindows}
+        parts={PARTS_BY_ID}
+        otherPartId={skvOtherPartId}
+        onSaved={handleSkvSaved}
       />
     </Box>
   )

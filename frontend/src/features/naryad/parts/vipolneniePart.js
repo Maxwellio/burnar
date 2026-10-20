@@ -5,6 +5,7 @@ import { rowColorAction } from '../actions/color/rowColorAction.js'
 import { deleteBlockAction } from '../actions/delete/deleteBlockAction.js'
 import { deleteMarkedWorksAction } from '../actions/delete/deleteMarkedWorksAction.js'
 import { lockWorksAction, unlockWorksAction } from '../actions/lock/lockWorksActions.js'
+import { openSkvParamsAction } from '../actions/skv/openSkvParamsAction.js'
 import { COLUMN_SIZING_KEYS, RIGHT_PANEL_WIDTH_KEYS } from '../naryadPageLayout.js'
 import {
   naryadVipolnenieColumns,
@@ -33,7 +34,12 @@ export const vipolneniePart = {
   features: {
     locks: true,
   },
+  skv: {
+    title: 'Сквозные параметры выполнения (факт)',
+    openLabel: 'Сквозные параметры выполнения',
+  },
   actions: [
+    openSkvParamsAction,
     importZadanieWorksAction,
     replaceZadanieAction,
     deleteMarkedWorksAction,

@@ -22,6 +22,7 @@ import { useAlgorithm, useLockFlags, useTotals, useWorkAction } from './useWorks
  * @param {(header: object) => void} [args.onVipolnenieCreated]
  * @param {(header: object) => void} [args.onZadanieReplaced]
  * @param {number} [args.externalReloadSignal] страница просит перечитать дерево
+ * @param {(partId: string) => void} [args.onOpenSkv] открыть окно сквозных параметров
  */
 export default function useNaryadWorkspaceState({
   naryadId,
@@ -32,6 +33,7 @@ export default function useNaryadWorkspaceState({
   onVipolnenieCreated,
   onZadanieReplaced,
   externalReloadSignal = 0,
+  onOpenSkv,
 }) {
   const showAlert = useAlert()
   const confirm = useConfirm()
@@ -82,6 +84,7 @@ export default function useNaryadWorkspaceState({
     getHasVipolnenie,
     onVipolnenieCreated,
     onZadanieReplaced,
+    openSkv: onOpenSkv ? () => onOpenSkv(part.id) : undefined,
     getLockFlags,
     getTotals,
     tree,

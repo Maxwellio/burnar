@@ -29,6 +29,7 @@ export default function NaryadWorkspacePanel({
   onVipolnenieCreated,
   onZadanieReplaced,
   externalReloadSignal,
+  onOpenSkv,
 }) {
   const workspace = useNaryadWorkspaceState({
     naryadId,
@@ -39,6 +40,7 @@ export default function NaryadWorkspacePanel({
     onVipolnenieCreated,
     onZadanieReplaced,
     externalReloadSignal,
+    onOpenSkv,
   })
   const { urls, tree, colors } = workspace
   useColumnSizingPersistence([
@@ -121,6 +123,7 @@ export default function NaryadWorkspacePanel({
                 paramsUrl={urls.params}
                 paramColumns={part.paramColumns}
                 paramFilters={paramFilters}
+                reloadSignal={tree.reloadSignal}
                 algorithm={workspace.algorithm}
               />
             </Box>

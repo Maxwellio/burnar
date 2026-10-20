@@ -3,6 +3,7 @@ import { createEmptyVipolnenieAction } from '../actions/create/createEmptyVipoln
 import { rowColorAction } from '../actions/color/rowColorAction.js'
 import { deleteBlockAction } from '../actions/delete/deleteBlockAction.js'
 import { deleteMarkedWorksAction } from '../actions/delete/deleteMarkedWorksAction.js'
+import { openSkvParamsAction } from '../actions/skv/openSkvParamsAction.js'
 import { COLUMN_SIZING_KEYS, RIGHT_PANEL_WIDTH_KEYS } from '../naryadPageLayout.js'
 import {
   naryadZadanieColumns,
@@ -28,7 +29,12 @@ export const zadaniePart = {
   features: {
     locks: false,
   },
+  skv: {
+    title: 'Сквозные параметры задания (план)',
+    openLabel: 'Сквозные параметры задания',
+  },
   actions: [
+    openSkvParamsAction,
     createEmptyVipolnenieAction,
     deleteMarkedWorksAction,
     deleteBlockAction,
