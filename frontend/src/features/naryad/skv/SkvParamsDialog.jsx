@@ -311,6 +311,18 @@ export default function SkvParamsDialog({
                 display: 'flex',
                 flexDirection: 'column',
                 '& .overflow-y-auto': { overflowX: 'auto' },
+                '& td, & th': {
+                  whiteSpace: 'normal !important',
+                  textOverflow: 'clip !important',
+                  overflowWrap: 'anywhere',
+                },
+                '& .MuiSelect-select, & .MuiInputBase-input': {
+                  whiteSpace: 'pre-wrap !important',
+                  textOverflow: 'clip !important',
+                  height: 'auto !important',
+                  lineHeight: 1.35,
+                  overflowWrap: 'anywhere',
+                },
               }}
             >
               <SkvEditorProvider value={editor}>

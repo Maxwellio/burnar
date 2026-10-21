@@ -8,7 +8,13 @@ import { sanitizeSkvNumberInput, skvCellValue, skvChangedFields } from './skvRul
 const VALSTR_MAX_LENGTH = 150
 
 const inputSx = {
-  '& .MuiInputBase-input': { py: 0.5, fontSize: '0.875rem' },
+  '& .MuiInputBase-input': {
+    py: 0.5,
+    fontSize: '0.875rem',
+    whiteSpace: 'pre-wrap',
+    textOverflow: 'clip',
+    height: 'auto',
+  },
 }
 
 function changedInputSx(changed) {
@@ -40,7 +46,10 @@ function NmCell({ row }) {
   const changed = skvChangedFields(draft, row.original)
   const bold = changed.znval || changed.val || changed.valstr
   return (
-    <Box component="span" sx={{ fontWeight: bold ? 700 : 400 }}>
+    <Box
+      component="span"
+      sx={{ display: 'block', fontWeight: bold ? 700 : 400, whiteSpace: 'normal', overflowWrap: 'anywhere' }}
+    >
       {row.original.nm ?? ''}
     </Box>
   )
@@ -71,7 +80,14 @@ function ZnvalCell({ row }) {
         inputProps={{ 'aria-label': `Значение: ${original.nm ?? ''}` }}
         sx={{
           ...inputSx,
-          '& .MuiSelect-select': { fontWeight: bold ? 700 : 400 },
+          '& .MuiSelect-select': {
+            fontWeight: bold ? 700 : 400,
+            whiteSpace: 'normal',
+            overflowWrap: 'anywhere',
+            textOverflow: 'clip',
+            height: 'auto',
+            lineHeight: 1.35,
+          },
         }}
       >
         <MenuItem value="">{'\u00a0'}</MenuItem>
@@ -117,6 +133,8 @@ function ValstrCell({ row }) {
         variant="standard"
         size="small"
         fullWidth
+        multiline
+        minRows={1}
         InputProps={{ disableUnderline: true }}
         inputProps={{ maxLength: VALSTR_MAX_LENGTH, 'aria-label': `Строковое: ${original.nm ?? ''}` }}
         sx={changedInputSx(skvChangedFields(draft, original).valstr)}
