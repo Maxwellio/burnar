@@ -258,15 +258,14 @@ CSS `#RRGGBB` перед отправкой
 перечитываются. «Отмена», крестик и `Esc` при несохранённых правках спрашивают
 «Изменения не сохранены. Закрыть?».
 
-`GET .../skv` — шапка `{ begDate, closed, closedDate, readOnly, readOnlyReason }`,
-`GET .../skv/params` — строки для `BaseTable`, `GET .../skv/values?parcode=` — пункты
-`{ id, nm }`; сохранённое значение всегда в списке, даже если оно вне поддерева.
+`GET .../skv` — шапка `{ begDate, closed, closedDate, readOnly, readOnlyReason }`.
+`GET .../skv/params` — строки для `BaseTable` и сразу пункты `values: [{ id, nm }]`
+всех параметров одним обходом `common_spr`. Сохранённое значение вне поддерева
+дописывается в свой список.
 
 Таблица — `BaseTable` пакета без изменений: редакторы рисуются в `columnDef.cell`, правки
 лежат в черновике окна (`SkvEditorContext`), а не в данных таблицы. Список значений —
-MUI `Select` с загрузкой через `fetch`, не `DynamicSelect`: тот отменяет запрос при
-размонтировании, а перехватчик `AxiosProvider` принимает отмену за сетевую ошибку и
-уводит на `/#/login`.
+MUI `Select` по полю `values` строки, без отдельного запроса на параметр.
 
 Известная ошибка в базе: в `burnar.vipolnenie_set_skvparam` условие
 `and p.parcode=rec.parcode` ссылается на псевдоним `p`, которого нет в `UPDATE`. Пока

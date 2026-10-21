@@ -1,6 +1,7 @@
 package burnar.dto;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 /**
  * Строка {@code zndefnarzadatrib} / {@code zndefnarvipatrib}: параметр и три вида значения.
@@ -15,6 +16,7 @@ public class NaryadSkvParamDto {
     private final String znnm;
     private final BigDecimal val;
     private final String valstr;
+    private final List<NaryadSkvValueDto> values;
 
     public NaryadSkvParamDto(
             BigDecimal parcode,
@@ -23,7 +25,8 @@ public class NaryadSkvParamDto {
             BigDecimal znval,
             String znnm,
             BigDecimal val,
-            String valstr) {
+            String valstr,
+            List<NaryadSkvValueDto> values) {
         this.parcode = parcode;
         this.prnum = prnum;
         this.nm = nm;
@@ -31,6 +34,7 @@ public class NaryadSkvParamDto {
         this.znnm = znnm;
         this.val = val;
         this.valstr = valstr;
+        this.values = values == null ? List.of() : List.copyOf(values);
     }
 
     public String getId() {
@@ -63,5 +67,10 @@ public class NaryadSkvParamDto {
 
     public String getValstr() {
         return valstr;
+    }
+
+    /** Пункты выпадающего списка этого параметра, включая сохранённое значение. */
+    public List<NaryadSkvValueDto> getValues() {
+        return values;
     }
 }

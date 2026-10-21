@@ -62,10 +62,24 @@ public class NaryadSkvParamsService {
                     + "ORDER BY zn.prnum, zn.parcode";
         }
 
-        String storedZnvalSql() {
-            return "SELECT zn.znval FROM " + valuesTable + " zn "
-                    + "WHERE zn.defnar = :narkey AND zn.parcode = :parcode "
-                    + "ORDER BY zn.prnum";
+        /**
+         * Поддеревья common_spr сразу для всех параметров наряда.
+         * Порядок внутри уровня — row_number по ord, как в HIERARCHY1.
+         */
+        String valuesSql() {
+            return "WITH RECURSIVE roots AS ("
+                    + "  SELECT DISTINCT zn.parcode FROM " + valuesTable + " zn WHERE zn.defnar = :narkey"
+                    + "), tmp AS ("
+                    + "  SELECT c.id, c.nm, roots.parcode AS root, "
+                    + "         ARRAY[(row_number() OVER (PARTITION BY c.parent_id ORDER BY c.ord, c.id))::integer] AS ord2 "
+                    + "  FROM public.common_spr c "
+                    + "  INNER JOIN roots ON c.parent_id = roots.parcode "
+                    + "  UNION ALL "
+                    + "  SELECT c.id, c.nm, tmp.root, "
+                    + "         tmp.ord2 || ARRAY[(row_number() OVER (PARTITION BY c.parent_id ORDER BY c.ord, c.id))::integer] "
+                    + "  FROM public.common_spr c INNER JOIN tmp ON tmp.id = c.parent_id"
+                    + ") "
+                    + "SELECT tmp.root AS parcode, tmp.id, tmp.nm FROM tmp ORDER BY tmp.root, tmp.ord2";
         }
 
         String updateParamSql() {
@@ -82,20 +96,9 @@ public class NaryadSkvParamsService {
         }
     }
 
-    /** Поддерево common_spr под параметром, порядок как HIERARCHY1 (ord на каждом уровне). */
-    static final String VALUES_SQL =
-            "WITH RECURSIVE tmp AS ("
-                    + "  SELECT c.id, c.nm, "
-                    + "         ARRAY[(row_number() OVER (PARTITION BY c.parent_id ORDER BY c.ord, c.id))::integer] AS ord2 "
-                    + "  FROM public.common_spr c WHERE c.parent_id = :parcode "
-                    + "  UNION ALL "
-                    + "  SELECT c.id, c.nm, "
-                    + "         tmp.ord2 || ARRAY[(row_number() OVER (PARTITION BY c.parent_id ORDER BY c.ord, c.id))::integer] "
-                    + "  FROM public.common_spr c INNER JOIN tmp ON tmp.id = c.parent_id"
-                    + ") "
-                    + "SELECT tmp.id, tmp.nm FROM tmp ORDER BY tmp.ord2";
-
-    static final String VALUE_BY_ID_SQL = "SELECT c.id, c.nm FROM public.common_spr c WHERE c.id = :id";
+    /** Сохранённые значения, которых нет в поддереве своего параметра. */
+    static final String VALUES_BY_IDS_SQL =
+            "SELECT c.id, c.nm FROM public.common_spr c WHERE c.id IN (:ids)";
 
     static final String VALUE_IN_SUBTREE_SQL =
             "WITH RECURSIVE tmp AS ("
@@ -125,39 +128,7 @@ public class NaryadSkvParamsService {
 
     public List<NaryadSkvParamDto> findParams(int naryadId, Part part) {
         requirePart(naryadId, part);
-        return queryParams(naryadId, part);
-    }
-
-    /**
-     * Пункты для выбора справочного значения. Сохранённое значение всегда в списке,
-     * даже если оно вне поддерева: иначе список сбросил бы его на пустое.
-     */
-    public List<NaryadSkvValueDto> findValues(int naryadId, Part part, BigDecimal parcode) {
-        requirePart(naryadId, part);
-        if (parcode == null) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "parcode is required");
-        }
-        List<BigDecimal> stored = jdbc.query(
-                part.storedZnvalSql(),
-                new MapSqlParameterSource("narkey", naryadId).addValue("parcode", parcode),
-                (rs, rowNum) -> rs.getBigDecimal("znval"));
-        if (stored.isEmpty()) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, NaryadSkvParams.PARAM_NOT_FOUND);
-        }
-        List<NaryadSkvValueDto> values = new ArrayList<>(jdbc.query(
-                VALUES_SQL,
-                new MapSqlParameterSource("parcode", parcode),
-                (rs, rowNum) -> new NaryadSkvValueDto(rs.getBigDecimal("id"), rs.getString("nm"))));
-        for (BigDecimal znval : stored) {
-            if (znval == null || containsValue(values, znval)) {
-                continue;
-            }
-            values.addAll(0, jdbc.query(
-                    VALUE_BY_ID_SQL,
-                    new MapSqlParameterSource("id", znval),
-                    (rs, rowNum) -> new NaryadSkvValueDto(rs.getBigDecimal("id"), rs.getString("nm"))));
-        }
-        return values;
+        return withValueLists(naryadId, part, queryParams(naryadId, part));
     }
 
     @Transactional
@@ -242,7 +213,66 @@ public class NaryadSkvParamsService {
                         rs.getBigDecimal("znval"),
                         rs.getString("znnm"),
                         rs.getBigDecimal("val"),
-                        rs.getString("valstr")));
+                        rs.getString("valstr"),
+                        List.of()));
+    }
+
+    /**
+     * Один обход справочника на все параметры. Сохранённое значение, которого нет
+     * в поддереве, добавляется в список: иначе выпадающий список сбросил бы его.
+     */
+    private List<NaryadSkvParamDto> withValueLists(int naryadId, Part part, List<NaryadSkvParamDto> rows) {
+        Map<String, List<NaryadSkvValueDto>> byCode = new LinkedHashMap<>();
+        jdbc.query(part.valuesSql(), new MapSqlParameterSource("narkey", naryadId), rs -> {
+            byCode.computeIfAbsent(codeKey(rs.getBigDecimal("parcode")), key -> new ArrayList<>())
+                    .add(new NaryadSkvValueDto(rs.getBigDecimal("id"), rs.getString("nm")));
+        });
+        List<BigDecimal> missing = new ArrayList<>();
+        for (NaryadSkvParamDto row : rows) {
+            if (row.getZnval() != null && !containsValue(byCode.get(codeKey(row.getParcode())), row.getZnval())) {
+                missing.add(row.getZnval());
+            }
+        }
+        Map<String, NaryadSkvValueDto> extras = loadValuesById(missing);
+        List<NaryadSkvParamDto> result = new ArrayList<>();
+        for (NaryadSkvParamDto row : rows) {
+            List<NaryadSkvValueDto> values = new ArrayList<>(
+                    byCode.getOrDefault(codeKey(row.getParcode()), List.of()));
+            NaryadSkvValueDto extra = row.getZnval() == null ? null : extras.get(codeKey(row.getZnval()));
+            if (extra != null) {
+                values.add(0, extra);
+            }
+            result.add(new NaryadSkvParamDto(
+                    row.getParcode(),
+                    row.getPrnum(),
+                    row.getNm(),
+                    row.getZnval(),
+                    row.getZnnm(),
+                    row.getVal(),
+                    row.getValstr(),
+                    values));
+        }
+        return result;
+    }
+
+    private Map<String, NaryadSkvValueDto> loadValuesById(List<BigDecimal> ids) {
+        if (ids.isEmpty()) {
+            return Map.of();
+        }
+        Map<String, NaryadSkvValueDto> byId = new LinkedHashMap<>();
+        jdbc.query(
+                VALUES_BY_IDS_SQL,
+                new MapSqlParameterSource("ids", ids),
+                (rs, rowNum) -> {
+                    NaryadSkvValueDto value = new NaryadSkvValueDto(rs.getBigDecimal("id"), rs.getString("nm"));
+                    byId.putIfAbsent(codeKey(value.getId()), value);
+                    return value;
+                });
+        return byId;
+    }
+
+    private static String codeKey(BigDecimal value) {
+        return value.stripTrailingZeros().toPlainString();
     }
 
     private boolean valueInSubtree(BigDecimal parcode, BigDecimal znval) {
@@ -290,7 +320,7 @@ public class NaryadSkvParamsService {
     }
 
     private static boolean containsValue(List<NaryadSkvValueDto> values, BigDecimal id) {
-        return values.stream().anyMatch(item -> sameNumber(item.getId(), id));
+        return values != null && values.stream().anyMatch(item -> sameNumber(item.getId(), id));
     }
 
     private static boolean sameNumber(BigDecimal a, BigDecimal b) {

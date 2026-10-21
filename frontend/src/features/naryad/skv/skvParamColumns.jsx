@@ -1,4 +1,3 @@
-import { useEffect, useState } from 'react'
 import Box from '@mui/material/Box'
 import MenuItem from '@mui/material/MenuItem'
 import Select from '@mui/material/Select'
@@ -48,22 +47,13 @@ function NmCell({ row }) {
 }
 
 function ZnvalCell({ row }) {
-  const { readOnly, draft, setCell, loadValues } = useSkvEditor()
+  const { readOnly, draft, setCell } = useSkvEditor()
   const original = row.original
-  const [options, setOptions] = useState(null)
-
-  useEffect(() => {
-    if (readOnly) return undefined
-    let active = true
-    loadValues(original.parcode)
-      .then((items) => { if (active) setOptions(items) })
-      .catch(() => { if (active) setOptions([]) })
-    return () => { active = false }
-  }, [readOnly, loadValues, original.parcode])
+  const options = Array.isArray(original.values) ? original.values : []
 
   if (readOnly) return original.znnm ?? ''
   const value = skvCellValue(draft, original, 'znval') ?? ''
-  const known = options?.some((item) => String(item.id) === value) ?? false
+  const known = options.some((item) => String(item.id) === value)
   const bold = skvChangedFields(draft, original).znval
   return (
     <CellEditor>
@@ -75,7 +65,6 @@ function ZnvalCell({ row }) {
         fullWidth
         disableUnderline
         displayEmpty
-        disabled={options == null}
         renderValue={(selected) => (
           options?.find((item) => String(item.id) === String(selected))?.nm ?? ''
         )}

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import Alert from '@mui/material/Alert'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
@@ -22,7 +22,7 @@ import { ruRU } from '@mui/x-date-pickers/locales'
 import { format, isValid, parseISO } from 'date-fns'
 import { ru } from 'date-fns/locale'
 import { AxiosProvider, BaseTable } from 'mainComponent'
-import { fetchNaryadSkvHeader, fetchNaryadSkvValues, saveNaryadSkv } from '../../../api/naryadyApi.js'
+import { fetchNaryadSkvHeader, saveNaryadSkv } from '../../../api/naryadyApi.js'
 import useColumnSizingPersistence from '../workspace/layout/useColumnSizingPersistence.js'
 import DraggableDialog from '../../../components/DraggableDialog'
 import { useAlert, useConfirm } from '../../../context/ConfirmContext.jsx'
@@ -128,7 +128,6 @@ export default function SkvParamsDialog({
   const titleId = `skv-dialog-title-${partId}`
   const paramsUrl = `/naryady/${naryadId}/${partId}/skv/params`
   useColumnSizingPersistence([[paramsUrl, part.skv.columnSizing]])
-  const valueRequests = useRef(new Map())
   const readOnly = header?.readOnly === true
   const dirty = isSkvDirty({ savedBegDate: header?.begDate, begDate, draft })
   const badNumbers = invalidSkvNumbers(draft).length > 0
@@ -160,22 +159,9 @@ export default function SkvParamsDialog({
     setDraft((prev) => applySkvEdit(prev, row, field, value))
   }, [])
 
-  /** Один запрос на параметр, пока окно открыто; ошибку не кешируем. */
-  const loadValues = useCallback((parcode) => {
-    const key = String(parcode)
-    if (!valueRequests.current.has(key)) {
-      const request = fetchNaryadSkvValues(naryadId, partId, parcode).catch((error) => {
-        valueRequests.current.delete(key)
-        throw error
-      })
-      valueRequests.current.set(key, request)
-    }
-    return valueRequests.current.get(key)
-  }, [naryadId, partId])
-
   const editor = useMemo(
-    () => ({ readOnly: readOnly || saving, draft, setCell, loadValues }),
-    [readOnly, saving, draft, setCell, loadValues],
+    () => ({ readOnly: readOnly || saving, draft, setCell }),
+    [readOnly, saving, draft, setCell],
   )
 
   const requestClose = async () => {
