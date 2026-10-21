@@ -8,13 +8,7 @@ import { sanitizeSkvNumberInput, skvCellValue, skvChangedFields } from './skvRul
 const VALSTR_MAX_LENGTH = 150
 
 const inputSx = {
-  '& .MuiInputBase-input': {
-    py: 0.5,
-    fontSize: '0.875rem',
-    whiteSpace: 'pre-wrap',
-    textOverflow: 'clip',
-    height: 'auto',
-  },
+  '& .MuiInputBase-input': { py: 0.5, fontSize: '0.875rem' },
 }
 
 function changedInputSx(changed) {
@@ -82,11 +76,15 @@ function ZnvalCell({ row }) {
           ...inputSx,
           '& .MuiSelect-select': {
             fontWeight: bold ? 700 : 400,
-            whiteSpace: 'normal',
+            // normal, не pre-wrap: у MUI в тексте списка есть перевод строки,
+            // pre-wrap превращает его во вторую пустую строку.
+            whiteSpace: 'normal !important',
             overflowWrap: 'anywhere',
-            textOverflow: 'clip',
-            height: 'auto',
+            textOverflow: 'clip !important',
+            height: 'auto !important',
             lineHeight: 1.35,
+            paddingTop: '2px',
+            paddingBottom: '2px',
           },
         }}
       >
@@ -137,7 +135,16 @@ function ValstrCell({ row }) {
         minRows={1}
         InputProps={{ disableUnderline: true }}
         inputProps={{ maxLength: VALSTR_MAX_LENGTH, 'aria-label': `Строковое: ${original.nm ?? ''}` }}
-        sx={changedInputSx(skvChangedFields(draft, original).valstr)}
+        sx={{
+          ...changedInputSx(skvChangedFields(draft, original).valstr),
+          '& .MuiInputBase-root': { p: 0 },
+          '& .MuiInputBase-input': {
+            py: '2px',
+            fontWeight: skvChangedFields(draft, original).valstr ? 700 : 400,
+            whiteSpace: 'pre-wrap',
+            height: 'auto',
+          },
+        }}
       />
     </CellEditor>
   )

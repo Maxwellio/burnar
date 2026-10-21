@@ -316,13 +316,6 @@ export default function SkvParamsDialog({
                   textOverflow: 'clip !important',
                   overflowWrap: 'anywhere',
                 },
-                '& .MuiSelect-select, & .MuiInputBase-input': {
-                  whiteSpace: 'pre-wrap !important',
-                  textOverflow: 'clip !important',
-                  height: 'auto !important',
-                  lineHeight: 1.35,
-                  overflowWrap: 'anywhere',
-                },
               }}
             >
               <SkvEditorProvider value={editor}>
