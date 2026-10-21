@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 import Box from '@mui/material/Box'
 import { AxiosProvider, BaseTreeTable } from 'mainComponent'
-import { RIGHT_PANEL_DEFAULT_RATIO } from '../naryadPageLayout.js'
+import { naryadCompactTableSx, RIGHT_PANEL_DEFAULT_RATIO } from '../naryadPageLayout.js'
 import PanelSplitter from './layout/PanelSplitter.jsx'
 import useColumnSizingPersistence from './layout/useColumnSizingPersistence.js'
 import useResizablePanel from './layout/useResizablePanel.js'
@@ -85,7 +85,7 @@ export default function NaryadWorkspacePanel({
                 overflow: 'hidden',
               }}
             >
-              <Box sx={{ flex: 1, minHeight: 0, minWidth: 0, overflow: 'hidden' }}>
+              <Box sx={{ flex: 1, minHeight: 0, minWidth: 0, overflow: 'hidden', ...naryadCompactTableSx }}>
                 <BaseTreeTable
                   url={urls.tree}
                   columns={part.treeColumns}
