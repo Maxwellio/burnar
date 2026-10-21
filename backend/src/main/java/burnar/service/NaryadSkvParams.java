@@ -12,7 +12,7 @@ import java.util.Objects;
 
 /**
  * Правила окна сквозных параметров (Delphi formSkvZadVar / formSkvVipVar) без доступа к базе.
- * Дата начала — до минут, как маска {@code 90.90.2000 !90:00:00}.
+ * Дата начала — с секундами, как маска {@code 90.90.2000 !90:00:00}.
  * {@code val} — {@code numeric(8,4)}, {@code valstr} — {@code varchar(150)}.
  */
 public final class NaryadSkvParams {
@@ -30,8 +30,8 @@ public final class NaryadSkvParams {
     static final BigDecimal VAL_LIMIT = new BigDecimal("10000");
     static final int VALSTR_MAX = 150;
 
-    private static final DateTimeFormatter ISO_MINUTES = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss");
-    private static final DateTimeFormatter CLOSED_DATE = DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm");
+    private static final DateTimeFormatter ISO_SECONDS = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss");
+    private static final DateTimeFormatter CLOSED_DATE = DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm:ss");
 
     private NaryadSkvParams() {
     }
@@ -52,14 +52,14 @@ public final class NaryadSkvParams {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, BEG_DATE_REQUIRED);
         }
         try {
-            return toMinutes(LocalDateTime.parse(raw.trim()));
+            return toSeconds(LocalDateTime.parse(raw.trim()));
         } catch (DateTimeParseException ex) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, BEG_DATE_INVALID);
         }
     }
 
     public static String formatBegDate(Timestamp value) {
-        return value == null ? null : toMinutes(value.toLocalDateTime()).format(ISO_MINUTES);
+        return value == null ? null : toSeconds(value.toLocalDateTime()).format(ISO_SECONDS);
     }
 
     public static String formatClosedDate(Timestamp value) {
@@ -70,7 +70,7 @@ public final class NaryadSkvParams {
         if (current == null) {
             return false;
         }
-        return toMinutes(current.toLocalDateTime()).equals(next);
+        return toSeconds(current.toLocalDateTime()).equals(toSeconds(next));
     }
 
     @SuppressWarnings("deprecation") // константа BigDecimal: округление half-up до 4 знаков
@@ -119,9 +119,9 @@ public final class NaryadSkvParams {
         return parcode.stripTrailingZeros().toPlainString() + ":" + prnum.stripTrailingZeros().toPlainString();
     }
 
-    /** Секунды и доли секунды отбрасываются: маска даты в Delphi хранит минуты. */
-    private static LocalDateTime toMinutes(LocalDateTime value) {
-        return value.withSecond(0).withNano(0);
+    /** Доли секунды отбрасываются: в форме хранятся целые секунды. */
+    private static LocalDateTime toSeconds(LocalDateTime value) {
+        return value.withNano(0);
     }
 
     private static boolean sameNumber(BigDecimal a, BigDecimal b) {
