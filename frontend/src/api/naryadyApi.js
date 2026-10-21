@@ -140,6 +140,20 @@ export function fetchNaryadSkvHeader(id, part) {
   return requestAction(`/naryady/${id}/${part}/skv`)
 }
 
+/** Расчёт операции: { rebuilt, node, dates }. rebuilt — расчёт не выполнялся. */
+export function calcNaryadOper(id, part, nodeId) {
+  return requestAction(`/naryady/${id}/${part}/${nodeId}/calc`, { method: 'POST' })
+}
+
+/** Значение параметра операции. value — число или код списка, null очищает. */
+export function saveNaryadOperParam(id, part, nodeId, parcode, value) {
+  return requestAction(`/naryady/${id}/${part}/${nodeId}/params/${parcode}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ value }),
+  })
+}
+
 /** Дата начала работ и изменённые строки сквозных параметров: { dateChanged, paramsChanged }. */
 export function saveNaryadSkv(id, part, payload) {
   return requestAction(`/naryady/${id}/${part}/skv`, {

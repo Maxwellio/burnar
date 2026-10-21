@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useRef } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useAlert, useConfirm } from '../../../context/ConfirmContext.jsx'
+import { mergeWorkPatches } from '../actions/calc/workPatches.js'
 import useRowColorEditing from '../actions/color/useRowColorEditing.js'
 import useLatest from './useLatest.js'
 import useMutationRunner from './useMutationRunner.js'
@@ -44,13 +45,46 @@ export default function useNaryadWorkspaceState({
   const getHasVipolnenie = useLatest(hasVipolnenie === true)
   const { detailId, reloadSignal } = tree
 
-  const totals = useTotals(naryadId, part.id, reloadSignal)
+  const [totalsEpoch, setTotalsEpoch] = useState(0)
+  const [paramsReloadSignal, setParamsReloadSignal] = useState(0)
+  const [workPatches, setWorkPatches] = useState(() => new Map())
+  const refreshTotals = useCallback(() => setTotalsEpoch((value) => value + 1), [])
+  const reloadParams = useCallback(() => setParamsReloadSignal((value) => value + 1), [])
+  const applyWorkPatches = useCallback((patches) => {
+    setWorkPatches((current) => mergeWorkPatches(current, patches))
+  }, [])
+  const saveQueue = useRef(Promise.resolve())
+  const paramsSeen = useRef(false)
+  const totals = useTotals(naryadId, part.id, reloadSignal, totalsEpoch)
   const lockFlags = useLockFlags(naryadId, part.features.locks, reloadSignal)
   const workAction = useWorkAction(naryadId, part.id, detailId, reloadSignal)
-  const algorithm = useAlgorithm(urls.algorithm, detailId)
+  const algorithm = useAlgorithm(urls.algorithm, detailId, reloadSignal)
   const getLockFlags = useLatest(lockFlags)
   const getTotals = useLatest(totals)
   const seenReload = useRef(externalReloadSignal)
+
+  useEffect(() => {
+    setWorkPatches(new Map())
+  }, [reloadSignal])
+
+  useEffect(() => {
+    if (!paramsSeen.current) {
+      paramsSeen.current = true
+      return
+    }
+    setParamsReloadSignal((value) => value + 1)
+  }, [reloadSignal, closed])
+
+  const enqueueSave = (work) => {
+    const job = saveQueue.current.then(async () => {
+      while (mutation.isPending()) {
+        await new Promise((resolve) => setTimeout(resolve, 20))
+      }
+      return work()
+    })
+    saveQueue.current = job.then(() => undefined, () => undefined)
+    return job
+  }
 
   useEffect(() => {
     if (seenReload.current === externalReloadSignal) return
@@ -97,5 +131,10 @@ export default function useNaryadWorkspaceState({
     workAction,
     algorithm,
     colors,
+    workValues: { overrides: workPatches, apply: applyWorkPatches },
+    refreshTotals,
+    reloadParams,
+    paramsReloadSignal,
+    enqueueSave,
   }
 }

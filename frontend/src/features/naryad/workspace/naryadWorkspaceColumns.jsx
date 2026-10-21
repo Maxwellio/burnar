@@ -3,6 +3,9 @@ import IconButton from '@mui/material/IconButton'
 import Add from '@mui/icons-material/Add'
 import Remove from '@mui/icons-material/Remove'
 import { Bell, Calculator, FolderTree, Link2, SquareArrowOutUpRight } from 'lucide-react'
+import { ParamValueCell } from '../actions/params/operParamColumns.jsx'
+import { workFieldValue } from '../actions/calc/workPatches.js'
+import { useNaryadWorkspace } from './NaryadWorkspaceContext.jsx'
 import {
   naryadCorrelationIconName,
   naryadLockIconName,
@@ -111,6 +114,27 @@ function WorkNameCell({ row, getValue }) {
   )
 }
 
+/** Правка расчёта или сброса нормы поверх уже загруженной строки. */
+function useWorkField(row, field, getValue) {
+  const { workValues } = useNaryadWorkspace()
+  const patch = workValues.overrides.get(String(row.original?.id))
+  if (patch && Object.prototype.hasOwnProperty.call(patch, field)) {
+    return workFieldValue(row.original, field, workValues.overrides)
+  }
+  const value = getValue()
+  return value == null ? '' : value
+}
+
+function OverrideTextCell({ row, getValue, field }) {
+  return useWorkField(row, field, getValue)
+}
+
+function overrideCell(field) {
+  return function WorkFieldCell(props) {
+    return <OverrideTextCell {...props} field={field} />
+  }
+}
+
 function col(prefix, accessorKey, header, size, extra = {}) {
   return {
     id: `${prefix}_${accessorKey}`,
@@ -176,9 +200,10 @@ function VipOrdCell({ row, getValue }) {
 
 /** Image4: правило корреляции в «Н.в. на объём», красный колокольчик. */
 function VipNormVolumeCell({ row, getValue }) {
+  const value = useWorkField(row, 'n2', getValue)
   return (
     <MarkedValueCell
-      getValue={getValue}
+      getValue={() => value}
       iconName={naryadCorrelationIconName(row.original)}
       Icon={Bell}
       label="Есть правило корреляции"
@@ -196,15 +221,17 @@ function makePlanTreeColumns(prefix, { vipMarks = false } = {}) {
     //col(prefix, 'id', 'Код', 70),
     col(prefix, 'ord', '№ п/п', vipMarks ? 120 : 80, vipMarks ? { cell: VipOrdCell } : {}),
     col(prefix, 'nm', 'Название работы', 250, { cell: WorkNameCell }),
-    col(prefix, 'begoperdate', 'Время начала работы', 140),
-    col(prefix, 'istnorm', 'Источник нормирования', 140),
+    col(prefix, 'begoperdate', 'Время начала работы', 140, { cell: overrideCell('begoperdate') }),
+    col(prefix, 'istnorm', 'Источник нормирования', 140, { cell: overrideCell('istnorm') }),
     group(prefix, 'interval', 'Интервал', [
-      col(prefix, 'ot', 'от', 50),
-      col(prefix, 'do_', 'до', 50),
+      col(prefix, 'ot', 'от', 50, { cell: overrideCell('ot') }),
+      col(prefix, 'do_', 'до', 50, { cell: overrideCell('do_') }),
     ]),
     group(prefix, 'norm', 'Норма времени', [
-      col(prefix, 'n1', 'на ед. измер.', 90),
-      col(prefix, 'n2', 'на объём раб.', vipMarks ? 150 : 110, vipMarks ? { cell: VipNormVolumeCell } : {}),
+      col(prefix, 'n1', 'на ед. измер.', 90, { cell: overrideCell('n1') }),
+      col(prefix, 'n2', 'на объём раб.', vipMarks ? 150 : 110, {
+        cell: vipMarks ? VipNormVolumeCell : overrideCell('n2'),
+      }),
     ]),
   ]
 }
@@ -212,7 +239,7 @@ function makePlanTreeColumns(prefix, { vipMarks = false } = {}) {
 function makeParamColumns(prefix) {
   return [
     col(prefix, 'nm', 'Параметр', 140),
-    col(prefix, 'val', 'Значение', 100),
+    col(prefix, 'val', 'Значение', 140, { cell: ParamValueCell }),
   ]
 }
 

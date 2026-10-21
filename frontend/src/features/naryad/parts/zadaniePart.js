@@ -1,3 +1,4 @@
+import { calcOperAction } from '../actions/calc/calcOperAction.js'
 import { closePartAction } from '../actions/close/closePartAction.js'
 import { createEmptyVipolnenieAction } from '../actions/create/createEmptyVipolnenieAction.js'
 import { rowColorAction } from '../actions/color/rowColorAction.js'
@@ -40,6 +41,7 @@ export const zadaniePart = {
     deleteMarkedWorksAction,
     deleteBlockAction,
     closePartAction,
+    calcOperAction,
     rowColorAction,
   ],
 }
