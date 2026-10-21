@@ -11,8 +11,9 @@ const noopSetFilters = () => {}
 /**
  * Правая панель вкладки: параметры операции (Delphi GrdParams) и алгоритм (algInfo).
  * Ширину задаёт родитель; панель только заполняет её.
+ * reloadSignal — перечитывание дерева: значения и признак isSkv могли измениться.
  */
-export default function WorkDetailsPanel({ paramsUrl, paramColumns, paramFilters, algorithm }) {
+export default function WorkDetailsPanel({ paramsUrl, paramColumns, paramFilters, reloadSignal, algorithm }) {
   return (
     <>
       <Box sx={{ flex: 1, minHeight: 0, minWidth: 0, overflow: 'hidden' }}>
@@ -21,6 +22,7 @@ export default function WorkDetailsPanel({ paramsUrl, paramColumns, paramFilters
           columns={paramColumns}
           filters={paramFilters}
           setFilters={noopSetFilters}
+          reRenderSignal={reloadSignal}
         />
       </Box>
       <Box

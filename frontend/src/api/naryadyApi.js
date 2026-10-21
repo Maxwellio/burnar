@@ -134,3 +134,17 @@ export function updateNaryadRowsColor(id, part, nodeIds, color) {
   })
 }
 
+
+/** Шапка сквозных параметров: { begDate, closed, closedDate, readOnly, readOnlyReason }. */
+export function fetchNaryadSkvHeader(id, part) {
+  return requestAction(`/naryady/${id}/${part}/skv`)
+}
+
+/** Дата начала работ и изменённые строки сквозных параметров: { dateChanged, paramsChanged }. */
+export function saveNaryadSkv(id, part, payload) {
+  return requestAction(`/naryady/${id}/${part}/skv`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+}

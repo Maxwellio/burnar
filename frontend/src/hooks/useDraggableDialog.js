@@ -34,18 +34,23 @@ function clampPosition(nextX, nextY, paperEl, currentX, currentY) {
   return { x: nextX + adjustX, y: nextY + adjustY }
 }
 
-/** Drag-состояние для DraggableDialog: сброс позиции при close. */
-export function useDraggableDialog(open, paperRef) {
-  const [position, setPosition] = useState({ x: 0, y: 0 })
+const CENTER = { x: 0, y: 0 }
+
+/**
+ * Drag-состояние для DraggableDialog: сброс позиции при close.
+ * initialPosition — смещение от центра, которое окно получает при открытии.
+ */
+export function useDraggableDialog(open, paperRef, initialPosition) {
+  const [position, setPosition] = useState(() => (open && initialPosition) || CENTER)
   const positionRef = useRef(position)
+  const initialPositionRef = useRef(initialPosition)
   const dragState = useRef(null)
 
   positionRef.current = position
+  initialPositionRef.current = initialPosition
 
   useEffect(() => {
-    if (!open) {
-      setPosition({ x: 0, y: 0 })
-    }
+    setPosition(open ? initialPositionRef.current || CENTER : CENTER)
   }, [open])
 
   const handleMouseDown = useCallback((event) => {

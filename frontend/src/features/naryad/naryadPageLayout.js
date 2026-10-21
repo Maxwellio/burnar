@@ -22,6 +22,8 @@ export const COLUMN_SIZING_KEYS = {
   zadanieParams: 'naryad-column-sizing:zadanie-params',
   vipolnenieTree: 'naryad-column-sizing:vipolnenie-tree',
   vipolnenieParams: 'naryad-column-sizing:vipolnenie-params',
+  skvZadanie: 'naryad-column-sizing:skv-zadanie',
+  skvVipolnenie: 'naryad-column-sizing:skv-vipolnenie',
 }
 
 const TABLE_SIZING_PREFIX = 'table-column-sizing:'

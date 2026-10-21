@@ -164,7 +164,7 @@ frmComNarVip (fsMDIChild)
 
 | Action | Hint / ShortCut | Обработчик | Что делает |
 |--------|-----------------|------------|------------|
-| `actOpenSkvVip` | Сквозные параметры, `Ctrl+Y` | `actOpenSkvVipExecute` | `TfrmSkvVipVar.CreateEx(Self, keynar)` |
+| `actOpenSkvVip` | Сквозные параметры, `Ctrl+Y` | `actOpenSkvVipExecute` | `TfrmSkvVipVar.CreateEx(Self, keynar)`; веб — окно сквозных параметров, см. [naryady-notes.md §7](./naryady-notes.md#7-сквозные-параметры) |
 | `actExpandNodes` | Свернуть/развернуть все, `Ctrl+E` | `tbExpandNodesClick` | `FullExpand` / `FullCollapse` |
 | `actAutoWidthCols` | Подобрать ширины, `Ctrl+L` | `tbAutoWidthColsClick` | `SetAutoWidthAllColumns` |
 | `actReloadNar` | Обновить, `Ctrl+R` | `tbReloadNarClick` | `ReloadTekNar` |
