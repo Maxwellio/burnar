@@ -1,6 +1,7 @@
 import Box from '@mui/material/Box'
 import TextField from '@mui/material/TextField'
 import { BaseTable } from 'mainComponent'
+import { naryadCompactTableSx } from '../naryadPageLayout.js'
 
 /** Пустое поле — несколько строк; дальше высота растёт по тексту, лишнее прокручивается внутри рамки. */
 const ALG_FIELD_MIN_ROWS = 4
@@ -16,7 +17,7 @@ const noopSetFilters = () => {}
 export default function WorkDetailsPanel({ paramsUrl, paramColumns, paramFilters, reloadSignal, algorithm }) {
   return (
     <>
-      <Box sx={{ flex: 1, minHeight: 0, minWidth: 0, overflow: 'hidden' }}>
+      <Box sx={{ flex: 1, minHeight: 0, minWidth: 0, overflow: 'hidden', ...naryadCompactTableSx }}>
         <BaseTable
           url={paramsUrl}
           columns={paramColumns}

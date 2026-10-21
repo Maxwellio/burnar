@@ -1,6 +1,21 @@
 /** Высота action bar карточки наряда — как Toolbar в ProtectedLayout (minHeight 48). */
 export const ACTION_BAR_HEIGHT = 48
 
+/**
+ * Вертикальные поля ячеек дерева и параметров.
+ * BaseTreeTable/BaseTable ставят Tailwind py-2 (8px сверху и снизу).
+ */
+export const NARYAD_CELL_PADDING_Y = '2px'
+
+/** Плотнее строки только на карточке наряда, без смены общего пакета таблиц. */
+export const naryadCompactTableSx = {
+  '& th, & td': {
+    paddingTop: NARYAD_CELL_PADDING_Y,
+    paddingBottom: NARYAD_CELL_PADDING_Y,
+    lineHeight: 1.15,
+  },
+}
+
 /** Вертикальное или горизонтальное деление задания и выполнения. */
 export const SPLIT_ORIENTATION_KEY = 'naryad-split-orientation'
 

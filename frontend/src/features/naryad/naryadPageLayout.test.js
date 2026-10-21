@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict'
 import { beforeEach, describe, it } from 'node:test'
 import {
+  NARYAD_CELL_PADDING_Y,
+  naryadCompactTableSx,
   persistTableColumnSizing,
   readStoredRightPanelWidth,
   readStoredSplitOrientation,
@@ -113,5 +115,14 @@ describe('table column sizing', () => {
     persistTableColumnSizing(url, stableKey)
 
     assert.deepEqual(JSON.parse(localStorage.getItem(stableKey)), { vip_nm: 310 })
+  })
+})
+
+describe('compact naryad cells', () => {
+  it('uses less vertical padding than the package py-2 (8px)', () => {
+    const padding = Number.parseFloat(NARYAD_CELL_PADDING_Y)
+    assert.ok(padding < 8)
+    assert.equal(naryadCompactTableSx['& th, & td'].paddingTop, NARYAD_CELL_PADDING_Y)
+    assert.equal(naryadCompactTableSx['& th, & td'].paddingBottom, NARYAD_CELL_PADDING_Y)
   })
 })

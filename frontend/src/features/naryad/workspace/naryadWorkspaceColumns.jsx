@@ -11,8 +11,9 @@ import {
 
 /** Отступ одного уровня (~32px), как в каталоге тематических разделов. */
 const LEVEL_INDENT = 4
-const EXPANDER_SIZE = 30
-const OPER_ICON_SIZE = 24
+/** Кнопка раскрытия задаёт нижнюю границу высоты строки дерева. */
+const EXPANDER_SIZE = 20
+const OPER_ICON_SIZE = 16
 
 /**
  * Потолок ресайза. В mainComponent defaultColumn.maxSize = 500.
@@ -91,9 +92,9 @@ function WorkNameCell({ row, getValue }) {
           }}
         >
           {row.getIsExpanded() ? (
-            <Remove sx={{ fontSize: 26 }} />
+            <Remove sx={{ fontSize: 18 }} />
           ) : (
-            <Add sx={{ fontSize: 26 }} />
+            <Add sx={{ fontSize: 18 }} />
           )}
         </IconButton>
       ) : (
