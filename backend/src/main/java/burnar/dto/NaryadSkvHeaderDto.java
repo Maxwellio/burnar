@@ -2,7 +2,7 @@ package burnar.dto;
 
 /**
  * Шапка окна сквозных параметров: дата начала работ и состояние закрытия описателя.
- * begDate — {@code yyyy-MM-dd'T'HH:mm:ss}, closedDate — {@code dd.MM.yyyy HH:mm}.
+ * begDate — {@code yyyy-MM-dd'T'HH:mm:ss}, closedDate — {@code dd.MM.yyyy HH:mm:ss}.
  * readOnlyReason не пустой, когда правка запрещена.
  */
 public class NaryadSkvHeaderDto {

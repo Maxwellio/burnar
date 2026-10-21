@@ -47,7 +47,7 @@ public class NaryadWorkspaceService {
     static final String TREE_CHILDREN_WHERE = "WHERE tmp.parent = :parentId ";
 
     private static final DateTimeFormatter DATE_ONLY = DateTimeFormatter.ofPattern("dd.MM.yyyy");
-    private static final DateTimeFormatter DATE_TIME = DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm");
+    private static final DateTimeFormatter DATE_TIME = DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm:ss");
 
     private static final String RS_SQL =
             "(WITH vars(npi) AS ("
@@ -674,14 +674,14 @@ public class NaryadWorkspaceService {
     }
 
     /**
-     * Delphi: дата без времени, если часы и минуты нулевые; иначе dd.mm.yyyy HH:mm.
+     * Дата без времени, если часы, минуты и секунды нулевые; иначе dd.MM.yyyy HH:mm:ss.
      */
     static String formatBegoperdate(Timestamp value) {
         if (value == null) {
             return null;
         }
         LocalDateTime local = value.toLocalDateTime();
-        if (local.getHour() == 0 && local.getMinute() == 0) {
+        if (local.getHour() == 0 && local.getMinute() == 0 && local.getSecond() == 0) {
             return local.format(DATE_ONLY);
         }
         return local.format(DATE_TIME);
