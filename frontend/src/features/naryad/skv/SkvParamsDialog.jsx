@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Alert from '@mui/material/Alert'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
@@ -24,6 +24,7 @@ import { ru } from 'date-fns/locale'
 import { AxiosProvider, BaseTable } from 'mainComponent'
 import { fetchNaryadSkvHeader, saveNaryadSkv } from '../../../api/naryadyApi.js'
 import useColumnSizingPersistence from '../workspace/layout/useColumnSizingPersistence.js'
+import useSkvFittedColumns from './useSkvFittedColumns.js'
 import DraggableDialog from '../../../components/DraggableDialog'
 import { useAlert, useConfirm } from '../../../context/ConfirmContext.jsx'
 import { SkvEditorProvider } from './SkvEditorContext.jsx'
@@ -127,6 +128,7 @@ export default function SkvParamsDialog({
   const partId = part.id
   const titleId = `skv-dialog-title-${partId}`
   const paramsUrl = `/naryady/${naryadId}/${partId}/skv/params`
+  const tableBoxRef = useRef(null)
   useColumnSizingPersistence([[paramsUrl, part.skv.columnSizing]])
   const readOnly = header?.readOnly === true
   const dirty = isSkvDirty({ savedBegDate: header?.begDate, begDate, draft })
@@ -139,6 +141,7 @@ export default function SkvParamsDialog({
     dirty,
     draft,
   })
+  useSkvFittedColumns(tableBoxRef, paramsUrl, skvParamColumns, header != null)
 
   const loadHeader = useCallback(async () => {
     setLoadError('')
@@ -302,15 +305,35 @@ export default function SkvParamsDialog({
               </Alert>
             ) : null}
             <Box
+              ref={tableBoxRef}
               sx={{
                 flex: 1,
                 minHeight: 0,
                 minWidth: 0,
                 width: '100%',
+                maxWidth: '100%',
                 overflow: 'hidden',
                 display: 'flex',
                 flexDirection: 'column',
-                '& .overflow-y-auto': { overflowX: 'auto' },
+                // Доли колонок в сумме дают ширину окна, без горизонтальной прокрутки.
+                '& .overflow-y-auto': { overflowX: 'hidden' },
+                '& table': {
+                  width: '100% !important',
+                  minWidth: '0 !important',
+                  maxWidth: '100%',
+                },
+                '& th, & td': {
+                  whiteSpace: 'normal !important',
+                  overflowWrap: 'anywhere',
+                  wordBreak: 'break-word',
+                  textOverflow: 'clip !important',
+                  height: 'auto',
+                },
+                '& td > div': {
+                  whiteSpace: 'normal',
+                  overflowWrap: 'anywhere',
+                  wordBreak: 'break-word',
+                },
               }}
             >
               <SkvEditorProvider value={editor}>
@@ -321,13 +344,7 @@ export default function SkvParamsDialog({
                     filters={[]}
                     setFilters={noopSetFilters}
                     reRenderSignal={tableSignal}
-                    defaultColumn={{
-                      enableColumnFilter: false,
-                      size: 150,
-                      minSize: 40,
-                      maxSize: 4000,
-                    }}
-                    style={{ flex: 1, minWidth: 0, minHeight: 0, width: '100%' }}
+                    style={{ flex: 1, minWidth: 0, minHeight: 0, width: '100%', maxWidth: '100%' }}
                   />
                 </AxiosProvider>
               </SkvEditorProvider>

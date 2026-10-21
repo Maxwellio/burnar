@@ -11,6 +11,14 @@ const inputSx = {
   '& .MuiInputBase-input': { py: 0.5, fontSize: '0.875rem' },
 }
 
+/** Длинный текст ячейки переносится по строкам, а не обрезается точками. */
+const wrapSx = {
+  display: 'block',
+  whiteSpace: 'pre-wrap',
+  overflowWrap: 'anywhere',
+  wordBreak: 'break-word',
+}
+
 function changedInputSx(changed) {
   return {
     ...inputSx,
@@ -40,7 +48,7 @@ function NmCell({ row }) {
   const changed = skvChangedFields(draft, row.original)
   const bold = changed.znval || changed.val || changed.valstr
   return (
-    <Box component="span" sx={{ fontWeight: bold ? 700 : 400 }}>
+    <Box component="span" sx={{ ...wrapSx, fontWeight: bold ? 700 : 400 }}>
       {row.original.nm ?? ''}
     </Box>
   )
@@ -51,7 +59,7 @@ function ZnvalCell({ row }) {
   const original = row.original
   const options = Array.isArray(original.values) ? original.values : []
 
-  if (readOnly) return original.znnm ?? ''
+  if (readOnly) return <Box component="span" sx={wrapSx}>{original.znnm ?? ''}</Box>
   const value = skvCellValue(draft, original, 'znval') ?? ''
   const known = options.some((item) => String(item.id) === value)
   const bold = skvChangedFields(draft, original).znval
@@ -71,7 +79,17 @@ function ZnvalCell({ row }) {
         inputProps={{ 'aria-label': `Значение: ${original.nm ?? ''}` }}
         sx={{
           ...inputSx,
-          '& .MuiSelect-select': { fontWeight: bold ? 700 : 400 },
+          '& .MuiSelect-select': {
+            fontWeight: bold ? 700 : 400,
+            whiteSpace: 'pre-wrap !important',
+            overflowWrap: 'anywhere',
+            wordBreak: 'break-word',
+            textOverflow: 'clip !important',
+            height: 'auto !important',
+            display: 'block',
+            lineHeight: 1.4,
+            overflow: 'visible',
+          },
         }}
       >
         <MenuItem value="">{'\u00a0'}</MenuItem>
@@ -87,7 +105,7 @@ function ValCell({ row }) {
   const { readOnly, draft, setCell } = useSkvEditor()
   const original = row.original
   const value = skvCellValue(draft, original, 'val')
-  if (readOnly) return value
+  if (readOnly) return <Box component="span" sx={wrapSx}>{value}</Box>
   return (
     <CellEditor>
       <TextField
@@ -108,7 +126,8 @@ function ValstrCell({ row }) {
   const { readOnly, draft, setCell } = useSkvEditor()
   const original = row.original
   const value = skvCellValue(draft, original, 'valstr')
-  if (readOnly) return value
+  if (readOnly) return <Box component="span" sx={wrapSx}>{value}</Box>
+  const fieldSx = changedInputSx(skvChangedFields(draft, original).valstr)
   return (
     <CellEditor>
       <TextField
@@ -117,9 +136,19 @@ function ValstrCell({ row }) {
         variant="standard"
         size="small"
         fullWidth
+        multiline
+        minRows={1}
         InputProps={{ disableUnderline: true }}
         inputProps={{ maxLength: VALSTR_MAX_LENGTH, 'aria-label': `Строковое: ${original.nm ?? ''}` }}
-        sx={changedInputSx(skvChangedFields(draft, original).valstr)}
+        sx={{
+          ...fieldSx,
+          '& .MuiInputBase-input': {
+            ...fieldSx['& .MuiInputBase-input'],
+            whiteSpace: 'pre-wrap',
+            overflowWrap: 'anywhere',
+            wordBreak: 'break-word',
+          },
+        }}
       />
     </CellEditor>
   )
