@@ -1,7 +1,6 @@
 package burnar.service;
 
 import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.util.Collection;
 
 /**
@@ -65,11 +64,12 @@ public final class NaryadOperCalc {
         return null;
     }
 
+    @SuppressWarnings("deprecation") // константа BigDecimal, как в NaryadSkvParams.normalizeVal
     public static BigDecimal normalizeZnach(BigDecimal value) {
         if (value == null) {
             return null;
         }
-        BigDecimal scaled = value.setScale(ZNACH_SCALE, RoundingMode.HALF_UP);
+        BigDecimal scaled = value.setScale(ZNACH_SCALE, BigDecimal.ROUND_HALF_UP);
         if (scaled.abs().compareTo(ZNACH_LIMIT) >= 0) {
             throw new IllegalArgumentException(ZNACH_OUT_OF_RANGE);
         }
