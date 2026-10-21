@@ -1,7 +1,10 @@
 package burnar.controller;
 
 import burnar.dto.NaryadAlgorithmDto;
+import burnar.dto.NaryadCalcResultDto;
 import burnar.dto.NaryadClosedDto;
+import burnar.dto.NaryadOperParamSaveDto;
+import burnar.dto.NaryadOperParamValueRequest;
 import burnar.dto.NaryadClosedRequest;
 import burnar.dto.NaryadDurationTotalsDto;
 import burnar.dto.NaryadHeaderDto;
@@ -15,6 +18,7 @@ import burnar.dto.NaryadRowColorDto;
 import burnar.dto.NaryadRowColorRequest;
 import burnar.dto.NaryadRowsColorDto;
 import burnar.dto.NaryadRowsColorRequest;
+import burnar.service.NaryadOperCalcService;
 import burnar.service.NaryadWorkspaceService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -23,6 +27,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -42,9 +47,13 @@ import java.util.Map;
 public class NaryadWorkspaceController {
 
     private final NaryadWorkspaceService naryadWorkspaceService;
+    private final NaryadOperCalcService naryadOperCalcService;
 
-    public NaryadWorkspaceController(NaryadWorkspaceService naryadWorkspaceService) {
+    public NaryadWorkspaceController(
+            NaryadWorkspaceService naryadWorkspaceService,
+            NaryadOperCalcService naryadOperCalcService) {
         this.naryadWorkspaceService = naryadWorkspaceService;
+        this.naryadOperCalcService = naryadOperCalcService;
     }
 
     @GetMapping("/{id:\\d+}/zadanie")
@@ -61,6 +70,21 @@ public class NaryadWorkspaceController {
     public List<NaryadOperParamDto> zadanieParams(
             @PathVariable int id, @RequestParam(required = false) Long nodeId) {
         return naryadWorkspaceService.findZadanieParams(id, nodeId);
+    }
+
+    @PostMapping("/{id:\\d+}/zadanie/{nodeId:\\d+}/calc")
+    public NaryadCalcResultDto calcZadanie(@PathVariable int id, @PathVariable long nodeId) {
+        return naryadOperCalcService.calcZadanie(id, nodeId);
+    }
+
+    @PutMapping("/{id:\\d+}/zadanie/{nodeId:\\d+}/params/{parcode:\\d+}")
+    public NaryadOperParamSaveDto saveZadanieParam(
+            @PathVariable int id,
+            @PathVariable long nodeId,
+            @PathVariable long parcode,
+            @RequestBody(required = false) NaryadOperParamValueRequest request) {
+        return naryadOperCalcService.saveZadanieParam(
+                id, nodeId, parcode, request == null ? null : request.getValue());
     }
 
     @GetMapping("/{id:\\d+}/zadanie/algorithm")
@@ -149,6 +173,21 @@ public class NaryadWorkspaceController {
     public List<NaryadOperParamDto> vipolnenieParams(
             @PathVariable int id, @RequestParam(required = false) Long nodeId) {
         return naryadWorkspaceService.findVipolnenieParams(id, nodeId);
+    }
+
+    @PostMapping("/{id:\\d+}/vipolnenie/{nodeId:\\d+}/calc")
+    public NaryadCalcResultDto calcVipolnenie(@PathVariable int id, @PathVariable long nodeId) {
+        return naryadOperCalcService.calcVipolnenie(id, nodeId);
+    }
+
+    @PutMapping("/{id:\\d+}/vipolnenie/{nodeId:\\d+}/params/{parcode:\\d+}")
+    public NaryadOperParamSaveDto saveVipolnenieParam(
+            @PathVariable int id,
+            @PathVariable long nodeId,
+            @PathVariable long parcode,
+            @RequestBody(required = false) NaryadOperParamValueRequest request) {
+        return naryadOperCalcService.saveVipolnenieParam(
+                id, nodeId, parcode, request == null ? null : request.getValue());
     }
 
     @GetMapping("/{id:\\d+}/vipolnenie/algorithm")

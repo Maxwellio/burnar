@@ -123,7 +123,7 @@ export default function NaryadWorkspacePanel({
                 paramsUrl={urls.params}
                 paramColumns={part.paramColumns}
                 paramFilters={paramFilters}
-                reloadSignal={tree.reloadSignal}
+                reloadSignal={workspace.paramsReloadSignal}
                 algorithm={workspace.algorithm}
               />
             </Box>

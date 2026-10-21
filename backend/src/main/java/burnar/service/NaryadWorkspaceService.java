@@ -228,12 +228,18 @@ public class NaryadWorkspaceService {
                     + "WHERE o.id = :oplife AND ao.id_operlife = o.id AND ao.alg = a.key";
 
     private static final String ZADANIE_OPER_REF_SQL =
-            "SELECT operlifeid, operlifetype FROM burnar.zadanie_oper "
+            "SELECT operlifeid, operlifetype, locked FROM burnar.zadanie_oper "
                     + "WHERE narkey = :narkey AND key = :nodeId";
 
     private static final String VIPOLNENIE_OPER_REF_SQL =
-            "SELECT operlifeid, operlifetype FROM burnar.vipolnenie_oper "
+            "SELECT operlifeid, operlifetype, locked FROM burnar.vipolnenie_oper "
                     + "WHERE narkey = :narkey AND key = :nodeId";
+
+    private static final String ZADANIE_CLOSED_SQL =
+            "SELECT closed FROM burnar.defnarzad WHERE narkey = :narkey";
+
+    private static final String VIPOLNENIE_CLOSED_SQL =
+            "SELECT closed FROM burnar.defnarvip WHERE narkey = :narkey";
 
     static final String ZADANIE_DESCRIPTOR_SQL =
             "SELECT closed FROM burnar.defnarzad WHERE narkey = :narkey FOR UPDATE";
@@ -383,11 +389,15 @@ public class NaryadWorkspaceService {
 
     private final NamedParameterJdbcTemplate jdbc;
     private final NaryadListService naryadListService;
+    private final NaryadOperCalcService naryadOperCalcService;
 
     public NaryadWorkspaceService(
-            NamedParameterJdbcTemplate jdbc, NaryadListService naryadListService) {
+            NamedParameterJdbcTemplate jdbc,
+            NaryadListService naryadListService,
+            NaryadOperCalcService naryadOperCalcService) {
         this.jdbc = jdbc;
         this.naryadListService = naryadListService;
+        this.naryadOperCalcService = naryadOperCalcService;
     }
 
     public List<NaryadOperNodeDto> findZadanieRoots(int naryadId) {
@@ -420,7 +430,9 @@ public class NaryadWorkspaceService {
                 .addValue("narkey", naryadId)
                 .addValue("zadkey", nodeId)
                 .addValue("aoperlifeid", ref.operlifeid);
-        return jdbc.query(ZADANIE_PARAMS_SQL, params, PARAM_MAPPER);
+        List<NaryadOperParamDto> rows = jdbc.query(ZADANIE_PARAMS_SQL, params, PARAM_MAPPER);
+        attachParamEditors(rows, nodeId, ref.operlifeid, paramEditable(ZADANIE_CLOSED_SQL, naryadId, false, ref));
+        return rows;
     }
 
     public List<NaryadOperParamDto> findVipolnenieParams(int naryadId, Long nodeId) {
@@ -433,7 +445,9 @@ public class NaryadWorkspaceService {
                 .addValue("narkey", naryadId)
                 .addValue("vipkey", nodeId)
                 .addValue("aoperlifeid", ref.operlifeid);
-        return jdbc.query(VIPOLNENIE_PARAMS_SQL, params, PARAM_MAPPER);
+        List<NaryadOperParamDto> rows = jdbc.query(VIPOLNENIE_PARAMS_SQL, params, PARAM_MAPPER);
+        attachParamEditors(rows, nodeId, ref.operlifeid, paramEditable(VIPOLNENIE_CLOSED_SQL, naryadId, true, ref));
+        return rows;
     }
 
     public NaryadAlgorithmDto findZadanieAlgorithm(int naryadId, Long nodeId) {
@@ -564,11 +578,11 @@ public class NaryadWorkspaceService {
     }
 
     public NaryadWorkActionDto zadanieWorkAction(int naryadId, long nodeId) {
-        return workAction(naryadId, nodeId, ZADANIE_WORK_ROWS_SQL);
+        return workAction(naryadId, nodeId, ZADANIE_WORK_ROWS_SQL, "burnar.zadanie_oper");
     }
 
     public NaryadWorkActionDto vipolnenieWorkAction(int naryadId, long nodeId) {
-        return workAction(naryadId, nodeId, VIPOLNENIE_WORK_ROWS_SQL);
+        return workAction(naryadId, nodeId, VIPOLNENIE_WORK_ROWS_SQL, "burnar.vipolnenie_oper");
     }
 
     /** actDelSelOpers: burnar.zadanie_operac_del по выбранным, дети раньше родителей. */
@@ -747,7 +761,10 @@ public class NaryadWorkspaceService {
                 new MapSqlParameterSource()
                         .addValue("narkey", naryadId)
                         .addValue("nodeId", nodeId),
-                (rs, rowNum) -> new OperRef(getInteger(rs, "operlifeid"), getInteger(rs, "operlifetype")));
+                (rs, rowNum) -> new OperRef(
+                        getInteger(rs, "operlifeid"),
+                        getInteger(rs, "operlifetype"),
+                        getInteger(rs, "locked")));
         return rows.isEmpty() ? null : rows.get(0);
     }
 
@@ -833,14 +850,79 @@ public class NaryadWorkspaceService {
         return descriptors.get(0) == 1;
     }
 
-    private NaryadWorkActionDto workAction(int naryadId, long nodeId, String rowsSql) {
+    private NaryadWorkActionDto workAction(
+            int naryadId, long nodeId, String rowsSql, String childrenTable) {
         naryadListService.findHeader(naryadId);
         List<NaryadWorkDeletion.Node> nodes = loadWorkNodes(rowsSql, naryadId, List.of(nodeId));
         if (nodes.isEmpty()) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Naryad row not found");
         }
         NaryadWorkDeletion.Node node = nodes.get(0);
-        return new NaryadWorkActionDto(node.id, node.operlifetype, node.locked, node.rs);
+        Boolean hasChildren = jdbc.queryForObject(
+                "SELECT EXISTS (SELECT 1 FROM " + childrenTable + " c WHERE c.parent = :nodeId)",
+                new MapSqlParameterSource("nodeId", nodeId),
+                Boolean.class);
+        return new NaryadWorkActionDto(
+                node.id, node.operlifetype, node.locked, node.rs, Boolean.TRUE.equals(hasChildren));
+    }
+
+    /**
+     * Закрытая часть только для чтения. В выполнении заблокированная работа тоже:
+     * в задании блокировка параметры не закрывает, как ReadOpParams.
+     */
+    private boolean paramEditable(String closedSql, int naryadId, boolean lockBlocksEdit, OperRef ref) {
+        if (partClosed(closedSql, naryadId)) {
+            return false;
+        }
+        return !lockBlocksEdit || ref.locked == null || ref.locked != 1;
+    }
+
+    private boolean partClosed(String sql, int naryadId) {
+        List<Integer> rows = jdbc.query(
+                sql,
+                new MapSqlParameterSource("narkey", naryadId),
+                (rs, rowNum) -> rs.getInt("closed"));
+        return rows.isEmpty() || rows.get(0) == 1;
+    }
+
+    private void attachParamEditors(
+            List<NaryadOperParamDto> rows, Long nodeId, Integer operlifeid, boolean editable) {
+        List<BigDecimal> discrete = new java.util.ArrayList<>();
+        for (NaryadOperParamDto row : rows) {
+            row.setNodeId(nodeId);
+            row.setEditable(editable);
+            row.setParcode(NaryadOperCalcService.plain(row.getParcode()));
+            row.setZnachCode(NaryadOperCalcService.plain(row.getZnachCode()));
+            if (row.getPtype() != null && row.getPtype() == 2 && row.getParcode() != null) {
+                discrete.add(row.getParcode());
+            }
+        }
+        java.util.Map<String, List<burnar.dto.NaryadSkvValueDto>> options =
+                naryadOperCalcService.discreteOptions(operlifeid, discrete);
+        for (NaryadOperParamDto row : rows) {
+            if (row.getPtype() == null || row.getPtype() != 2) {
+                continue;
+            }
+            List<burnar.dto.NaryadSkvValueDto> values = new java.util.ArrayList<>(
+                    options.getOrDefault(NaryadOperCalcService.plainKey(row.getParcode()), List.of()));
+            appendStoredDiscrete(values, row);
+            row.setValues(values);
+        }
+    }
+
+    /** Сохранённый код вне списка норм всё равно виден в ячейке и может остаться выбранным. */
+    private static void appendStoredDiscrete(
+            List<burnar.dto.NaryadSkvValueDto> values, NaryadOperParamDto row) {
+        if (row.getZnachCode() == null) {
+            return;
+        }
+        for (burnar.dto.NaryadSkvValueDto value : values) {
+            if (value.getId() != null && value.getId().compareTo(row.getZnachCode()) == 0) {
+                return;
+            }
+        }
+        values.add(new burnar.dto.NaryadSkvValueDto(
+                row.getZnachCode(), row.getVal() == null ? "" : row.getVal()));
     }
 
     private List<Long> deleteWorks(
@@ -1091,10 +1173,12 @@ public class NaryadWorkspaceService {
     private static final class OperRef {
         final Integer operlifeid;
         final Integer operlifetype;
+        final Integer locked;
 
-        OperRef(Integer operlifeid, Integer operlifetype) {
+        OperRef(Integer operlifeid, Integer operlifetype, Integer locked) {
             this.operlifeid = operlifeid;
             this.operlifetype = operlifetype;
+            this.locked = locked;
         }
     }
 }

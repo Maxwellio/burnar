@@ -8,10 +8,10 @@ import { lockFlagMap } from '../actions/lock/lockRules.js'
 import useAsyncValue from './useAsyncValue.js'
 
 /** Итоги CalcItogsNS всего дерева; на время перечитывания остаются прежние числа. */
-export function useTotals(naryadId, part, reloadSignal) {
+export function useTotals(naryadId, part, reloadSignal, refreshSignal = 0) {
   return useAsyncValue(
     () => fetchNaryadTotals(naryadId, part),
-    [naryadId, part, reloadSignal],
+    [naryadId, part, reloadSignal, refreshSignal],
     { clearOnRefetch: false, resetKey: `${naryadId}:${part}` },
   )
 }
@@ -35,10 +35,10 @@ export function useWorkAction(naryadId, part, nodeId, reloadSignal) {
 }
 
 /** Текст алгоритма единственной выбранной строки (algs.ops, только тип 80). */
-export function useAlgorithm(algorithmUrl, nodeId) {
+export function useAlgorithm(algorithmUrl, nodeId, reloadSignal = 0) {
   return useAsyncValue(
     async () => (await fetchNaryadAlgorithm(algorithmUrl, nodeId))?.text ?? '',
-    [algorithmUrl, nodeId],
+    [algorithmUrl, nodeId, reloadSignal],
     { enabled: nodeId != null && Boolean(algorithmUrl), empty: '', clearOnRefetch: false },
   )
 }
