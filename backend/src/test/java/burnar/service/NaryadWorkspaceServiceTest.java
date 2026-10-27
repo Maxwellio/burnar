@@ -26,9 +26,15 @@ class NaryadWorkspaceServiceTest {
     }
 
     @Test
-    void begoperdateWithTimeKeepsHoursAndMinutes() {
+    void begoperdateWithTimeKeepsHoursMinutesAndSeconds() {
         Timestamp ts = Timestamp.valueOf(LocalDateTime.of(2024, 3, 5, 14, 7, 30));
-        assertEquals("05.03.2024 14:07", NaryadWorkspaceService.formatBegoperdate(ts));
+        assertEquals("05.03.2024 14:07:30", NaryadWorkspaceService.formatBegoperdate(ts));
+    }
+
+    @Test
+    void begoperdateWithOnlySecondsKeepsTime() {
+        Timestamp ts = Timestamp.valueOf(LocalDateTime.of(2024, 3, 5, 0, 0, 15));
+        assertEquals("05.03.2024 00:00:15", NaryadWorkspaceService.formatBegoperdate(ts));
     }
 
     @Test

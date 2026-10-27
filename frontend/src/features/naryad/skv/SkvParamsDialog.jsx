@@ -69,10 +69,10 @@ function SkvBegDateField({ value, onChange, readOnly }) {
         onChange={(next) => {
           onChange(next && isValid(next) ? format(next, "yyyy-MM-dd'T'HH:mm:ss") : null)
         }}
-        format="dd.MM.yyyy HH:mm"
+        format="dd.MM.yyyy HH:mm:ss"
         ampm={false}
-        views={['year', 'month', 'day', 'hours', 'minutes']}
-        timeSteps={{ hours: 1, minutes: 1 }}
+        views={['year', 'month', 'day', 'hours', 'minutes', 'seconds']}
+        timeSteps={{ hours: 1, minutes: 1, seconds: 1 }}
         readOnly={readOnly}
         disabled={readOnly}
         minDateTime={new Date(2000, 0, 1)}
@@ -258,7 +258,7 @@ export default function SkvParamsDialog({
         {header != null ? (
           <>
             <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2, flexWrap: 'wrap', pt: 1, flexShrink: 0 }}>
-              <Box sx={{ width: 240 }}>
+              <Box sx={{ width: 280 }}>
                 <SkvBegDateField
                   value={begDate}
                   onChange={setBegDate}
@@ -277,7 +277,7 @@ export default function SkvParamsDialog({
                 InputProps={{ readOnly: true }}
                 InputLabelProps={{ shrink: true }}
                 disabled
-                sx={{ width: 200 }}
+                sx={{ width: 230 }}
               />
               <FormControlLabel
                 control={<Checkbox checked={header.closed === true} disabled size="small" />}

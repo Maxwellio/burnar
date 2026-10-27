@@ -139,13 +139,13 @@ export function invalidSkvNumbers(draft) {
   return changedSkvRows(draft).filter((entry) => Number.isNaN(parseSkvNumber(entry.values.val)))
 }
 
-function minuteOf(value) {
+function secondOf(value) {
   if (!value) return null
-  return String(value).slice(0, 16)
+  return String(value).slice(0, 19)
 }
 
 export function skvBegDateChanged(savedBegDate, begDate) {
-  return minuteOf(savedBegDate) !== minuteOf(begDate)
+  return secondOf(savedBegDate) !== secondOf(begDate)
 }
 
 export function isSkvDirty({ savedBegDate, begDate, draft }) {

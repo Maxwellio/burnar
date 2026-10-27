@@ -84,8 +84,9 @@ describe('draft', () => {
 })
 
 describe('saving', () => {
-  it('compares the start date to the minute', () => {
-    assert.equal(skvBegDateChanged('2026-10-19T08:30:00', '2026-10-19T08:30:59'), false)
+  it('compares the start date to the second', () => {
+    assert.equal(skvBegDateChanged('2026-10-19T08:30:00', '2026-10-19T08:30:00'), false)
+    assert.equal(skvBegDateChanged('2026-10-19T08:30:00', '2026-10-19T08:30:59'), true)
     assert.equal(skvBegDateChanged('2026-10-19T08:30:00', '2026-10-19T08:31:00'), true)
     assert.equal(skvBegDateChanged(null, '2026-10-19T08:31:00'), true)
   })

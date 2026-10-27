@@ -221,7 +221,7 @@ function makePlanTreeColumns(prefix, { vipMarks = false } = {}) {
     //col(prefix, 'id', 'Код', 70),
     col(prefix, 'ord', '№ п/п', vipMarks ? 120 : 80, vipMarks ? { cell: VipOrdCell } : {}),
     col(prefix, 'nm', 'Название работы', 250, { cell: WorkNameCell }),
-    col(prefix, 'begoperdate', 'Время начала работы', 140, { cell: overrideCell('begoperdate') }),
+    col(prefix, 'begoperdate', 'Время начала работы', 180, { cell: overrideCell('begoperdate') }),
     col(prefix, 'istnorm', 'Источник нормирования', 140, { cell: overrideCell('istnorm') }),
     group(prefix, 'interval', 'Интервал', [
       col(prefix, 'ot', 'от', 50, { cell: overrideCell('ot') }),
