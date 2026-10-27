@@ -8,13 +8,16 @@ public class NaryadEmptyBlockRequest {
 
     private final Long beforeNodeId;
     private final String name;
+    private final String place;
 
     @JsonCreator
     public NaryadEmptyBlockRequest(
             @JsonProperty("beforeNodeId") Long beforeNodeId,
-            @JsonProperty("name") String name) {
+            @JsonProperty("name") String name,
+            @JsonProperty("place") String place) {
         this.beforeNodeId = beforeNodeId;
         this.name = name;
+        this.place = place;
     }
 
     public Long getBeforeNodeId() {
@@ -23,5 +26,9 @@ public class NaryadEmptyBlockRequest {
 
     public String getName() {
         return name;
+    }
+
+    public String getPlace() {
+        return place;
     }
 }

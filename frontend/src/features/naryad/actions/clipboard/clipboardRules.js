@@ -8,11 +8,15 @@ export const CUT_MARK_COLOR = '#87CEEB'
 
 export const CUT_LOCKED_MESSAGE = 'Не допускается перемещение заблокированных работ!'
 
-export const EMPTY_BLOCK_PASTE_COPY =
-  'Данный блок пустой! Выберите, куда скопировать данные.'
+export const PASTE_PLACE_MESSAGE =
+  'Куда поместить данные относительно выбранной записи?'
 
-export const EMPTY_BLOCK_PASTE_CUT =
-  'Данный блок пустой! Выберите, куда вставить данные.'
+export const EMPTY_BLOCK_PASTE_MESSAGE =
+  'Данный блок пустой. Куда поместить данные?'
+
+export const PLACE_BEFORE = { result: 'before', label: 'Перед записью', variant: 'contained' }
+export const PLACE_AFTER = { result: 'after', label: 'После записи' }
+export const PLACE_INSIDE = { result: 'inside', label: 'Внутрь блока' }
 
 const NAME_LIMIT = 512
 
@@ -131,8 +135,14 @@ export function canRenameBlock(node, closed, pending) {
   return canDeleteBlock(node, closed, pending)
 }
 
-export function emptyBlockPasteMessage(mode) {
-  return mode === 'cut' ? EMPTY_BLOCK_PASTE_CUT : EMPTY_BLOCK_PASTE_COPY
+export function pastePlaceChoices(target) {
+  const choices = [PLACE_BEFORE, PLACE_AFTER]
+  if (isEmptyBlock(target)) return [PLACE_INSIDE, ...choices]
+  return choices
+}
+
+export function pastePlaceMessage(target) {
+  return isEmptyBlock(target) ? EMPTY_BLOCK_PASTE_MESSAGE : PASTE_PLACE_MESSAGE
 }
 
 export function nameTooLong(name) {

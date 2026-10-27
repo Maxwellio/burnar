@@ -19,9 +19,11 @@ function ConfirmDialog({
   cancelLabel = 'Отмена',
   confirmColor = 'error',
   alternateLabel = null,
+  choices = null,
   input = null,
   onConfirm,
   onAlternate,
+  onChoice,
   onCancel,
 }) {
   const [draft, setDraft] = useState(input?.defaultValue ?? '')
@@ -43,7 +45,7 @@ function ConfirmDialog({
             value={draft}
             onChange={(event) => setDraft(event.target.value)}
             onKeyDown={(event) => {
-              if (event.key === 'Enter') {
+              if (event.key === 'Enter' && !choices?.length) {
                 event.preventDefault()
                 onConfirm(draft)
               }
@@ -59,19 +61,32 @@ function ConfirmDialog({
             {cancelLabel}
           </Button>
         ) : null}
-        {alternateLabel ? (
-          <Button variant="outlined" onClick={onAlternate}>
-            {alternateLabel}
+        {choices?.length ? choices.map((choice) => (
+          <Button
+            key={choice.result}
+            variant={choice.variant || 'outlined'}
+            color={choice.variant === 'contained' ? confirmColor : 'primary'}
+            onClick={() => onChoice(choice.result, draft)}
+          >
+            {choice.label}
           </Button>
-        ) : null}
-        <Button
-          variant="contained"
-          color={confirmColor}
-          onClick={() => onConfirm(draft)}
-          autoFocus={!input}
-        >
-          {confirmLabel}
-        </Button>
+        )) : (
+          <>
+            {alternateLabel ? (
+              <Button variant="outlined" onClick={onAlternate}>
+                {alternateLabel}
+              </Button>
+            ) : null}
+            <Button
+              variant="contained"
+              color={confirmColor}
+              onClick={() => onConfirm(draft)}
+              autoFocus={!input}
+            >
+              {confirmLabel}
+            </Button>
+          </>
+        )}
       </DialogActions>
     </DraggableDialog>
   )

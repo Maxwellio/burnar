@@ -182,10 +182,43 @@ public final class NaryadClipboard {
             }
             return new Slot(target.id, BigDecimal.ONE);
         }
-        if (!"before".equals(place)) {
+        if ("before".equals(place)) {
+            return new Slot(target.parentId, target.prnum);
+        }
+        if ("after".equals(place)) {
+            BigDecimal prnum = target.prnum == null ? BigDecimal.ONE : target.prnum.add(BigDecimal.ONE);
+            return new Slot(target.parentId, prnum);
+        }
+        throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "place is required");
+    }
+
+    /**
+     * Перенос внутри того же уровня: процедура ставит строку на конечный номер,
+     * а не сдвигает хвост, как копирование. Номер считается от живого номера цели.
+     */
+    public static BigDecimal sameLevelMovePrnum(BigDecimal sourcePrnum, BigDecimal targetPrnum, String place) {
+        if (!"before".equals(place) && !"after".equals(place)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "place is required");
         }
-        return new Slot(target.parentId, target.prnum);
+        if (sourcePrnum == null || targetPrnum == null) {
+            return "after".equals(place) ? BigDecimal.ONE : targetPrnum;
+        }
+        int cmp = sourcePrnum.compareTo(targetPrnum);
+        if ("before".equals(place)) {
+            return cmp < 0 ? targetPrnum.subtract(BigDecimal.ONE) : targetPrnum;
+        }
+        return cmp > 0 ? targetPrnum.add(BigDecimal.ONE) : targetPrnum;
+    }
+
+    /** Пустой блок — сосед выбранной строки: перед ней или сразу после. */
+    public static BigDecimal emptyBlockPrnum(Node anchor, String place) {
+        if (!"before".equals(place) && !"after".equals(place)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "place is required");
+        }
+        if ("before".equals(place)) {
+            return anchor.prnum;
+        }
+        return anchor.prnum == null ? BigDecimal.ONE : anchor.prnum.add(BigDecimal.ONE);
     }
 
     /** Выполнение не вырезает набор, в котором есть заблокированная работа. */

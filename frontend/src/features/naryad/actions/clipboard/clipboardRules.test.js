@@ -10,6 +10,8 @@ import {
   isCutMarked,
   isEmptyBlock,
   nestedSelectionWarning,
+  pastePlaceChoices,
+  pastePlaceMessage,
   visualOrder,
 } from './clipboardRules.js'
 
@@ -62,6 +64,16 @@ describe('naryad clipboard rules', () => {
     assert.equal(canAddEmptyBlock(structure.get(13), false, false, false), true)
     assert.equal(isEmptyBlock(structure.get(14)), true)
     assert.equal(isEmptyBlock(structure.get(11)), false)
+  })
+
+  it('asks before or after the selected row, and inside only for an empty block', () => {
+    assert.deepEqual(pastePlaceChoices(structure.get(12)).map((choice) => choice.result), ['before', 'after'])
+    assert.deepEqual(
+      pastePlaceChoices(structure.get(14)).map((choice) => choice.result),
+      ['inside', 'before', 'after'],
+    )
+    assert.equal(pastePlaceMessage(structure.get(12)), 'Куда поместить данные относительно выбранной записи?')
+    assert.match(pastePlaceMessage(structure.get(14)), /пустой/)
   })
 
   it('renames the same blocks that can be deleted without their children', () => {

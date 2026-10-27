@@ -1083,16 +1083,33 @@ public class NaryadWorkspaceService {
         if (target == null) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Naryad row not found");
         }
-        NaryadClipboard.Slot slot = NaryadClipboard.pasteSlot(target, request.getPlace());
-        for (NaryadClipboard.Node source : sequence) {
+        String place = request.getPlace();
+        NaryadClipboard.Slot slot = NaryadClipboard.pasteSlot(target, place);
+        boolean allSameLevel = cut
+                && !"inside".equals(place)
+                && sequence.stream().allMatch(node -> java.util.Objects.equals(node.parentId, slot.parentId));
+        List<NaryadClipboard.Node> apply = new java.util.ArrayList<>(sequence);
+        if (allSameLevel && "before".equals(place)) {
+            java.util.Collections.reverse(apply);
+        }
+        for (NaryadClipboard.Node source : apply) {
             FreshOper fresh = loadFreshOper(operTable, naryadId, source.id);
             if (fresh == null) {
                 continue;
             }
+            boolean sameLevel = !copy
+                    && !"inside".equals(place)
+                    && java.util.Objects.equals(fresh.parentId, slot.parentId);
+            BigDecimal prnum = slot.prnum;
+            if (sameLevel) {
+                FreshOper liveTarget = loadFreshOper(operTable, naryadId, target.id);
+                BigDecimal livePrnum = liveTarget == null ? target.prnum : liveTarget.prnum;
+                prnum = NaryadClipboard.sameLevelMovePrnum(fresh.prnum, livePrnum, place);
+            }
             if (copy) {
-                callCopy(vip, source.id, fresh.parentId, slot.parentId, slot.prnum, naryadId);
+                callCopy(vip, source.id, fresh.parentId, slot.parentId, prnum, naryadId);
             } else {
-                callMove(vip, source.id, fresh.parentId, fresh.prnum, slot.parentId, slot.prnum, naryadId);
+                callMove(vip, source.id, fresh.parentId, fresh.prnum, slot.parentId, prnum, naryadId);
             }
         }
     }
@@ -1114,8 +1131,9 @@ public class NaryadWorkspaceService {
         List<NaryadClipboard.Node> tree = loadClipboardTree(structureSql, naryadId);
         NaryadClipboard.Node before = findClipboardNode(tree, request.getBeforeNodeId());
         NaryadClipboard.requireEmptyBlock(before, request.getName(), vip);
+        BigDecimal prnum = NaryadClipboard.emptyBlockPrnum(before, request.getPlace());
         Timestamp date = loadBegoperdate(operTable, naryadId, before.id);
-        callEmptyBlock(vip, naryadId, date, before.parentId, before.prnum, request.getName());
+        callEmptyBlock(vip, naryadId, date, before.parentId, prnum, request.getName());
     }
 
     private void renameBlock(

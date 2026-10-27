@@ -27,6 +27,7 @@ export function ConfirmProvider({ children }) {
     alternateLabel: null,
     confirmResult: true,
     alternateResult: null,
+    choices: null,
     input: null,
   })
   const resolveRef = useRef(null)
@@ -57,6 +58,7 @@ export function ConfirmProvider({ children }) {
         alternateLabel: null,
         confirmResult: true,
         alternateResult: null,
+        choices: null,
         input: null,
       })
     })
@@ -76,12 +78,13 @@ export function ConfirmProvider({ children }) {
         alternateLabel: null,
         confirmResult: true,
         alternateResult: null,
+        choices: null,
         input: null,
       })
     })
   }, [])
 
-  /** Две рабочие кнопки и отмена. Отмена решает null и ничего не вызывает. */
+  /** Кнопки выбора и отмена. Отмена решает null и ничего не вызывает. */
   const choose = useCallback((message, options = {}) => {
     const {
       title = 'Внимание',
@@ -90,6 +93,7 @@ export function ConfirmProvider({ children }) {
       alternateLabel,
       alternateResult,
       cancelLabel = 'Отмена',
+      choices = null,
     } = options
     return new Promise((resolve) => {
       resolveRef.current = resolve
@@ -103,6 +107,7 @@ export function ConfirmProvider({ children }) {
         alternateLabel,
         confirmResult,
         alternateResult,
+        choices,
         input: null,
       })
     })
@@ -119,6 +124,7 @@ export function ConfirmProvider({ children }) {
       cancelLabel = 'Отмена',
       defaultValue = '',
       allowEmpty = false,
+      choices = null,
     } = options
     return new Promise((resolve) => {
       resolveRef.current = resolve
@@ -132,6 +138,7 @@ export function ConfirmProvider({ children }) {
         alternateLabel: null,
         confirmResult: true,
         alternateResult: null,
+        choices,
         input: { defaultValue, allowEmpty },
       })
     })
@@ -157,10 +164,19 @@ export function ConfirmProvider({ children }) {
         cancelLabel={state.cancelLabel}
         confirmColor={state.confirmColor}
         alternateLabel={state.alternateLabel}
+        choices={state.choices}
         input={state.input}
         onConfirm={submit}
         onAlternate={() => close(state.alternateResult)}
-        onCancel={() => close(state.input || state.alternateLabel ? null : false)}
+        onChoice={(result, draft) => {
+          if (state.input) {
+            if (!state.input.allowEmpty && draft === '') close(null)
+            else close({ value: draft, place: result })
+            return
+          }
+          close(result)
+        }}
+        onCancel={() => close(state.input || state.alternateLabel || state.choices ? null : false)}
       />
     </ConfirmContext.Provider>
   )

@@ -75,6 +75,29 @@ class NaryadClipboardTest {
         assertEquals(new BigDecimal("1"), inside.prnum);
         assertEquals(1L, before.parentId);
         assertEquals(new BigDecimal("3"), before.prnum);
+        NaryadClipboard.Slot after = NaryadClipboard.pasteSlot(empty, "after");
+        assertEquals(1L, after.parentId);
+        assertEquals(new BigDecimal("4"), after.prnum);
+    }
+
+    @Test
+    void sameLevelMoveUsesTheFinalNumberTheProcedureExpects() {
+        assertEquals(new BigDecimal("2"), NaryadClipboard.sameLevelMovePrnum(
+                new BigDecimal("1"), new BigDecimal("3"), "before"));
+        assertEquals(new BigDecimal("3"), NaryadClipboard.sameLevelMovePrnum(
+                new BigDecimal("1"), new BigDecimal("3"), "after"));
+        assertEquals(new BigDecimal("1"), NaryadClipboard.sameLevelMovePrnum(
+                new BigDecimal("3"), new BigDecimal("1"), "before"));
+        assertEquals(new BigDecimal("2"), NaryadClipboard.sameLevelMovePrnum(
+                new BigDecimal("3"), new BigDecimal("1"), "after"));
+    }
+
+    @Test
+    void emptyBlockPrnumIsTheAnchorOrTheNextNumber() {
+        NaryadClipboard.Node anchor = work(2, 1L, "2");
+        assertEquals(new BigDecimal("2"), NaryadClipboard.emptyBlockPrnum(anchor, "before"));
+        assertEquals(new BigDecimal("3"), NaryadClipboard.emptyBlockPrnum(anchor, "after"));
+        assertThrows(ResponseStatusException.class, () -> NaryadClipboard.emptyBlockPrnum(anchor, "inside"));
     }
 
     @Test

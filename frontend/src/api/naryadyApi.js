@@ -123,7 +123,7 @@ export function fetchNaryadStructure(id, part) {
   return requestJson(`/naryady/${id}/${part}/structure`)
 }
 
-/** actPasteRab: mode copy|cut, place before|inside. */
+/** Вставка снимка: place before, after или inside. */
 export function pasteNaryadClipboard(id, part, payload) {
   return requestAction(`/naryady/${id}/${part}/clipboard/paste`, {
     method: 'POST',
@@ -132,12 +132,12 @@ export function pasteNaryadClipboard(id, part, payload) {
   })
 }
 
-/** act*_add_emptyblock. Пустое имя создаёт блок. */
-export function addNaryadEmptyBlock(id, part, beforeNodeId, name) {
+/** Пустой блок перед выбранной строкой или сразу после неё. Пустое имя создаёт блок. */
+export function addNaryadEmptyBlock(id, part, beforeNodeId, name, place) {
   return requestAction(`/naryady/${id}/${part}/blocks`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ beforeNodeId, name }),
+    body: JSON.stringify({ beforeNodeId, name, place }),
   })
 }
 
