@@ -29,7 +29,7 @@ public final class NaryadClipboard {
     public static final String EMPTY_BLOCK_ROOT_MESSAGE =
             "Создавать блоки можно только в основных разделах!";
     public static final String NOT_EMPTY_BLOCK_MESSAGE =
-            "Внутрь можно вставить только в пустой блок";
+            "Внутрь можно вставить только в блок";
     public static final String NAME_REQUIRED = "Название блока не задано";
     public static final String NAME_TOO_LONG = "Название блока длиннее 512 символов";
     public static final String SYSTEM_BLOCK_MESSAGE = "Невозможно переименовать основной блок!";
@@ -176,8 +176,9 @@ public final class NaryadClipboard {
         if (isLocked(target)) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, PASTE_LOCKED_MESSAGE);
         }
+        place = place == null ? "" : place.trim();
         if ("inside".equals(place)) {
-            if (!isEmptyBlock(target)) {
+            if (!isBlock(target)) {
                 throw new ResponseStatusException(HttpStatus.CONFLICT, NOT_EMPTY_BLOCK_MESSAGE);
             }
             return new Slot(target.id, BigDecimal.ONE);

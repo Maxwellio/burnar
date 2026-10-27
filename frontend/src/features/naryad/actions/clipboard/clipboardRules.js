@@ -11,12 +11,11 @@ export const CUT_LOCKED_MESSAGE = 'Не допускается перемеще�
 export const PASTE_PLACE_MESSAGE =
   'Куда поместить данные относительно выбранной записи?'
 
-export const EMPTY_BLOCK_PASTE_MESSAGE =
-  'Данный блок пустой. Куда поместить данные?'
+export const BLOCK_PASTE_MESSAGE =
+  'Куда поместить данные относительно блока?'
 
-export const PLACE_BEFORE = { result: 'before', label: 'Перед записью', variant: 'contained' }
+export const PLACE_BEFORE = { result: 'before', label: 'Перед записью' }
 export const PLACE_AFTER = { result: 'after', label: 'После записи' }
-export const PLACE_INSIDE = { result: 'inside', label: 'Внутрь блока' }
 
 const NAME_LIMIT = 512
 
@@ -135,14 +134,25 @@ export function canRenameBlock(node, closed, pending) {
   return canDeleteBlock(node, closed, pending)
 }
 
+/** Внутрь — у любого блока, не только пустого. Перед и после — соседи выбранной строки. */
 export function pastePlaceChoices(target) {
-  const choices = [PLACE_BEFORE, PLACE_AFTER]
-  if (isEmptyBlock(target)) return [PLACE_INSIDE, ...choices]
+  const block = isBlock(target)
+  const choices = [
+    { result: 'before', label: block ? 'Перед блоком' : 'Перед записью' },
+    { result: 'after', label: block ? 'После блока' : 'После записи' },
+  ]
+  if (block) return [{ result: 'inside', label: 'Внутрь блока' }, ...choices]
   return choices
 }
 
 export function pastePlaceMessage(target) {
-  return isEmptyBlock(target) ? EMPTY_BLOCK_PASTE_MESSAGE : PASTE_PLACE_MESSAGE
+  return isBlock(target) ? BLOCK_PASTE_MESSAGE : PASTE_PLACE_MESSAGE
+}
+
+export function normalizePlace(value) {
+  const text = typeof value === 'string' ? value.trim().toLowerCase() : ''
+  if (text === 'before' || text === 'after' || text === 'inside') return text
+  return null
 }
 
 export function nameTooLong(name) {

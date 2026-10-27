@@ -1,7 +1,7 @@
 import ContentPaste from '@mui/icons-material/ContentPaste'
 import { pasteNaryadClipboard } from '../../../../api/naryadyApi.js'
 import { detailNodeId } from '../../workspace/naryadWorkspaceData.js'
-import { canPaste, pastePlaceChoices, pastePlaceMessage } from './clipboardRules.js'
+import { canPaste, normalizePlace, pastePlaceChoices, pastePlaceMessage } from './clipboardRules.js'
 
 /** Перед вставкой спрашиваем, куда относительно выбранной записи. Отмена ничего не делает. */
 export const pasteWorkAction = {
@@ -18,11 +18,11 @@ export const pasteWorkAction = {
     const targetId = detailNodeId(ctx.tree.getSelectedIds())
     const target = targetId == null ? null : ctx.getStructure()?.get(Number(targetId))
     if (!canPaste(clipboard, target, ctx.getClosed(), ctx.mutation.isPending())) return
-    const place = await ctx.choose(pastePlaceMessage(target), {
+    const place = normalizePlace(await ctx.choose(pastePlaceMessage(target), {
       title: 'Внимание',
       choices: pastePlaceChoices(target),
       cancelLabel: 'Отмена',
-    })
+    }))
     if (place == null) return
     await ctx.runMutation(async () => {
       try {

@@ -66,14 +66,18 @@ describe('naryad clipboard rules', () => {
     assert.equal(isEmptyBlock(structure.get(11)), false)
   })
 
-  it('asks before or after the selected row, and inside only for an empty block', () => {
+  it('asks before or after the selected row, and inside for every block', () => {
     assert.deepEqual(pastePlaceChoices(structure.get(12)).map((choice) => choice.result), ['before', 'after'])
+    assert.deepEqual(
+      pastePlaceChoices(structure.get(11)).map((choice) => choice.result),
+      ['inside', 'before', 'after'],
+    )
     assert.deepEqual(
       pastePlaceChoices(structure.get(14)).map((choice) => choice.result),
       ['inside', 'before', 'after'],
     )
     assert.equal(pastePlaceMessage(structure.get(12)), 'Куда поместить данные относительно выбранной записи?')
-    assert.match(pastePlaceMessage(structure.get(14)), /пустой/)
+    assert.match(pastePlaceMessage(structure.get(11)), /блока/)
   })
 
   it('renames the same blocks that can be deleted without their children', () => {

@@ -1,7 +1,7 @@
 import NoteAdd from '@mui/icons-material/NoteAdd'
 import { addNaryadEmptyBlock } from '../../../../api/naryadyApi.js'
 import { detailNodeId } from '../../workspace/naryadWorkspaceData.js'
-import { PLACE_AFTER, PLACE_BEFORE, canAddEmptyBlock, nameTooLong } from './clipboardRules.js'
+import { canAddEmptyBlock, nameTooLong, normalizePlace } from './clipboardRules.js'
 
 const NAME_TOO_LONG = 'Название блока длиннее 512 символов'
 
@@ -23,15 +23,19 @@ export const addEmptyBlockAction = {
       title: 'Введите название блока',
       defaultValue: '',
       allowEmpty: true,
-      choices: [PLACE_BEFORE, PLACE_AFTER],
+      choices: [
+        { result: 'before', label: 'Перед записью' },
+        { result: 'after', label: 'После записи' },
+      ],
     })
-    if (named == null) return
+    const place = normalizePlace(named?.place)
+    if (named == null || place == null) return
     if (nameTooLong(named.value)) {
       await ctx.showAlert(NAME_TOO_LONG)
       return
     }
     await ctx.runMutation(async () => {
-      await addNaryadEmptyBlock(ctx.naryadId, ctx.part.id, Number(targetId), named.value, named.place)
+      await addNaryadEmptyBlock(ctx.naryadId, ctx.part.id, Number(targetId), named.value, place)
     }, { reload: true })
   },
 }

@@ -57,16 +57,21 @@ function ConfirmDialog({
       </DialogContent>
       <DialogActions sx={{ px: 3, py: 2 }}>
         {hasCancel ? (
-          <Button variant="outlined" color="inherit" onClick={onCancel}>
+          <Button type="button" variant="outlined" color="inherit" onClick={onCancel}>
             {cancelLabel}
           </Button>
         ) : null}
         {choices?.length ? choices.map((choice) => (
           <Button
             key={choice.result}
-            variant={choice.variant || 'outlined'}
-            color={choice.variant === 'contained' ? confirmColor : 'primary'}
-            onClick={() => onChoice(choice.result, draft)}
+            type="button"
+            variant="outlined"
+            data-place={choice.result}
+            onClick={(event) => {
+              event.preventDefault()
+              event.stopPropagation()
+              onChoice(event.currentTarget.getAttribute('data-place'), draft)
+            }}
           >
             {choice.label}
           </Button>

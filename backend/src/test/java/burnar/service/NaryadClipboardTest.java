@@ -101,14 +101,14 @@ class NaryadClipboardTest {
     }
 
     @Test
-    void insideSlotRejectsABlockThatAlreadyHasChildren() {
+    void insideSlotPutsTheCopyAtTheStartOfAnyBlock() {
         NaryadClipboard.Node filled = new NaryadClipboard.Node(5, 1L, new BigDecimal("3"), null, 0, "0", true);
+        NaryadClipboard.Slot inside = NaryadClipboard.pasteSlot(filled, "inside");
 
-        ResponseStatusException error = assertThrows(ResponseStatusException.class, () ->
-                NaryadClipboard.pasteSlot(filled, "inside"));
-
-        assertEquals(409, error.getStatus().value());
-        assertEquals(NaryadClipboard.NOT_EMPTY_BLOCK_MESSAGE, error.getReason());
+        assertEquals(5L, inside.parentId);
+        assertEquals(new BigDecimal("1"), inside.prnum);
+        assertThrows(ResponseStatusException.class, () ->
+                NaryadClipboard.pasteSlot(work(4, 1L, "1"), "inside"));
     }
 
     @Test

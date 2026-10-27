@@ -150,7 +150,7 @@ export function ConfirmProvider({ children }) {
       else close(value)
       return
     }
-    close(state.confirmResult ?? true)
+    close(state.confirmResult === true ? true : (state.confirmResult ?? false))
   }
 
   return (
@@ -169,12 +169,17 @@ export function ConfirmProvider({ children }) {
         onConfirm={submit}
         onAlternate={() => close(state.alternateResult)}
         onChoice={(result, draft) => {
-          if (state.input) {
-            if (!state.input.allowEmpty && draft === '') close(null)
-            else close({ value: draft, place: result })
+          const place = typeof result === 'string' ? result.trim() : ''
+          if (place !== 'before' && place !== 'after' && place !== 'inside') {
+            close(null)
             return
           }
-          close(result)
+          if (state.input) {
+            if (!state.input.allowEmpty && draft === '') close(null)
+            else close({ value: draft ?? '', place })
+            return
+          }
+          close(place)
         }}
         onCancel={() => close(state.input || state.alternateLabel || state.choices ? null : false)}
       />
