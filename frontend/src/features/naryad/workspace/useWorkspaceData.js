@@ -1,5 +1,6 @@
 import {
   fetchNaryadAlgorithm,
+  fetchNaryadStructure,
   fetchNaryadTotals,
   fetchNaryadWorkAction,
   fetchNaryadWorkLocks,
@@ -22,6 +23,14 @@ export function useLockFlags(naryadId, enabled, reloadSignal) {
     async () => lockFlagMap(await fetchNaryadWorkLocks(naryadId)),
     [naryadId, reloadSignal],
     { enabled },
+  )
+}
+
+/** Все строки части: родитель и тип, чтобы не копировать блок вместе с работой внутри. */
+export function useStructure(naryadId, part, reloadSignal) {
+  return useAsyncValue(
+    () => fetchNaryadStructure(naryadId, part),
+    [naryadId, part, reloadSignal],
   )
 }
 

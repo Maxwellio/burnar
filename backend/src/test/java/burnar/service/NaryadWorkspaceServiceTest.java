@@ -189,6 +189,10 @@ class NaryadWorkspaceServiceTest {
         assertTrue(NaryadWorkspaceService.ZADANIE_WORK_ROWS_SQL.contains("burnar.zadanie_oper"));
         assertTrue(NaryadWorkspaceService.VIPOLNENIE_WORK_ROWS_SQL.contains("burnar.vipolnenie_oper"));
         assertTrue(NaryadWorkspaceService.ZADANIE_WORK_ROWS_SQL.contains("key IN (:nodeIds)"));
+        assertTrue(NaryadWorkspaceService.ZADANIE_STRUCTURE_SQL.contains("burnar.zadanie_anynm"));
+        assertTrue(NaryadWorkspaceService.VIPOLNENIE_STRUCTURE_SQL.contains("burnar.vipolnenie_anynm"));
+        assertTrue(NaryadWorkspaceService.ZADANIE_RENAME_SQL.contains("UPDATE burnar.zadanie_anynm"));
+        assertTrue(NaryadWorkspaceService.VIPOLNENIE_RENAME_SQL.contains("UPDATE burnar.vipolnenie_anynm"));
     }
 
     @Test

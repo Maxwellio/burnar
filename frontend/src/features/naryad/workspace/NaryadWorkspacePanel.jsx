@@ -6,6 +6,7 @@ import PanelSplitter from './layout/PanelSplitter.jsx'
 import useColumnSizingPersistence from './layout/useColumnSizingPersistence.js'
 import useResizablePanel from './layout/useResizablePanel.js'
 import { NaryadWorkspaceProvider } from './NaryadWorkspaceContext.jsx'
+import { CUT_MARK_COLOR, isCutMarked } from '../actions/clipboard/clipboardRules.js'
 import { nodeIdFilters, treeFooterStatusItems } from './naryadWorkspaceData.js'
 import TreeStatusBar from './TreeStatusBar.jsx'
 import useNaryadWorkspaceState from './useNaryadWorkspaceState.js'
@@ -93,7 +94,11 @@ export default function NaryadWorkspacePanel({
                   columns={part.treeColumns}
                   multiSelect
                   {...tree.tableProps}
-                  getRowBackgroundColor={colors.getRowBackgroundColor}
+                  getRowBackgroundColor={(row) => (
+                    isCutMarked(workspace.clipboard, row?.id)
+                      ? CUT_MARK_COLOR
+                      : colors.getRowBackgroundColor(row)
+                  )}
                   initialState={TREE_INITIAL_STATE}
                 />
               </Box>

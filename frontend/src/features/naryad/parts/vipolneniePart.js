@@ -3,6 +3,11 @@ import { closePartAction } from '../actions/close/closePartAction.js'
 import { importZadanieWorksAction } from '../actions/import/importZadanieWorksAction.js'
 import { replaceZadanieAction } from '../actions/replace/replaceZadanieAction.js'
 import { rowColorAction } from '../actions/color/rowColorAction.js'
+import { addEmptyBlockAction } from '../actions/clipboard/addEmptyBlockAction.js'
+import { copyWorkAction } from '../actions/clipboard/copyWorkAction.js'
+import { cutWorkAction } from '../actions/clipboard/cutWorkAction.js'
+import { pasteWorkAction } from '../actions/clipboard/pasteWorkAction.js'
+import { renameBlockAction } from '../actions/clipboard/renameBlockAction.js'
 import { deleteBlockAction } from '../actions/delete/deleteBlockAction.js'
 import { deleteMarkedWorksAction } from '../actions/delete/deleteMarkedWorksAction.js'
 import { lockWorksAction, unlockWorksAction } from '../actions/lock/lockWorksActions.js'
@@ -46,6 +51,11 @@ export const vipolneniePart = {
     replaceZadanieAction,
     deleteMarkedWorksAction,
     deleteBlockAction,
+    cutWorkAction,
+    copyWorkAction,
+    pasteWorkAction,
+    addEmptyBlockAction,
+    renameBlockAction,
     closePartAction,
     calcOperAction,
     lockWorksAction,

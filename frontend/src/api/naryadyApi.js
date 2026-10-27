@@ -118,6 +118,38 @@ export function replaceZadanieFromVipolnenie(id) {
   return requestAction(`/naryady/${id}/vipolnenie/replace-zadanie`, { method: 'POST' })
 }
 
+/** Родитель, тип и имя всех строк части. Кнопки буфера смотрят сюда, не в таблицу. */
+export function fetchNaryadStructure(id, part) {
+  return requestJson(`/naryady/${id}/${part}/structure`)
+}
+
+/** actPasteRab: mode copy|cut, place before|inside. */
+export function pasteNaryadClipboard(id, part, payload) {
+  return requestAction(`/naryady/${id}/${part}/clipboard/paste`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+}
+
+/** act*_add_emptyblock. Пустое имя создаёт блок. */
+export function addNaryadEmptyBlock(id, part, beforeNodeId, name) {
+  return requestAction(`/naryady/${id}/${part}/blocks`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ beforeNodeId, name }),
+  })
+}
+
+/** actRenameBlock. */
+export function renameNaryadBlock(id, part, nodeId, name) {
+  return requestAction(`/naryady/${id}/${part}/blocks/${nodeId}/name`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name }),
+  })
+}
+
 /** act*_del_block: снять блок и поднять вложенные работы на его уровень. */
 export function deleteNaryadBlock(id, part, nodeId) {
   return requestAction(`/naryady/${id}/${part}/blocks/${nodeId}/delete`, {
