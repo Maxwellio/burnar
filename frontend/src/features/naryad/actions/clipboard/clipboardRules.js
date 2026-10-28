@@ -14,8 +14,8 @@ export const PASTE_PLACE_MESSAGE =
 export const BLOCK_PASTE_MESSAGE =
   'Куда поместить данные относительно блока?'
 
-export const PLACE_BEFORE = { result: 'before', label: 'Перед записью' }
-export const PLACE_AFTER = { result: 'after', label: 'После записи' }
+export const PLACE_BEFORE = { result: 'before', label: 'Перед' }
+export const PLACE_AFTER = { result: 'after', label: 'После' }
 
 const NAME_LIMIT = 512
 
@@ -138,10 +138,10 @@ export function canRenameBlock(node, closed, pending) {
 export function pastePlaceChoices(target) {
   const block = isBlock(target)
   const choices = [
-    { result: 'before', label: block ? 'Перед блоком' : 'Перед записью' },
-    { result: 'after', label: block ? 'После блока' : 'После записи' },
+    { result: 'before', label: block ? 'Перед' : 'Перед' },
+    { result: 'after', label: block ? 'После' : 'После' },
   ]
-  if (block) return [{ result: 'inside', label: 'Внутрь блока' }, ...choices]
+  if (block) return [{ result: 'inside', label: 'В блок' }, ...choices]
   return choices
 }
 
