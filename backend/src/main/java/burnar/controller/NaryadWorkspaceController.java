@@ -3,6 +3,10 @@ package burnar.controller;
 import burnar.dto.NaryadAlgorithmDto;
 import burnar.dto.NaryadCalcResultDto;
 import burnar.dto.NaryadClosedDto;
+import burnar.dto.NaryadEmptyBlockRequest;
+import burnar.dto.NaryadPasteRequest;
+import burnar.dto.NaryadRenameBlockRequest;
+import burnar.dto.NaryadStructureNodeDto;
 import burnar.dto.NaryadOperParamSaveDto;
 import burnar.dto.NaryadOperParamValueRequest;
 import burnar.dto.NaryadClosedRequest;
@@ -132,6 +136,34 @@ public class NaryadWorkspaceController {
         return ResponseEntity.noContent().build();
     }
 
+    @GetMapping("/{id:\\d+}/zadanie/structure")
+    public List<NaryadStructureNodeDto> zadanieStructure(@PathVariable int id) {
+        return naryadWorkspaceService.zadanieStructure(id);
+    }
+
+    @PostMapping("/{id:\\d+}/zadanie/clipboard/paste")
+    public ResponseEntity<Void> pasteZadanie(
+            @PathVariable int id, @RequestBody(required = false) NaryadPasteRequest request) {
+        naryadWorkspaceService.pasteZadanie(id, request);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/{id:\\d+}/zadanie/blocks")
+    public ResponseEntity<Void> addZadanieEmptyBlock(
+            @PathVariable int id, @RequestBody(required = false) NaryadEmptyBlockRequest request) {
+        naryadWorkspaceService.addZadanieEmptyBlock(id, request);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PatchMapping("/{id:\\d+}/zadanie/blocks/{nodeId:\\d+}/name")
+    public ResponseEntity<Void> renameZadanieBlock(
+            @PathVariable int id,
+            @PathVariable long nodeId,
+            @RequestBody(required = false) NaryadRenameBlockRequest request) {
+        naryadWorkspaceService.renameZadanieBlock(id, nodeId, request);
+        return ResponseEntity.noContent().build();
+    }
+
     @PatchMapping("/{id:\\d+}/zadanie/colors")
     public NaryadRowsColorDto updateZadanieColors(
             @PathVariable int id,
@@ -244,6 +276,34 @@ public class NaryadWorkspaceController {
     @PostMapping("/{id:\\d+}/vipolnenie/blocks/{nodeId:\\d+}/delete")
     public ResponseEntity<Void> deleteVipolnenieBlock(@PathVariable int id, @PathVariable long nodeId) {
         naryadWorkspaceService.deleteVipolnenieBlock(id, nodeId);
+        return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/{id:\\d+}/vipolnenie/structure")
+    public List<NaryadStructureNodeDto> vipolnenieStructure(@PathVariable int id) {
+        return naryadWorkspaceService.vipolnenieStructure(id);
+    }
+
+    @PostMapping("/{id:\\d+}/vipolnenie/clipboard/paste")
+    public ResponseEntity<Void> pasteVipolnenie(
+            @PathVariable int id, @RequestBody(required = false) NaryadPasteRequest request) {
+        naryadWorkspaceService.pasteVipolnenie(id, request);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/{id:\\d+}/vipolnenie/blocks")
+    public ResponseEntity<Void> addVipolnenieEmptyBlock(
+            @PathVariable int id, @RequestBody(required = false) NaryadEmptyBlockRequest request) {
+        naryadWorkspaceService.addVipolnenieEmptyBlock(id, request);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PatchMapping("/{id:\\d+}/vipolnenie/blocks/{nodeId:\\d+}/name")
+    public ResponseEntity<Void> renameVipolnenieBlock(
+            @PathVariable int id,
+            @PathVariable long nodeId,
+            @RequestBody(required = false) NaryadRenameBlockRequest request) {
+        naryadWorkspaceService.renameVipolnenieBlock(id, nodeId, request);
         return ResponseEntity.noContent().build();
     }
 

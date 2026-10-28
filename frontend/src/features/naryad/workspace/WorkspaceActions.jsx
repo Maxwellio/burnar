@@ -19,11 +19,13 @@ export default function WorkspaceActions({ actions }) {
       const { Component } = action
       return <Component key={action.id} />
     }
+    const warning = typeof action.warning === 'function' ? action.warning(ctx) : null
     return (
       <ActionButton
         key={action.id}
         label={action.getLabel ? action.getLabel(ctx) : action.label}
         icon={action.getIcon ? action.getIcon(ctx) : action.icon}
+        warning={warning}
         disabled={!action.isEnabled(ctx)}
         onClick={() => {
           void action.run(ctx)

@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { useAlert, useConfirm } from '../../../context/ConfirmContext.jsx'
+import { useAlert, useChoose, useConfirm, usePrompt } from '../../../context/ConfirmContext.jsx'
 import { mergeWorkPatches } from '../actions/calc/workPatches.js'
+import { indexStructure } from '../actions/clipboard/clipboardRules.js'
 import useRowColorEditing from '../actions/color/useRowColorEditing.js'
 import useLatest from './useLatest.js'
 import useMutationRunner from './useMutationRunner.js'
 import useWorkTree from './useWorkTree.js'
-import { useAlgorithm, useLockFlags, useTotals, useWorkAction } from './useWorkspaceData.js'
+import { useAlgorithm, useLockFlags, useStructure, useTotals, useWorkAction } from './useWorkspaceData.js'
 
 /**
  * Собирает всё, что нужно кнопкам и панелям вкладки. Результат кладётся
@@ -38,6 +39,8 @@ export default function useNaryadWorkspaceState({
 }) {
   const showAlert = useAlert()
   const confirm = useConfirm()
+  const choose = useChoose()
+  const prompt = usePrompt()
   const urls = useMemo(() => part.urls(naryadId), [part, naryadId])
   const tree = useWorkTree(urls.tree)
   const mutation = useMutationRunner(showAlert)
@@ -57,6 +60,23 @@ export default function useNaryadWorkspaceState({
   const paramsSeen = useRef(false)
   const totals = useTotals(naryadId, part.id, reloadSignal, totalsEpoch)
   const lockFlags = useLockFlags(naryadId, part.features.locks, reloadSignal)
+  const structureRows = useStructure(naryadId, part.id, reloadSignal)
+  const structureById = useMemo(
+    () => (Array.isArray(structureRows) ? indexStructure(structureRows) : null),
+    [structureRows],
+  )
+  const getStructure = useLatest(structureById)
+  const [clipboard, setClipboardState] = useState(null)
+  const clipboardRef = useRef(null)
+  const setClipboard = useCallback((value) => {
+    clipboardRef.current = value
+    setClipboardState(value)
+  }, [])
+  const getClipboard = useCallback(() => clipboardRef.current, [])
+  const clearClipboard = useCallback(() => {
+    clipboardRef.current = null
+    setClipboardState(null)
+  }, [])
   const workAction = useWorkAction(naryadId, part.id, detailId, reloadSignal)
   const algorithm = useAlgorithm(urls.algorithm, detailId, reloadSignal)
   const getLockFlags = useLatest(lockFlags)
@@ -66,6 +86,11 @@ export default function useNaryadWorkspaceState({
   useEffect(() => {
     setWorkPatches(new Map())
   }, [reloadSignal])
+
+  useEffect(() => {
+    clipboardRef.current = null
+    setClipboardState(null)
+  }, [urls.tree])
 
   useEffect(() => {
     if (!paramsSeen.current) {
@@ -125,7 +150,15 @@ export default function useNaryadWorkspaceState({
     mutation,
     runMutation,
     confirm,
+    choose,
+    prompt,
     showAlert,
+    clipboard,
+    setClipboard,
+    getClipboard,
+    clearClipboard,
+    structureById,
+    getStructure,
     totals,
     lockFlags,
     workAction,

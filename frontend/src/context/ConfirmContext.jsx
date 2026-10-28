@@ -24,6 +24,11 @@ export function ConfirmProvider({ children }) {
     confirmLabel: CONFIRM_DEFAULTS.confirmLabel,
     cancelLabel: CONFIRM_DEFAULTS.cancelLabel,
     confirmColor: CONFIRM_DEFAULTS.confirmColor,
+    alternateLabel: null,
+    confirmResult: true,
+    alternateResult: null,
+    choices: null,
+    input: null,
   })
   const resolveRef = useRef(null)
 
@@ -50,6 +55,11 @@ export function ConfirmProvider({ children }) {
         confirmLabel,
         cancelLabel,
         confirmColor: CONFIRM_DEFAULTS.confirmColor,
+        alternateLabel: null,
+        confirmResult: true,
+        alternateResult: null,
+        choices: null,
+        input: null,
       })
     })
   }, [])
@@ -65,12 +75,86 @@ export function ConfirmProvider({ children }) {
         confirmLabel,
         cancelLabel: null,
         confirmColor: 'primary',
+        alternateLabel: null,
+        confirmResult: true,
+        alternateResult: null,
+        choices: null,
+        input: null,
       })
     })
   }, [])
 
+  /** Кнопки выбора и отмена. Отмена решает null и ничего не вызывает. */
+  const choose = useCallback((message, options = {}) => {
+    const {
+      title = 'Внимание',
+      confirmLabel,
+      confirmResult,
+      alternateLabel,
+      alternateResult,
+      cancelLabel = 'Отмена',
+      choices = null,
+    } = options
+    return new Promise((resolve) => {
+      resolveRef.current = resolve
+      setState({
+        open: true,
+        title,
+        message,
+        confirmLabel,
+        cancelLabel,
+        confirmColor: 'primary',
+        alternateLabel,
+        confirmResult,
+        alternateResult,
+        choices,
+        input: null,
+      })
+    })
+  }, [])
+
+  /**
+   * Строка или null, если окно закрыли. Пустая строка возвращается только
+   * при allowEmpty: так создаётся блок без имени, а переименование молчит.
+   */
+  const prompt = useCallback((message, options = {}) => {
+    const {
+      title = 'Введите название блока',
+      confirmLabel = 'ОК',
+      cancelLabel = 'Отмена',
+      defaultValue = '',
+      allowEmpty = false,
+      choices = null,
+    } = options
+    return new Promise((resolve) => {
+      resolveRef.current = resolve
+      setState({
+        open: true,
+        title,
+        message,
+        confirmLabel,
+        cancelLabel,
+        confirmColor: 'primary',
+        alternateLabel: null,
+        confirmResult: true,
+        alternateResult: null,
+        choices,
+        input: { defaultValue, allowEmpty },
+      })
+    })
+  }, [])
+
+  const submit = (value) => {
+    if (state.input) {
+      if (!state.input.allowEmpty && value === '') close(null)
+      else close(value)
+      return
+    }
+    close(state.confirmResult === true ? true : (state.confirmResult ?? false))
+  }
+
   return (
-    <ConfirmContext.Provider value={{ confirm, alert }}>
+    <ConfirmContext.Provider value={{ confirm, alert, choose, prompt }}>
       {children}
       <ConfirmDialog
         open={state.open}
@@ -79,8 +163,25 @@ export function ConfirmProvider({ children }) {
         confirmLabel={state.confirmLabel}
         cancelLabel={state.cancelLabel}
         confirmColor={state.confirmColor}
-        onConfirm={() => close(true)}
-        onCancel={() => close(false)}
+        alternateLabel={state.alternateLabel}
+        choices={state.choices}
+        input={state.input}
+        onConfirm={submit}
+        onAlternate={() => close(state.alternateResult)}
+        onChoice={(result, draft) => {
+          const place = typeof result === 'string' ? result.trim() : ''
+          if (place !== 'before' && place !== 'after' && place !== 'inside') {
+            close(null)
+            return
+          }
+          if (state.input) {
+            if (!state.input.allowEmpty && draft === '') close(null)
+            else close({ value: draft ?? '', place })
+            return
+          }
+          close(place)
+        }}
+        onCancel={() => close(state.input || state.alternateLabel || state.choices ? null : false)}
       />
     </ConfirmContext.Provider>
   )
@@ -100,4 +201,12 @@ export function useConfirm() {
 
 export function useAlert() {
   return useConfirmContext().alert
+}
+
+export function useChoose() {
+  return useConfirmContext().choose
+}
+
+export function usePrompt() {
+  return useConfirmContext().prompt
 }

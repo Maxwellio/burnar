@@ -3,8 +3,12 @@ package burnar.service;
 import burnar.dto.NaryadAlgorithmDto;
 import burnar.dto.NaryadClosedDto;
 import burnar.dto.NaryadDurationTotalsDto;
+import burnar.dto.NaryadEmptyBlockRequest;
 import burnar.dto.NaryadHeaderDto;
 import burnar.dto.NaryadLockTargetDto;
+import burnar.dto.NaryadPasteRequest;
+import burnar.dto.NaryadRenameBlockRequest;
+import burnar.dto.NaryadStructureNodeDto;
 import burnar.dto.NaryadWorkActionDto;
 import burnar.dto.NaryadWorkLockDto;
 import burnar.dto.NaryadOperNodeDto;
@@ -358,6 +362,29 @@ public class NaryadWorkspaceService {
     static final String VIPOLNENIE_DELETE_WORK_SQL = "CALL burnar.vipolnenie_operac_del(?, ?, ?, ?)";
     static final String VIPOLNENIE_DELETE_BLOCK_SQL = "CALL burnar.vipolnenie_operac_del_block(?, ?, ?, ?)";
 
+    static final String ZADANIE_STRUCTURE_SQL = structureSql(
+            "burnar.zadanie_oper", "burnar.zadanie_anynm", "zad_key");
+    static final String VIPOLNENIE_STRUCTURE_SQL = structureSql(
+            "burnar.vipolnenie_oper", "burnar.vipolnenie_anynm", "vip_key");
+    static final String ZADANIE_RENAME_SQL =
+            "UPDATE burnar.zadanie_anynm a SET nm = :nm "
+                    + "WHERE a.zad_key = :nodeId AND EXISTS ("
+                    + "SELECT 1 FROM burnar.zadanie_oper o WHERE o.key = a.zad_key AND o.narkey = :narkey)";
+    static final String VIPOLNENIE_RENAME_SQL =
+            "UPDATE burnar.vipolnenie_anynm a SET nm = :nm "
+                    + "WHERE a.vip_key = :nodeId AND EXISTS ("
+                    + "SELECT 1 FROM burnar.vipolnenie_oper o WHERE o.key = a.vip_key AND o.narkey = :narkey)";
+
+    private static String structureSql(String operTable, String nameTable, String nameColumn) {
+        return "SELECT o.key AS id, o.parent AS parent_id, o.prnum, o.operlifetype, o.locked, "
+                + WORK_RS_SQL + " AS rs, "
+                + "CASE WHEN o.oper IS NOT NULL THEN "
+                + "(SELECT s.nm FROM public.spr_oper s WHERE s.key = o.oper) "
+                + "ELSE (SELECT a.nm FROM " + nameTable + " a WHERE a." + nameColumn + " = o.key) END AS nm, "
+                + "EXISTS (SELECT 1 FROM " + operTable + " c WHERE c.parent = o.key) AS has_children "
+                + "FROM " + operTable + " o WHERE o.narkey = :narkey";
+    }
+
     static final String NOT_ALL_LOCKED_MESSAGE = "Не все работы заблокированы!";
     static final String VIPOLNENIE_ALREADY_EXISTS = "Наряд-выполнение уже создано";
     static final String ZADANIE_NOT_CLOSED = "Наряд-задание не закрыто";
@@ -631,6 +658,40 @@ public class NaryadWorkspaceService {
                 VIPOLNENIE_WORK_ROWS_SQL,
                 VIPOLNENIE_DELETE_BLOCK_SQL,
                 true);
+    }
+
+    public List<NaryadStructureNodeDto> zadanieStructure(int naryadId) {
+        return structure(naryadId, ZADANIE_STRUCTURE_SQL);
+    }
+
+    public List<NaryadStructureNodeDto> vipolnenieStructure(int naryadId) {
+        return structure(naryadId, VIPOLNENIE_STRUCTURE_SQL);
+    }
+
+    /** actPasteRab: copy или move по снимку, с конца видимого порядка. */
+    public void pasteZadanie(int naryadId, NaryadPasteRequest request) {
+        paste(naryadId, request, false, ZADANIE_DESCRIPTOR_SQL, ZADANIE_STRUCTURE_SQL, "burnar.zadanie_oper");
+    }
+
+    public void pasteVipolnenie(int naryadId, NaryadPasteRequest request) {
+        paste(naryadId, request, true, VIPOLNENIE_DESCRIPTOR_SQL, VIPOLNENIE_STRUCTURE_SQL, "burnar.vipolnenie_oper");
+    }
+
+    /** act*_add_emptyblock: сосед перед выбранной строкой. */
+    public void addZadanieEmptyBlock(int naryadId, NaryadEmptyBlockRequest request) {
+        addEmptyBlock(naryadId, request, false, ZADANIE_DESCRIPTOR_SQL, ZADANIE_STRUCTURE_SQL, "burnar.zadanie_oper");
+    }
+
+    public void addVipolnenieEmptyBlock(int naryadId, NaryadEmptyBlockRequest request) {
+        addEmptyBlock(naryadId, request, true, VIPOLNENIE_DESCRIPTOR_SQL, VIPOLNENIE_STRUCTURE_SQL, "burnar.vipolnenie_oper");
+    }
+
+    public void renameZadanieBlock(int naryadId, long nodeId, NaryadRenameBlockRequest request) {
+        renameBlock(naryadId, nodeId, request, ZADANIE_DESCRIPTOR_SQL, ZADANIE_STRUCTURE_SQL, ZADANIE_RENAME_SQL);
+    }
+
+    public void renameVipolnenieBlock(int naryadId, long nodeId, NaryadRenameBlockRequest request) {
+        renameBlock(naryadId, nodeId, request, VIPOLNENIE_DESCRIPTOR_SQL, VIPOLNENIE_STRUCTURE_SQL, VIPOLNENIE_RENAME_SQL);
     }
 
     /** Признаки блокировки всех работ выполнения этого наряда. */
@@ -977,6 +1038,280 @@ public class NaryadWorkspaceService {
         }
     }
 
+    private List<NaryadStructureNodeDto> structure(int naryadId, String sql) {
+        naryadListService.findHeader(naryadId);
+        return jdbc.query(sql, new MapSqlParameterSource("narkey", naryadId), (rs, rowNum) -> {
+            NaryadStructureNodeDto dto = new NaryadStructureNodeDto();
+            dto.setId(getLong(rs, "id"));
+            dto.setParentId(getLong(rs, "parent_id"));
+            dto.setPrnum(rs.getBigDecimal("prnum"));
+            dto.setOperlifetype(getInteger(rs, "operlifetype"));
+            dto.setLocked(getInteger(rs, "locked"));
+            dto.setRs(rs.getString("rs"));
+            dto.setNm(rs.getString("nm"));
+            dto.setHasChildren(rs.getBoolean("has_children"));
+            return dto;
+        });
+    }
+
+    private void paste(
+            int naryadId,
+            NaryadPasteRequest request,
+            boolean vip,
+            String descriptorSql,
+            String structureSql,
+            String operTable) {
+        naryadListService.findHeader(naryadId);
+        if (readClosed(descriptorSql, naryadId)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Naryad part is closed");
+        }
+        if (request == null || request.getTargetId() == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "targetId is required");
+        }
+        boolean copy = "copy".equals(request.getMode());
+        boolean cut = "cut".equals(request.getMode());
+        if (!copy && !cut) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "mode is required");
+        }
+        List<Long> ids = requireNodeIds(request.getNodeIds());
+        List<NaryadClipboard.Node> tree = loadClipboardTree(structureSql, naryadId);
+        List<NaryadClipboard.Node> sequence = NaryadClipboard.pasteSequence(tree, ids);
+        if (cut) {
+            NaryadClipboard.requireCutAllowed(sequence, vip);
+        }
+        NaryadClipboard.Node target = findClipboardNode(tree, request.getTargetId());
+        if (target == null) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Naryad row not found");
+        }
+        String place = request.getPlace();
+        NaryadClipboard.Slot slot = NaryadClipboard.pasteSlot(target, place);
+        boolean allSameLevel = cut
+                && !"inside".equals(place)
+                && sequence.stream().allMatch(node -> java.util.Objects.equals(node.parentId, slot.parentId));
+        List<NaryadClipboard.Node> apply = new java.util.ArrayList<>(sequence);
+        if (allSameLevel && "before".equals(place)) {
+            java.util.Collections.reverse(apply);
+        }
+        for (NaryadClipboard.Node source : apply) {
+            FreshOper fresh = loadFreshOper(operTable, naryadId, source.id);
+            if (fresh == null) {
+                continue;
+            }
+            boolean sameLevel = !copy
+                    && !"inside".equals(place)
+                    && java.util.Objects.equals(fresh.parentId, slot.parentId);
+            BigDecimal prnum = slot.prnum;
+            if (sameLevel) {
+                FreshOper liveTarget = loadFreshOper(operTable, naryadId, target.id);
+                BigDecimal livePrnum = liveTarget == null ? target.prnum : liveTarget.prnum;
+                prnum = NaryadClipboard.sameLevelMovePrnum(fresh.prnum, livePrnum, place);
+            }
+            if (copy) {
+                callCopy(vip, source.id, fresh.parentId, slot.parentId, prnum, naryadId);
+            } else {
+                callMove(vip, source.id, fresh.parentId, fresh.prnum, slot.parentId, prnum, naryadId);
+            }
+        }
+    }
+
+    private void addEmptyBlock(
+            int naryadId,
+            NaryadEmptyBlockRequest request,
+            boolean vip,
+            String descriptorSql,
+            String structureSql,
+            String operTable) {
+        naryadListService.findHeader(naryadId);
+        if (readClosed(descriptorSql, naryadId)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Naryad part is closed");
+        }
+        if (request == null || request.getBeforeNodeId() == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "beforeNodeId is required");
+        }
+        List<NaryadClipboard.Node> tree = loadClipboardTree(structureSql, naryadId);
+        NaryadClipboard.Node before = findClipboardNode(tree, request.getBeforeNodeId());
+        NaryadClipboard.requireEmptyBlock(before, request.getName(), vip);
+        BigDecimal prnum = NaryadClipboard.emptyBlockPrnum(before, request.getPlace());
+        Timestamp date = loadBegoperdate(operTable, naryadId, before.id);
+        callEmptyBlock(vip, naryadId, date, before.parentId, prnum, request.getName());
+    }
+
+    private void renameBlock(
+            int naryadId,
+            long nodeId,
+            NaryadRenameBlockRequest request,
+            String descriptorSql,
+            String structureSql,
+            String updateSql) {
+        naryadListService.findHeader(naryadId);
+        if (readClosed(descriptorSql, naryadId)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Naryad part is closed");
+        }
+        String name = request == null ? null : request.getName();
+        List<NaryadClipboard.Node> tree = loadClipboardTree(structureSql, naryadId);
+        NaryadClipboard.Node node = findClipboardNode(tree, nodeId);
+        if (node == null) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Naryad row not found");
+        }
+        String refusal = NaryadClipboard.renameRefusal(node, name);
+        if (refusal != null) {
+            HttpStatus status = NaryadClipboard.NAME_REQUIRED.equals(refusal)
+                    || NaryadClipboard.NAME_TOO_LONG.equals(refusal)
+                    ? HttpStatus.BAD_REQUEST
+                    : HttpStatus.CONFLICT;
+            throw new ResponseStatusException(status, refusal);
+        }
+        int updated = jdbc.update(
+                updateSql,
+                new MapSqlParameterSource("narkey", naryadId)
+                        .addValue("nodeId", nodeId)
+                        .addValue("nm", name));
+        if (updated == 0) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Naryad row not found");
+        }
+    }
+
+    private List<NaryadClipboard.Node> loadClipboardTree(String sql, int naryadId) {
+        return jdbc.query(
+                sql,
+                new MapSqlParameterSource("narkey", naryadId),
+                (rs, rowNum) -> new NaryadClipboard.Node(
+                        rs.getLong("id"),
+                        getLong(rs, "parent_id"),
+                        rs.getBigDecimal("prnum"),
+                        getInteger(rs, "operlifetype"),
+                        getInteger(rs, "locked"),
+                        rs.getString("rs"),
+                        rs.getBoolean("has_children")));
+    }
+
+    private static NaryadClipboard.Node findClipboardNode(List<NaryadClipboard.Node> tree, long id) {
+        for (NaryadClipboard.Node node : tree) {
+            if (node.id == id) {
+                return node;
+            }
+        }
+        return null;
+    }
+
+    private FreshOper loadFreshOper(String operTable, int naryadId, long nodeId) {
+        List<FreshOper> rows = jdbc.query(
+                "SELECT o.parent AS parent_id, o.prnum FROM " + operTable
+                        + " o WHERE o.narkey = :narkey AND o.key = :nodeId",
+                new MapSqlParameterSource("narkey", naryadId).addValue("nodeId", nodeId),
+                (rs, rowNum) -> new FreshOper(getLong(rs, "parent_id"), rs.getBigDecimal("prnum")));
+        return rows.isEmpty() ? null : rows.get(0);
+    }
+
+    private Timestamp loadBegoperdate(String operTable, int naryadId, long nodeId) {
+        List<Timestamp> rows = jdbc.query(
+                "SELECT o.begoperdate FROM " + operTable + " o WHERE o.narkey = :narkey AND o.key = :nodeId",
+                new MapSqlParameterSource("narkey", naryadId).addValue("nodeId", nodeId),
+                (rs, rowNum) -> rs.getTimestamp("begoperdate"));
+        return rows.isEmpty() ? null : rows.get(0);
+    }
+
+    private void callCopy(
+            boolean vip, long key, Long parent, Long destParent, BigDecimal destPrnum, int naryadId) {
+        String sql = vip
+                ? "CALL burnar.vipolnenie_operac_copy(?, ?, ?, ?, ?)"
+                : "CALL burnar.zadanie_operac_copy(?, ?, ?, ?, ?)";
+        executeAutocommit(con -> {
+            try (CallableStatement cs = con.prepareCall(sql)) {
+                bindWorkKey(cs, 1, key, vip);
+                bindNullableKey(cs, 2, parent, vip);
+                bindNullableKey(cs, 3, destParent, vip);
+                bindPrnum(cs, 4, destPrnum);
+                cs.setInt(5, naryadId);
+                cs.execute();
+            }
+        });
+    }
+
+    private void callMove(
+            boolean vip,
+            long key,
+            Long parent,
+            BigDecimal prnum,
+            Long destParent,
+            BigDecimal destPrnum,
+            int naryadId) {
+        String sql = vip
+                ? "CALL burnar.vipolnenie_operac_move(?, ?, ?, ?, ?, ?)"
+                : "CALL burnar.zadanie_operac_move(?, ?, ?, ?, ?, ?)";
+        executeAutocommit(con -> {
+            try (CallableStatement cs = con.prepareCall(sql)) {
+                bindWorkKey(cs, 1, key, vip);
+                bindNullableKey(cs, 2, parent, vip);
+                bindPrnum(cs, 3, prnum);
+                bindNullableKey(cs, 4, destParent, vip);
+                bindPrnum(cs, 5, destPrnum);
+                cs.setInt(6, naryadId);
+                cs.execute();
+            }
+        });
+    }
+
+    private void callEmptyBlock(
+            boolean vip, int naryadId, Timestamp date, long parentId, BigDecimal prnum, String name) {
+        String sql = vip
+                ? "CALL burnar.vipolnenie_add_emptyblock(?, ?, ?, ?, ?, ?)"
+                : "CALL burnar.zadanie_add_emptyblock(?, ?, ?, ?, ?, ?)";
+        executeAutocommit(con -> {
+            try (CallableStatement cs = con.prepareCall(sql)) {
+                cs.setInt(1, naryadId);
+                if (date == null) {
+                    cs.setNull(2, Types.TIMESTAMP);
+                } else {
+                    cs.setTimestamp(2, date);
+                }
+                bindWorkKey(cs, 3, parentId, vip);
+                bindPrnum(cs, 4, prnum);
+                cs.setString(5, name);
+                cs.setNull(6, Types.INTEGER);
+                cs.execute();
+            }
+        });
+    }
+
+    private void executeAutocommit(AutocommitWork work) {
+        try {
+            jdbc.getJdbcTemplate().execute((Connection con) -> {
+                boolean previousAutoCommit = con.getAutoCommit();
+                con.setAutoCommit(true);
+                try {
+                    work.run(con);
+                } finally {
+                    try {
+                        con.setAutoCommit(previousAutoCommit);
+                    } catch (SQLException ignored) {
+                        // Процедура уже завершила свою транзакцию.
+                    }
+                }
+                return null;
+            });
+        } catch (DataAccessException ex) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, NaryadProcedureMessages.from(ex));
+        }
+    }
+
+    private static void bindNullableKey(CallableStatement cs, int index, Long value, boolean bigintKeys)
+            throws SQLException {
+        if (value == null) {
+            cs.setNull(index, bigintKeys ? Types.BIGINT : Types.INTEGER);
+        } else {
+            bindWorkKey(cs, index, value, bigintKeys);
+        }
+    }
+
+    private static void bindPrnum(CallableStatement cs, int index, BigDecimal prnum) throws SQLException {
+        if (prnum == null) {
+            cs.setNull(index, Types.NUMERIC);
+        } else {
+            cs.setBigDecimal(index, prnum);
+        }
+    }
+
     private List<NaryadWorkDeletion.Node> loadWorkNodes(String sql, int naryadId, List<Long> nodeIds) {
         return jdbc.query(
                 sql,
@@ -1158,6 +1493,21 @@ public class NaryadWorkspaceService {
     private static Long getLong(ResultSet rs, String column) throws SQLException {
         long value = rs.getLong(column);
         return rs.wasNull() ? null : value;
+    }
+
+    @FunctionalInterface
+    private interface AutocommitWork {
+        void run(Connection con) throws SQLException;
+    }
+
+    private static final class FreshOper {
+        final Long parentId;
+        final BigDecimal prnum;
+
+        FreshOper(Long parentId, BigDecimal prnum) {
+            this.parentId = parentId;
+            this.prnum = prnum;
+        }
     }
 
     private static final class OrderedWork {
