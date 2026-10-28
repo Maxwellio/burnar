@@ -294,7 +294,7 @@ public class NaryadOperCalcService {
                 new MapSqlParameterSource("narkey", naryadId),
                 (rs, rowNum) -> new NaryadCalcDateDto(
                         getLong(rs, "key"),
-                        NaryadWorkspaceService.formatBegoperdate(rs.getTimestamp("begoperdate"))));
+                        NaryadOperFormat.formatBegoperdate(rs.getTimestamp("begoperdate"))));
     }
 
     private static NaryadCalcNodeDto nodeFrom(long nodeId, Map<String, Object> outs) {

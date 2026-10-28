@@ -110,10 +110,15 @@ public class NaryadSkvParamsService {
 
     private final NamedParameterJdbcTemplate jdbc;
     private final NaryadListService naryadListService;
+    private final NaryadPartCommandService naryadPartCommandService;
 
-    public NaryadSkvParamsService(NamedParameterJdbcTemplate jdbc, NaryadListService naryadListService) {
+    public NaryadSkvParamsService(
+            NamedParameterJdbcTemplate jdbc,
+            NaryadListService naryadListService,
+            NaryadPartCommandService naryadPartCommandService) {
         this.jdbc = jdbc;
         this.naryadListService = naryadListService;
+        this.naryadPartCommandService = naryadPartCommandService;
     }
 
     public NaryadSkvHeaderDto findHeader(int naryadId, Part part) {
@@ -285,7 +290,7 @@ public class NaryadSkvParamsService {
 
     private String readOnlyReason(int naryadId, Part part, Descriptor descriptor) {
         long lockedWorks = part == Part.VIPOLNENIE
-                ? count(NaryadWorkspaceService.VIPOLNENIE_LOCKED_COUNT_SQL, naryadId)
+                ? naryadPartCommandService.countVipolnenieLocked(naryadId)
                 : 0L;
         return NaryadSkvParams.readOnlyReason(descriptor.closed, lockedWorks);
     }
@@ -312,11 +317,6 @@ public class NaryadSkvParamsService {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Naryad descriptor not found");
         }
         return rows.get(0);
-    }
-
-    private long count(String sql, int naryadId) {
-        Long value = jdbc.queryForObject(sql, new MapSqlParameterSource("narkey", naryadId), Long.class);
-        return value == null ? 0L : value;
     }
 
     private static boolean containsValue(List<NaryadSkvValueDto> values, BigDecimal id) {
