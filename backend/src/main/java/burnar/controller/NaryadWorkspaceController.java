@@ -23,7 +23,11 @@ import burnar.dto.NaryadRowColorRequest;
 import burnar.dto.NaryadRowsColorDto;
 import burnar.dto.NaryadRowsColorRequest;
 import burnar.service.NaryadOperCalcService;
-import burnar.service.NaryadWorkspaceService;
+import burnar.service.NaryadOperEditService;
+import burnar.service.NaryadOperParamsService;
+import burnar.service.NaryadOperTreeService;
+import burnar.service.NaryadPartCommandService;
+import burnar.service.NaryadRowColorService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -50,30 +54,42 @@ import java.util.Map;
 @RequestMapping("/api/naryady")
 public class NaryadWorkspaceController {
 
-    private final NaryadWorkspaceService naryadWorkspaceService;
+    private final NaryadOperTreeService naryadOperTreeService;
+    private final NaryadOperParamsService naryadOperParamsService;
+    private final NaryadRowColorService naryadRowColorService;
+    private final NaryadPartCommandService naryadPartCommandService;
+    private final NaryadOperEditService naryadOperEditService;
     private final NaryadOperCalcService naryadOperCalcService;
 
     public NaryadWorkspaceController(
-            NaryadWorkspaceService naryadWorkspaceService,
+            NaryadOperTreeService naryadOperTreeService,
+            NaryadOperParamsService naryadOperParamsService,
+            NaryadRowColorService naryadRowColorService,
+            NaryadPartCommandService naryadPartCommandService,
+            NaryadOperEditService naryadOperEditService,
             NaryadOperCalcService naryadOperCalcService) {
-        this.naryadWorkspaceService = naryadWorkspaceService;
+        this.naryadOperTreeService = naryadOperTreeService;
+        this.naryadOperParamsService = naryadOperParamsService;
+        this.naryadRowColorService = naryadRowColorService;
+        this.naryadPartCommandService = naryadPartCommandService;
+        this.naryadOperEditService = naryadOperEditService;
         this.naryadOperCalcService = naryadOperCalcService;
     }
 
     @GetMapping("/{id:\\d+}/zadanie")
     public List<NaryadOperNodeDto> zadanieRoots(@PathVariable int id) {
-        return naryadWorkspaceService.findZadanieRoots(id);
+        return naryadOperTreeService.findZadanieRoots(id);
     }
 
     @GetMapping("/{id:\\d+}/zadanie/{nodeId:\\d+}/children")
     public List<NaryadOperNodeDto> zadanieChildren(@PathVariable int id, @PathVariable long nodeId) {
-        return naryadWorkspaceService.findZadanieChildren(id, nodeId);
+        return naryadOperTreeService.findZadanieChildren(id, nodeId);
     }
 
     @GetMapping("/{id:\\d+}/zadanie/params")
     public List<NaryadOperParamDto> zadanieParams(
             @PathVariable int id, @RequestParam(required = false) Long nodeId) {
-        return naryadWorkspaceService.findZadanieParams(id, nodeId);
+        return naryadOperParamsService.findZadanieParams(id, nodeId);
     }
 
     @PostMapping("/{id:\\d+}/zadanie/{nodeId:\\d+}/calc")
@@ -94,7 +110,7 @@ public class NaryadWorkspaceController {
     @GetMapping("/{id:\\d+}/zadanie/algorithm")
     public NaryadAlgorithmDto zadanieAlgorithm(
             @PathVariable int id, @RequestParam(required = false) Long nodeId) {
-        return naryadWorkspaceService.findZadanieAlgorithm(id, nodeId);
+        return naryadOperParamsService.findZadanieAlgorithm(id, nodeId);
     }
 
     @PatchMapping("/{id:\\d+}/zadanie/{nodeId:\\d+}/color")
@@ -102,56 +118,56 @@ public class NaryadWorkspaceController {
             @PathVariable int id,
             @PathVariable long nodeId,
             @RequestBody(required = false) NaryadRowColorRequest request) {
-        return naryadWorkspaceService.updateZadanieColor(
+        return naryadRowColorService.updateZadanieColor(
                 id, nodeId, request == null ? null : request.getColor());
     }
 
     @GetMapping("/{id:\\d+}/zadanie/totals")
     public NaryadDurationTotalsDto zadanieTotals(@PathVariable int id) {
-        return naryadWorkspaceService.zadanieTotals(id);
+        return naryadOperTreeService.zadanieTotals(id);
     }
 
     @PostMapping("/{id:\\d+}/zadanie/closed")
     public NaryadClosedDto setZadanieClosed(
             @PathVariable int id,
             @RequestBody(required = false) NaryadClosedRequest request) {
-        return naryadWorkspaceService.setZadanieClosed(id, request == null ? null : request.getClosed());
+        return naryadPartCommandService.setZadanieClosed(id, request == null ? null : request.getClosed());
     }
 
     @GetMapping("/{id:\\d+}/zadanie/nodes/{nodeId:\\d+}/action")
     public NaryadWorkActionDto zadanieWorkAction(@PathVariable int id, @PathVariable long nodeId) {
-        return naryadWorkspaceService.zadanieWorkAction(id, nodeId);
+        return naryadOperTreeService.zadanieWorkAction(id, nodeId);
     }
 
     @PostMapping("/{id:\\d+}/zadanie/works/delete")
     public List<Long> deleteZadanieWorks(
             @PathVariable int id,
             @RequestBody(required = false) NaryadNodeIdsRequest request) {
-        return naryadWorkspaceService.deleteZadanieWorks(id, request == null ? null : request.getNodeIds());
+        return naryadOperEditService.deleteZadanieWorks(id, request == null ? null : request.getNodeIds());
     }
 
     @PostMapping("/{id:\\d+}/zadanie/blocks/{nodeId:\\d+}/delete")
     public ResponseEntity<Void> deleteZadanieBlock(@PathVariable int id, @PathVariable long nodeId) {
-        naryadWorkspaceService.deleteZadanieBlock(id, nodeId);
+        naryadOperEditService.deleteZadanieBlock(id, nodeId);
         return ResponseEntity.noContent().build();
     }
 
     @GetMapping("/{id:\\d+}/zadanie/structure")
     public List<NaryadStructureNodeDto> zadanieStructure(@PathVariable int id) {
-        return naryadWorkspaceService.zadanieStructure(id);
+        return naryadOperEditService.zadanieStructure(id);
     }
 
     @PostMapping("/{id:\\d+}/zadanie/clipboard/paste")
     public ResponseEntity<Void> pasteZadanie(
             @PathVariable int id, @RequestBody(required = false) NaryadPasteRequest request) {
-        naryadWorkspaceService.pasteZadanie(id, request);
+        naryadOperEditService.pasteZadanie(id, request);
         return ResponseEntity.noContent().build();
     }
 
     @PostMapping("/{id:\\d+}/zadanie/blocks")
     public ResponseEntity<Void> addZadanieEmptyBlock(
             @PathVariable int id, @RequestBody(required = false) NaryadEmptyBlockRequest request) {
-        naryadWorkspaceService.addZadanieEmptyBlock(id, request);
+        naryadOperEditService.addZadanieEmptyBlock(id, request);
         return ResponseEntity.noContent().build();
     }
 
@@ -160,7 +176,7 @@ public class NaryadWorkspaceController {
             @PathVariable int id,
             @PathVariable long nodeId,
             @RequestBody(required = false) NaryadRenameBlockRequest request) {
-        naryadWorkspaceService.renameZadanieBlock(id, nodeId, request);
+        naryadOperEditService.renameZadanieBlock(id, nodeId, request);
         return ResponseEntity.noContent().build();
     }
 
@@ -168,7 +184,7 @@ public class NaryadWorkspaceController {
     public NaryadRowsColorDto updateZadanieColors(
             @PathVariable int id,
             @RequestBody(required = false) NaryadRowsColorRequest request) {
-        return naryadWorkspaceService.updateZadanieColors(
+        return naryadRowColorService.updateZadanieColors(
                 id,
                 request == null ? null : request.getColor(),
                 request == null ? null : request.getNodeIds());
@@ -176,35 +192,35 @@ public class NaryadWorkspaceController {
 
     @PostMapping("/{id:\\d+}/vipolnenie")
     public NaryadHeaderDto createEmptyVipolnenie(@PathVariable int id) {
-        return naryadWorkspaceService.createEmptyVipolnenie(id);
+        return naryadPartCommandService.createEmptyVipolnenie(id);
     }
 
     @PostMapping("/{id:\\d+}/vipolnenie/import-zadanie")
     public ResponseEntity<Void> importZadanieWorks(@PathVariable int id) {
-        naryadWorkspaceService.importZadanieWorks(id);
+        naryadPartCommandService.importZadanieWorks(id);
         return ResponseEntity.noContent().build();
     }
 
     @PostMapping("/{id:\\d+}/vipolnenie/replace-zadanie")
     public NaryadHeaderDto replaceZadanieFromVipolnenie(@PathVariable int id) {
-        return naryadWorkspaceService.replaceZadanieFromVipolnenie(id);
+        return naryadPartCommandService.replaceZadanieFromVipolnenie(id);
     }
 
     @GetMapping("/{id:\\d+}/vipolnenie")
     public List<NaryadOperNodeDto> vipolnenieRoots(@PathVariable int id) {
-        return naryadWorkspaceService.findVipolnenieRoots(id);
+        return naryadOperTreeService.findVipolnenieRoots(id);
     }
 
     @GetMapping("/{id:\\d+}/vipolnenie/{nodeId:\\d+}/children")
     public List<NaryadOperNodeDto> vipolnenieChildren(
             @PathVariable int id, @PathVariable long nodeId) {
-        return naryadWorkspaceService.findVipolnenieChildren(id, nodeId);
+        return naryadOperTreeService.findVipolnenieChildren(id, nodeId);
     }
 
     @GetMapping("/{id:\\d+}/vipolnenie/params")
     public List<NaryadOperParamDto> vipolnenieParams(
             @PathVariable int id, @RequestParam(required = false) Long nodeId) {
-        return naryadWorkspaceService.findVipolnenieParams(id, nodeId);
+        return naryadOperParamsService.findVipolnenieParams(id, nodeId);
     }
 
     @PostMapping("/{id:\\d+}/vipolnenie/{nodeId:\\d+}/calc")
@@ -225,7 +241,7 @@ public class NaryadWorkspaceController {
     @GetMapping("/{id:\\d+}/vipolnenie/algorithm")
     public NaryadAlgorithmDto vipolnenieAlgorithm(
             @PathVariable int id, @RequestParam(required = false) Long nodeId) {
-        return naryadWorkspaceService.findVipolnenieAlgorithm(id, nodeId);
+        return naryadOperParamsService.findVipolnenieAlgorithm(id, nodeId);
     }
 
     @PatchMapping("/{id:\\d+}/vipolnenie/{nodeId:\\d+}/color")
@@ -233,68 +249,68 @@ public class NaryadWorkspaceController {
             @PathVariable int id,
             @PathVariable long nodeId,
             @RequestBody(required = false) NaryadRowColorRequest request) {
-        return naryadWorkspaceService.updateVipolnenieColor(
+        return naryadRowColorService.updateVipolnenieColor(
                 id, nodeId, request == null ? null : request.getColor());
     }
 
     @GetMapping("/{id:\\d+}/vipolnenie/totals")
     public NaryadDurationTotalsDto vipolnenieTotals(@PathVariable int id) {
-        return naryadWorkspaceService.vipolnenieTotals(id);
+        return naryadOperTreeService.vipolnenieTotals(id);
     }
 
     @PostMapping("/{id:\\d+}/vipolnenie/closed")
     public NaryadClosedDto setVipolnenieClosed(
             @PathVariable int id,
             @RequestBody(required = false) NaryadClosedRequest request) {
-        return naryadWorkspaceService.setVipolnenieClosed(id, request == null ? null : request.getClosed());
+        return naryadPartCommandService.setVipolnenieClosed(id, request == null ? null : request.getClosed());
     }
 
     @GetMapping("/{id:\\d+}/vipolnenie/lock-flags")
     public List<NaryadWorkLockDto> vipolnenieLockFlags(@PathVariable int id) {
-        return naryadWorkspaceService.vipolnenieLockFlags(id);
+        return naryadPartCommandService.vipolnenieLockFlags(id);
     }
 
     @PostMapping("/{id:\\d+}/vipolnenie/lock")
     public NaryadLockTargetDto lockVipolnenie(
             @PathVariable int id,
             @RequestBody(required = false) NaryadNodeIdsRequest request) {
-        return naryadWorkspaceService.lockVipolnenie(id, request == null ? null : request.getNodeIds());
+        return naryadPartCommandService.lockVipolnenie(id, request == null ? null : request.getNodeIds());
     }
 
     @GetMapping("/{id:\\d+}/vipolnenie/nodes/{nodeId:\\d+}/action")
     public NaryadWorkActionDto vipolnenieWorkAction(@PathVariable int id, @PathVariable long nodeId) {
-        return naryadWorkspaceService.vipolnenieWorkAction(id, nodeId);
+        return naryadOperTreeService.vipolnenieWorkAction(id, nodeId);
     }
 
     @PostMapping("/{id:\\d+}/vipolnenie/works/delete")
     public List<Long> deleteVipolnenieWorks(
             @PathVariable int id,
             @RequestBody(required = false) NaryadNodeIdsRequest request) {
-        return naryadWorkspaceService.deleteVipolnenieWorks(id, request == null ? null : request.getNodeIds());
+        return naryadOperEditService.deleteVipolnenieWorks(id, request == null ? null : request.getNodeIds());
     }
 
     @PostMapping("/{id:\\d+}/vipolnenie/blocks/{nodeId:\\d+}/delete")
     public ResponseEntity<Void> deleteVipolnenieBlock(@PathVariable int id, @PathVariable long nodeId) {
-        naryadWorkspaceService.deleteVipolnenieBlock(id, nodeId);
+        naryadOperEditService.deleteVipolnenieBlock(id, nodeId);
         return ResponseEntity.noContent().build();
     }
 
     @GetMapping("/{id:\\d+}/vipolnenie/structure")
     public List<NaryadStructureNodeDto> vipolnenieStructure(@PathVariable int id) {
-        return naryadWorkspaceService.vipolnenieStructure(id);
+        return naryadOperEditService.vipolnenieStructure(id);
     }
 
     @PostMapping("/{id:\\d+}/vipolnenie/clipboard/paste")
     public ResponseEntity<Void> pasteVipolnenie(
             @PathVariable int id, @RequestBody(required = false) NaryadPasteRequest request) {
-        naryadWorkspaceService.pasteVipolnenie(id, request);
+        naryadOperEditService.pasteVipolnenie(id, request);
         return ResponseEntity.noContent().build();
     }
 
     @PostMapping("/{id:\\d+}/vipolnenie/blocks")
     public ResponseEntity<Void> addVipolnenieEmptyBlock(
             @PathVariable int id, @RequestBody(required = false) NaryadEmptyBlockRequest request) {
-        naryadWorkspaceService.addVipolnenieEmptyBlock(id, request);
+        naryadOperEditService.addVipolnenieEmptyBlock(id, request);
         return ResponseEntity.noContent().build();
     }
 
@@ -303,7 +319,7 @@ public class NaryadWorkspaceController {
             @PathVariable int id,
             @PathVariable long nodeId,
             @RequestBody(required = false) NaryadRenameBlockRequest request) {
-        naryadWorkspaceService.renameVipolnenieBlock(id, nodeId, request);
+        naryadOperEditService.renameVipolnenieBlock(id, nodeId, request);
         return ResponseEntity.noContent().build();
     }
 
@@ -311,14 +327,14 @@ public class NaryadWorkspaceController {
     public NaryadLockTargetDto unlockVipolnenie(
             @PathVariable int id,
             @RequestBody(required = false) NaryadNodeIdsRequest request) {
-        return naryadWorkspaceService.unlockVipolnenie(id, request == null ? null : request.getNodeIds());
+        return naryadPartCommandService.unlockVipolnenie(id, request == null ? null : request.getNodeIds());
     }
 
     @PatchMapping("/{id:\\d+}/vipolnenie/colors")
     public NaryadRowsColorDto updateVipolnenieColors(
             @PathVariable int id,
             @RequestBody(required = false) NaryadRowsColorRequest request) {
-        return naryadWorkspaceService.updateVipolnenieColors(
+        return naryadRowColorService.updateVipolnenieColors(
                 id,
                 request == null ? null : request.getColor(),
                 request == null ? null : request.getNodeIds());
