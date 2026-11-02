@@ -79,12 +79,21 @@ public final class OcardStorage {
      * Ссылка, которая после раскрытия уходит из каталога, — 400.
      */
     public static Path resolve(String configuredDir, String fileName) {
+        return resolve(configuredDir, fileName, Path.of(System.getProperty("user.dir")));
+    }
+
+    /**
+     * Полный путь берётся как есть и не приклеивается к папке backend.
+     * Относительный путь, когда процесс запущен из backend, считается от папки на уровень выше:
+     * каталог оперкарт лежит рядом с модулем, а не внутри него.
+     */
+    static Path resolve(String configuredDir, String fileName, Path workingDirectory) {
         String dir = normalizeDir(configuredDir);
         if (dir.isEmpty()) {
             throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, NOT_CONFIGURED);
         }
         String safe = safeFileName(fileName);
-        Path root = Path.of(dir).toAbsolutePath().normalize();
+        Path root = catalogRoot(dir, workingDirectory);
         if (!Files.isDirectory(root)) {
             throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "Каталог оперкарт не найден: " + root);
         }
@@ -111,6 +120,53 @@ public final class OcardStorage {
         } catch (IOException ex) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, missing(safe));
         }
+    }
+
+    static Path catalogRoot(String dir, Path workingDirectory) {
+        Path cwd = workingDirectory.toAbsolutePath().normalize();
+        String unwrapped = unwrapDoubledAbsolute(dir, cwd);
+        if (isAbsoluteLocation(unwrapped)) {
+            return Path.of(unwrapped).normalize();
+        }
+        Path base = cwd;
+        Path name = cwd.getFileName();
+        boolean climbs = unwrapped.equals("..") || unwrapped.startsWith("../");
+        if (!climbs && name != null && "backend".equalsIgnoreCase(name.toString()) && cwd.getParent() != null) {
+            base = cwd.getParent();
+        }
+        return base.resolve(unwrapped).normalize();
+    }
+
+    /** «папка backend» + «C:/полный/путь» → «C:/полный/путь». */
+    static String unwrapDoubledAbsolute(String dir, Path workingDirectory) {
+        String text = dir.replace('\\', '/');
+        String prefix = workingDirectory.toAbsolutePath().normalize().toString().replace('\\', '/');
+        if (text.regionMatches(true, 0, prefix, 0, prefix.length())
+                && text.length() > prefix.length()
+                && text.charAt(prefix.length()) == '/') {
+            String rest = text.substring(prefix.length() + 1);
+            if (isAbsoluteLocation(rest)) {
+                return rest;
+            }
+        }
+        for (int i = 1; i < text.length() - 2; i++) {
+            if (text.charAt(i - 1) == '/' && isWindowsDrive(text.substring(i))) {
+                return text.substring(i);
+            }
+        }
+        return dir;
+    }
+
+    static boolean isAbsoluteLocation(String dir) {
+        String text = dir.replace('\\', '/');
+        return isWindowsDrive(text) || text.startsWith("//") || text.startsWith("/") || Path.of(dir).isAbsolute();
+    }
+
+    private static boolean isWindowsDrive(String text) {
+        return text.length() >= 3
+                && Character.isLetter(text.charAt(0))
+                && text.charAt(1) == ':'
+                && text.charAt(2) == '/';
     }
 
     /** Кавычки и обратные слэши из Windows-пути не мешают открыть папку. */
