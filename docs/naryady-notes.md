@@ -29,6 +29,8 @@
 | Добавить | отложено |
 | Данные деревьев, параметры, алгоритм | **сделано** (параметры типов 79/80 правятся в ячейке; алгоритм read-only) |
 | Расчёт нормы операции | **сделано** (кнопка на задании и выполнении, типы 79 и 80) |
+| Перенумерация уровня | **сделано** (одна строка, открытая часть, без подтверждения; `zadanie_renumlevel` / `vipolnenie_renumlevel`) |
+| Оперкарта | **сделано** (одна строка, в том числе у закрытой части; файл из каталога `burnar.ocards.dir`, windows-1251) |
 | Перетаскивание работ и вставка из каталога | отложено |
 
 ---
@@ -96,7 +98,7 @@
 
 | Элемент | Поведение |
 |---------|-----------|
-| Action bar задания (48px) | сквозные параметры, создать пустое выполнение, удалить помеченные работы, удалить блок без вложенных, закрыть/открыть, расчёт нормы, затем цвет выбранных строк |
+| Action bar задания (48px) | сквозные параметры, создать пустое выполнение, удалить помеченные работы, удалить блок без вложенных, перенумеровать уровень, закрыть/открыть, расчёт нормы, оперкарта, затем цвет выбранных строк |
 | Слева | `BaseTreeTable` `GET /api/naryady/{id}/zadanie` (корни, свёрнуто); дети — `GET .../zadanie/{nodeId}/children` |
 | Справа сверху | `BaseTable` `GET /api/naryady/{id}/zadanie/params?nodeId=` — массив; пусто без выбора или если тип не 79/80 |
 | Справа снизу ~120px | read-only поле алгоритма: `GET .../zadanie/algorithm?nodeId=` (`algs.ops`, только тип 80) |
@@ -115,7 +117,7 @@
 
 | Элемент | Поведение |
 |---------|-----------|
-| Action bar выполнения (48px) | сквозные параметры, импорт работ из задания, замена задания выполнением, удалить помеченные работы, удалить блок без вложенных, закрыть/открыть, расчёт нормы, блокировка и разблокировка, затем цвет выбранных строк |
+| Action bar выполнения (48px) | сквозные параметры, импорт работ из задания, замена задания выполнением, удалить помеченные работы, удалить блок без вложенных, перенумеровать уровень, закрыть/открыть, расчёт нормы, оперкарта, блокировка и разблокировка, затем цвет выбранных строк |
 | Слева | `BaseTreeTable` `GET /api/naryady/{id}/vipolnenie` + `/{nodeId}/children` |
 | Справа сверху | `BaseTable` `GET /api/naryady/{id}/vipolnenie/params?nodeId=` |
 | Справа снизу ~120px | `GET .../vipolnenie/algorithm?nodeId=` |
@@ -406,16 +408,25 @@ export const deleteBlockAction = {
 | `features/naryad/actions/lock/` | блокировка и разблокировка; `lockRules.js` |
 | `features/naryad/actions/color/` | палитра (`RowColorActions`, `RowColorPalette`), очередь сохранений (`useRowColorEditing`), `naryadRowColors.js` |
 | `features/naryad/actions/calc/` | расчёт нормы (`calcOperAction`), правила `calcRules.js`, локальные правки строк `workPatches.js` |
+| `features/naryad/actions/renumber/` | перенумерация уровня текущей строки; `renumberRules.js` |
+| `features/naryad/actions/ocard/` | оперкарта: одна вкладка или список ссылок; `operCardRules.js` |
 | `features/naryad/actions/params/` | ячейка значения параметра (`operParamColumns`), когда писать число или код (`operParamRules.js`) |
 | `features/naryad/actions/skv/` | кнопка окна сквозных параметров |
 | `features/naryad/skv/` | окна (`SkvParamsWindows`, `SkvParamsDialog`), порядок и место окон (`useSkvWindows`, `skvWindows.js`), ячейки (`skvParamColumns`), правила `skvRules.js` |
 | `frontend/src/components/DraggableDialog.jsx` | общее перемещаемое окно; `modeless`, `initialPosition`, `zIndex`, `onActivate` — необязательные |
-| `frontend/src/api/naryadyApi.js` | заголовок, итоги, закрытие, блокировка, удаление работ, цвет, алгоритм, пустое выполнение, импорт, замена, расчёт, параметр строки |
+| `frontend/src/api/naryadyApi.js` | заголовок, итоги, закрытие, блокировка, удаление работ, цвет, алгоритм, пустое выполнение, импорт, замена, расчёт, параметр строки, перенумерация, оперкарты |
 | `mainComponent-changes/BaseTable/rowSelection.js` | расчёт набора строк для `Ctrl`/`Cmd` и `Shift` |
 | `frontend/src/App.jsx` | маршрут `/naryad/:id` |
 | `frontend/src/components/Navigation.jsx` | active для `/naryad/...` |
 | `NaryadListController` `GET /{id}` | заголовок (id, nm, описатели, closed) |
-| `NaryadWorkspaceController` | дерево / params / algorithm, итоги (`hasRoots`), закрытие, блокировка, удаление, пустое выполнение, импорт, замена, расчёт, сохранение параметра |
+| `NaryadWorkspaceController` | дерево / params / algorithm, итоги (`hasRoots`), закрытие, блокировка, удаление, пустое выполнение, импорт, замена, расчёт, сохранение параметра, перенумерация, список оперкарт |
+| `OcardFileController`, `OcardStorage` | файл из `burnar.ocards.dir`; htm отдаётся как windows-1251 |
 | `NaryadOperCalcService`, `NaryadOperCalc` | расчёт и сохранение параметра; правила числа и списка без базы |
 | `NaryadSkvParamsController`, `NaryadSkvParamsService`, `NaryadSkvParams` | сквозные параметры: шапка, строки, список значений, сохранение; правила без базы |
 | `SpaForwardController` | forward SPA в продакшен-сборке |
+
+## 10. Перенумерация и оперкарта
+
+«Обновить нумерацию на данном уровне» есть на обеих панелях. Кнопка активна при одной выбранной строке и открытой части. Подтверждения нет. `POST .../nodes/{nodeId}/renumber` читает `parent` этой строки и вызывает `burnar.zadanie_renumlevel` или `burnar.vipolnenie_renumlevel`: соседи получают номера 1, 2, 3… в прежнем порядке `prnum`, затем время начала. Вложенные работы не меняются. После вызова дерево перечитывается.
+
+«Показать оперкарту» активна при одной выбранной строке и у закрытой части тоже. `GET .../nodes/{nodeId}/ocards` собирает `public.istochniki.lnkfile` по `operlife.osnoventer1` и по `zadanie_ist` / `vipolnenie_ist`. Пустой список — «Оперкарта не найдена». Один файл открывается в новой вкладке, несколько — окном «Операционные карты» со ссылками. Файл читается с этого же сервера из `burnar.ocards.dir` (`GET /api/ocards/files/{имя}`), htm отдаётся в windows-1251. Пока путь пустой, сервер отвечает «Каталог оперкарт не настроен».
