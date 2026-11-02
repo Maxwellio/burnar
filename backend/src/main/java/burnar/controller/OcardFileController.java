@@ -8,6 +8,8 @@ import org.springframework.http.CacheControl;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -26,10 +28,14 @@ import java.util.Map;
 @RequestMapping("/api/ocards")
 public class OcardFileController {
 
+    private static final Logger log = LoggerFactory.getLogger(OcardFileController.class);
+
     private final BurnarProperties properties;
 
     public OcardFileController(BurnarProperties properties) {
         this.properties = properties;
+        String dir = properties.getOcardsDir();
+        log.info("Каталог оперкарт: {}", dir == null || dir.isBlank() ? "(не задан)" : dir);
     }
 
     @GetMapping("/files/{fileName:.+}")

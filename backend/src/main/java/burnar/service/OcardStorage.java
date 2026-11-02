@@ -16,7 +16,9 @@ import java.util.Set;
  */
 public final class OcardStorage {
 
-    public static final String NOT_CONFIGURED = "Каталог оперкарт не настроен";
+    public static final String NOT_CONFIGURED =
+            "Каталог оперкарт не настроен: burnar.ocards.dir пустой. "
+                    + "Укажите папку через / и перезапустите backend.";
     public static final String BAD_NAME = "Недопустимое имя файла оперкарты";
     public static final String HTML_MEDIA_TYPE = "text/html;charset=windows-1251";
     public static final String CONTENT_SECURITY_POLICY =
@@ -72,22 +74,24 @@ public final class OcardStorage {
     }
 
     /**
-     * Файл внутри настроенного каталога. Пустой путь и отсутствующий каталог — 503.
+     * Файл внутри настроенного каталога. Пустой путь — «не настроен».
+     * Путь задан, но папки нет — в тексте сам путь, который увидел процесс.
      * Ссылка, которая после раскрытия уходит из каталога, — 400.
      */
     public static Path resolve(String configuredDir, String fileName) {
-        if (configuredDir == null || configuredDir.isBlank()) {
+        String dir = normalizeDir(configuredDir);
+        if (dir.isEmpty()) {
             throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, NOT_CONFIGURED);
         }
         String safe = safeFileName(fileName);
-        Path root;
-        try {
-            root = Path.of(configuredDir).toAbsolutePath().normalize().toRealPath();
-        } catch (IOException ex) {
-            throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, NOT_CONFIGURED);
-        }
+        Path root = Path.of(dir).toAbsolutePath().normalize();
         if (!Files.isDirectory(root)) {
-            throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, NOT_CONFIGURED);
+            throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "Каталог оперкарт не найден: " + root);
+        }
+        try {
+            root = root.toRealPath();
+        } catch (IOException ex) {
+            throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "Каталог оперкарт недоступен: " + root);
         }
         Path file = root.resolve(safe).normalize();
         if (!file.startsWith(root)) {
@@ -107,6 +111,18 @@ public final class OcardStorage {
         } catch (IOException ex) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, missing(safe));
         }
+    }
+
+    /** Кавычки и обратные слэши из Windows-пути не мешают открыть папку. */
+    static String normalizeDir(String configuredDir) {
+        if (configuredDir == null) {
+            return "";
+        }
+        String dir = configuredDir.trim();
+        if (dir.length() >= 2 && dir.startsWith("\"") && dir.endsWith("\"")) {
+            dir = dir.substring(1, dir.length() - 1).trim();
+        }
+        return dir.replace('\\', '/');
     }
 
     private static String extension(String name) {
