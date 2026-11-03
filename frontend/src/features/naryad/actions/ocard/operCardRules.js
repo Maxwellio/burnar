@@ -5,9 +5,12 @@ export const OPER_CARD_TITLE = 'Операционные карты'
 export const OPER_CARD_MISSING = 'Оперкарта не найдена'
 export const OPER_CARD_POPUP_BLOCKED = 'Браузер заблокировал окно оперкарты'
 
-/** Закрытие части карту не прячет: в Delphi кнопка всегда доступна. */
-export function canShowOperCard(selectedIds, _closed, pending = false) {
-  if (pending) return false
+/**
+ * Одна выбранная строка, у которой в istochniki есть файл.
+ * Закрытие части карту не прячет. Пока признак строки не пришёл, кнопку не на что включить.
+ */
+export function canShowOperCard(selectedIds, _closed, pending = false, work = null) {
+  if (pending || work?.hasOcard !== true) return false
   return Array.isArray(selectedIds) && selectedIds.length === 1
     && selectedIds[0] != null && selectedIds[0] !== ''
 }

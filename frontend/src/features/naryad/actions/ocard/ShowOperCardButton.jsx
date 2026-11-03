@@ -26,12 +26,17 @@ export default function ShowOperCardButton() {
   const ctx = useNaryadWorkspace()
   const [files, setFiles] = useState(null)
   const opening = useRef(false)
-  const enabled = canShowOperCard(ctx.tree.selectedIds, ctx.closed, ctx.mutation.pending)
+  const enabled = canShowOperCard(
+    ctx.tree.selectedIds,
+    ctx.closed,
+    ctx.mutation.pending,
+    ctx.workAction,
+  )
 
   async function openCard() {
     if (opening.current) return
     const nodeId = detailNodeId(ctx.tree.getSelectedIds())
-    if (nodeId == null || !canShowOperCard([nodeId], ctx.getClosed(), ctx.mutation.isPending())) return
+    if (nodeId == null || !canShowOperCard([nodeId], ctx.getClosed(), ctx.mutation.isPending(), ctx.workAction)) return
     opening.current = true
     try {
       const rows = await fetchNaryadOcards(ctx.naryadId, ctx.part.id, nodeId)

@@ -15,12 +15,15 @@ describe('oper card', () => {
     assert.equal(OPER_CARD_MISSING, 'Оперкарта не найдена')
   })
 
-  it('stays available on a closed part when one row is selected', () => {
-    assert.equal(canShowOperCard(['7'], false), true)
-    assert.equal(canShowOperCard(['7'], true), true)
-    assert.equal(canShowOperCard(['7'], false, true), false)
-    assert.equal(canShowOperCard([], false), false)
-    assert.equal(canShowOperCard(['7', '8'], false), false)
+  it('enables only a single row that has an opercard, including a closed part', () => {
+    const card = { hasOcard: true }
+    assert.equal(canShowOperCard(['7'], false, false, card), true)
+    assert.equal(canShowOperCard(['7'], true, false, card), true)
+    assert.equal(canShowOperCard(['7'], false, false, { hasOcard: false }), false)
+    assert.equal(canShowOperCard(['7'], false, false, null), false)
+    assert.equal(canShowOperCard(['7'], false, true, card), false)
+    assert.equal(canShowOperCard([], false, false, card), false)
+    assert.equal(canShowOperCard(['7', '8'], false, false, card), false)
   })
 
   it('opens one file, lists several, and reports an empty lookup', () => {

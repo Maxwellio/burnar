@@ -60,6 +60,11 @@ public class OcardService {
         return files(false, naryadId, nodeId);
     }
 
+    /** Та же выборка, что у списка файлов: кнопка включается, только если карта есть. */
+    public boolean hasCard(boolean zadanie, int naryadId, long nodeId) {
+        return !safeNames(zadanie, naryadId, nodeId).isEmpty();
+    }
+
     private List<NaryadOcardFileDto> files(boolean zadanie, int naryadId, long nodeId) {
         naryadListService.findHeader(naryadId);
         MapSqlParameterSource params = new MapSqlParameterSource()
@@ -72,21 +77,31 @@ public class OcardService {
         if (found.isEmpty()) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Naryad row not found");
         }
+        List<NaryadOcardFileDto> files = new ArrayList<>();
+        for (String name : safeNames(zadanie, naryadId, nodeId)) {
+            files.add(new NaryadOcardFileDto(name));
+        }
+        return files;
+    }
+
+    private List<String> safeNames(boolean zadanie, int naryadId, long nodeId) {
         List<String> names = jdbc.query(
                 zadanie ? ZADANIE_FILES_SQL : VIPOLNENIE_FILES_SQL,
-                params,
+                new MapSqlParameterSource()
+                        .addValue("naryadId", naryadId)
+                        .addValue("nodeId", nodeId),
                 (rs, rowNum) -> rs.getString("lnkfile"));
-        List<NaryadOcardFileDto> files = new ArrayList<>();
+        List<String> safe = new ArrayList<>();
         for (String name : names) {
             if (name == null || name.isBlank()) {
                 continue;
             }
             try {
-                files.add(new NaryadOcardFileDto(OcardStorage.safeFileName(name)));
+                safe.add(OcardStorage.safeFileName(name));
             } catch (ResponseStatusException ignored) {
                 // Имя из базы с путём или чужим расширением в ссылку не кладём.
             }
         }
-        return files;
+        return safe;
     }
 }

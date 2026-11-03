@@ -180,10 +180,15 @@ public class NaryadOperTreeService {
 
     private final NamedParameterJdbcTemplate jdbc;
     private final NaryadListService naryadListService;
+    private final OcardService ocardService;
 
-    public NaryadOperTreeService(NamedParameterJdbcTemplate jdbc, NaryadListService naryadListService) {
+    public NaryadOperTreeService(
+            NamedParameterJdbcTemplate jdbc,
+            NaryadListService naryadListService,
+            OcardService ocardService) {
         this.jdbc = jdbc;
         this.naryadListService = naryadListService;
+        this.ocardService = ocardService;
     }
 
     public List<NaryadOperNodeDto> findZadanieRoots(int naryadId) {
@@ -265,8 +270,9 @@ public class NaryadOperTreeService {
                 "SELECT EXISTS (SELECT 1 FROM " + childrenTable + " c WHERE c.parent = :nodeId)",
                 new MapSqlParameterSource("nodeId", nodeId),
                 Boolean.class);
+        boolean hasOcard = ocardService.hasCard(!vipolnenie, naryadId, nodeId);
         return new NaryadWorkActionDto(
-                node.id, node.operlifetype, node.locked, node.rs, Boolean.TRUE.equals(hasChildren));
+                node.id, node.operlifetype, node.locked, node.rs, Boolean.TRUE.equals(hasChildren), hasOcard);
     }
 
     private BigDecimal sumHours(String sql, int naryadId) {
