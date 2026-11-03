@@ -1,5 +1,7 @@
 package burnar.service;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -15,6 +17,11 @@ import java.util.Set;
  * Содержимое htm — windows-1251, как у карт, которые открывал Internet Explorer.
  */
 public final class OcardStorage {
+
+    private static final Logger log = LoggerFactory.getLogger(OcardStorage.class);
+
+    public static final String CATALOG_NOT_FOUND = "Каталог оперкарт не найден";
+    public static final String CATALOG_UNAVAILABLE = "Каталог оперкарт недоступен";
 
     public static final String NOT_CONFIGURED =
             "Каталог оперкарт не настроен: burnar.ocards.dir пустой. "
@@ -95,12 +102,14 @@ public final class OcardStorage {
         String safe = safeFileName(fileName);
         Path root = catalogRoot(dir, workingDirectory);
         if (!Files.isDirectory(root)) {
-            throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "Каталог оперкарт не найден: " + root);
+            log.warn("Каталог оперкарт не найден: {}", root);
+            throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, CATALOG_NOT_FOUND);
         }
         try {
             root = root.toRealPath();
         } catch (IOException ex) {
-            throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "Каталог оперкарт недоступен: " + root);
+            log.warn("Каталог оперкарт недоступен: {}", root);
+            throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, CATALOG_UNAVAILABLE);
         }
         Path file = root.resolve(safe).normalize();
         if (!file.startsWith(root)) {
