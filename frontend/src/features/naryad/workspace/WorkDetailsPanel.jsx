@@ -1,6 +1,7 @@
 import Box from '@mui/material/Box'
 import TextField from '@mui/material/TextField'
 import { BaseTable } from 'mainComponent'
+import { paramRowBackground } from '../actions/params/paramRowColor.js'
 import { naryadCompactTableSx } from '../naryadPageLayout.js'
 
 /** Пустое поле — несколько строк; дальше высота растёт по тексту, лишнее прокручивается внутри рамки. */
@@ -24,6 +25,7 @@ export default function WorkDetailsPanel({ paramsUrl, paramColumns, paramFilters
           filters={paramFilters}
           setFilters={noopSetFilters}
           reRenderSignal={reloadSignal}
+          getRowBackgroundColor={paramRowBackground}
         />
       </Box>
       <Box

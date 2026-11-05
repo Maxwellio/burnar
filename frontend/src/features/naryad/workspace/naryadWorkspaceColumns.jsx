@@ -3,6 +3,7 @@ import IconButton from '@mui/material/IconButton'
 import Add from '@mui/icons-material/Add'
 import Remove from '@mui/icons-material/Remove'
 import { Bell, Calculator, FolderTree, Link2, SquareArrowOutUpRight } from 'lucide-react'
+import { paramColumnDefs, paramRowNumber } from '../actions/params/paramColumns.js'
 import { ParamValueCell } from '../actions/params/operParamColumns.jsx'
 import { workFieldValue } from '../actions/calc/workPatches.js'
 import { useNaryadWorkspace } from './NaryadWorkspaceContext.jsx'
@@ -236,11 +237,17 @@ function makePlanTreeColumns(prefix, { vipMarks = false } = {}) {
   ]
 }
 
+function ParamNumberCell({ row }) {
+  return paramRowNumber(row.index)
+}
+
 function makeParamColumns(prefix) {
-  return [
-    col(prefix, 'nm', 'Параметр', 140),
-    col(prefix, 'val', 'Значение', 140, { cell: ParamValueCell }),
-  ]
+  return paramColumnDefs(prefix).map((column) => {
+    const next = { ...column, maxSize: COLUMN_MAX_SIZE }
+    if (column.id.endsWith('_num')) next.cell = ParamNumberCell
+    if (column.id.endsWith('_val')) next.cell = ParamValueCell
+    return next
+  })
 }
 
 /**
