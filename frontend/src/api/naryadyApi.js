@@ -57,6 +57,11 @@ export function fetchNaryadTotals(id, part) {
   return requestJson(`/naryady/${id}/${part}/totals`)
 }
 
+/** Итоги по периодам выполнения. Пустая сумма приходит null и в таблице остаётся пустой. */
+export function fetchVipolneniePeriodTotals(id) {
+  return requestJson(`/naryady/${id}/vipolnenie/period-totals`)
+}
+
 /** closed: true закрывает часть от изменений, false открывает. */
 export function setNaryadPartClosed(id, part, closed) {
   return requestAction(`/naryady/${id}/${part}/closed`, {

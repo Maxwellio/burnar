@@ -8,6 +8,7 @@ import useResizablePanel from './layout/useResizablePanel.js'
 import { NaryadWorkspaceProvider } from './NaryadWorkspaceContext.jsx'
 import { CUT_MARK_COLOR, isCutMarked } from '../actions/clipboard/clipboardRules.js'
 import { nodeIdFilters, treeFooterStatusItems } from './naryadWorkspaceData.js'
+import PeriodTotalsPanel from './PeriodTotalsPanel.jsx'
 import TreeStatusBar from './TreeStatusBar.jsx'
 import useNaryadWorkspaceState from './useNaryadWorkspaceState.js'
 import WorkDetailsPanel from './WorkDetailsPanel.jsx'
@@ -102,9 +103,16 @@ export default function NaryadWorkspacePanel({
                   initialState={TREE_INITIAL_STATE}
                 />
               </Box>
-              <TreeStatusBar
-                items={treeFooterStatusItems(tree.selectedIds, part.id, workspace.totals)}
-              />
+              {part.id === 'vipolnenie' ? (
+                <PeriodTotalsPanel
+                  naryadId={naryadId}
+                  items={treeFooterStatusItems(tree.selectedIds, part.id, workspace.totals)}
+                />
+              ) : (
+                <TreeStatusBar
+                  items={treeFooterStatusItems(tree.selectedIds, part.id, workspace.totals)}
+                />
+              )}
             </Box>
 
             <PanelSplitter

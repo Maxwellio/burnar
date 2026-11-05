@@ -11,6 +11,7 @@ import burnar.dto.NaryadOperParamSaveDto;
 import burnar.dto.NaryadOperParamValueRequest;
 import burnar.dto.NaryadClosedRequest;
 import burnar.dto.NaryadDurationTotalsDto;
+import burnar.dto.NaryadPeriodTotalDto;
 import burnar.dto.NaryadHeaderDto;
 import burnar.dto.NaryadLockTargetDto;
 import burnar.dto.NaryadOcardFileDto;
@@ -283,6 +284,11 @@ public class NaryadWorkspaceController {
     @GetMapping("/{id:\\d+}/vipolnenie/totals")
     public NaryadDurationTotalsDto vipolnenieTotals(@PathVariable int id) {
         return naryadOperTreeService.vipolnenieTotals(id);
+    }
+
+    @GetMapping("/{id:\\d+}/vipolnenie/period-totals")
+    public List<NaryadPeriodTotalDto> vipolneniePeriodTotals(@PathVariable int id) {
+        return naryadOperTreeService.vipolneniePeriodTotals(id);
     }
 
     @PostMapping("/{id:\\d+}/vipolnenie/closed")

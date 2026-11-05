@@ -2,6 +2,7 @@ package burnar.service;
 
 import burnar.dto.NaryadDurationTotalsDto;
 import burnar.dto.NaryadOperNodeDto;
+import burnar.dto.NaryadPeriodTotalDto;
 import burnar.dto.NaryadWorkActionDto;
 import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
@@ -149,6 +150,42 @@ public class NaryadOperTreeService {
                     + "    AND NOT EXISTS (SELECT 1 FROM burnar.vipolnenie_oper c WHERE c.parent = o.key)"
                     + ") leaf";
 
+    /**
+     * Итоги по периодам, текст Delphi qrITOGtable.
+     * Скалярный ремонт не фильтрует defnar и prnum: несколько строк znrepparsv
+     * роняют запрос. См. docs/delphi-commonnarvip-db.md, замечание 4.
+     */
+    static final String VIPOLNENIE_PERIOD_TOTALS_SQL =
+            "select vv.period_key, "
+                    + "case when vv.begoperdate is null and vv.outoperdate is null then vv.nm "
+                    + "else vv.nm || ' ( ' || to_char(vv.begoperdate, 'dd.mm.yyyy') || '-' "
+                    + "|| to_char(vv.outoperdate, 'dd.mm.yyyy') || ' )' end as name, "
+                    + "vv.normativ + vv.remont_n as summ_n, "
+                    + "vv.fact + vv.remont_f as summ_f, "
+                    + "vv.normativ, vv.remont_n, vv.fact, vv.remont_f "
+                    + "from ( select o.narkey, p.key as period_key, p.begoperdate, p.outoperdate, "
+                    + "case when p.key is null then 'Не включенные в периоды работы' else p.nm end as nm, "
+                    + "sum(round(n.norma / 60, 2)) as normativ, "
+                    + "round(case when coalesce((select f.val from burnar.znrepparsv f "
+                    + "where f.period_key = o.period and f.parcode = 2683 and f.repid = 1), 0) "
+                    + "> sum(round(case when coalesce(o.operlifetypeoper, 0) not in (200, 207, 208, 209) "
+                    + "then n.norma else 0 end / 60, 2)) * 0.053 "
+                    + "then sum(round(case when coalesce(o.operlifetypeoper, 0) not in (200, 207, 208, 209) "
+                    + "then n.norma else 0 end / 60, 2) * 0.053) "
+                    + "else coalesce((select f.val from burnar.znrepparsv f "
+                    + "where f.period_key = o.period and f.parcode = 2683 and f.repid = 1), 0) "
+                    + "end, 2) as remont_n, "
+                    + "sum(round(n.fact / 60, 2)) as fact, "
+                    + "(select coalesce(f.val, 0) from burnar.znrepparsv f "
+                    + "where f.parcode = 2683 and f.period_key = p.key and f.repid = 1) as remont_f "
+                    + "from burnar.vipolnenie_oper o "
+                    + "join burnar.vipolnenie_norm n on n.vip_key = o.key "
+                    + "left join burnar.vipolnenie_period p on o.period = p.key "
+                    + "where n.prnum = 2 and o.narkey = :narkey "
+                    + "group by o.narkey, p.key, o.period, p.nm, p.begoperdate, p.outoperdate ) vv "
+                    + "where vv.narkey = :narkey "
+                    + "order by vv.begoperdate, vv.outoperdate";
+
     static final String VIPOLNENIE_FACT_TOTAL_SQL =
             "SELECT COALESCE(SUM(leaf.fact), 0) FROM ("
                     + "  SELECT CASE WHEN o.operlifetype IS NOT NULL THEN "
@@ -225,6 +262,15 @@ public class NaryadOperTreeService {
         dto.setNormDuration(sumHours(VIPOLNENIE_NORM_TOTAL_SQL, naryadId));
         dto.setFactDuration(sumHours(VIPOLNENIE_FACT_TOTAL_SQL, naryadId));
         return dto;
+    }
+
+    /** Строки панели «Итоги по периодам». Несколько значений ремонта роняют запрос, как в Delphi. */
+    public List<NaryadPeriodTotalDto> vipolneniePeriodTotals(int naryadId) {
+        naryadListService.findHeader(naryadId);
+        return jdbc.query(
+                VIPOLNENIE_PERIOD_TOTALS_SQL,
+                new MapSqlParameterSource("narkey", naryadId),
+                (rs, rowNum) -> mapPeriodTotal(rs));
     }
 
     public NaryadWorkActionDto zadanieWorkAction(int naryadId, long nodeId) {
@@ -319,6 +365,19 @@ public class NaryadOperTreeService {
             dto.setPeriodNm(rs.getString("period_nm"));
             dto.setPriznak(getInteger(rs, "priznak"));
         }
+        return dto;
+    }
+
+    private static NaryadPeriodTotalDto mapPeriodTotal(ResultSet rs) throws SQLException {
+        NaryadPeriodTotalDto dto = new NaryadPeriodTotalDto();
+        dto.setPeriodKey(getLong(rs, "period_key"));
+        dto.setName(rs.getString("name"));
+        dto.setSummN(rs.getBigDecimal("summ_n"));
+        dto.setSummF(rs.getBigDecimal("summ_f"));
+        dto.setNormativ(rs.getBigDecimal("normativ"));
+        dto.setRemontN(rs.getBigDecimal("remont_n"));
+        dto.setFact(rs.getBigDecimal("fact"));
+        dto.setRemontF(rs.getBigDecimal("remont_f"));
         return dto;
     }
 
