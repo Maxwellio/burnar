@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react'
-import MenuBook from '@mui/icons-material/MenuBook'
+import FilePresent from '@mui/icons-material/FilePresent'
 import Button from '@mui/material/Button'
 import DialogActions from '@mui/material/DialogActions'
 import DialogContent from '@mui/material/DialogContent'
@@ -63,7 +63,7 @@ export default function ShowOperCardButton() {
     <>
       <ActionButton
         label={OPER_CARD_LABEL}
-        icon={MenuBook}
+        icon={FilePresent}
         disabled={!enabled}
         onClick={() => {
           void openCard()
