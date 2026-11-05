@@ -68,6 +68,22 @@
 Потребитель: `frontend/src/pages/Home.jsx` (burnar) передаёт `yearSelectable`,
 а бэкенд принимает `period=yyyy` наравне с `period=yyyy-MM-dd`.
 
+## BaseTable
+
+Основа — `BaseTable/BaseTable.tsx` из `Maxwellio/mainComponent` на коммите
+`9c7915d`. Staging-файл повторяет её и добавляет только опциональный фон строки.
+
+Скопировать в пакет (путь в `Maxwellio/mainComponent`):
+
+- `BaseTable/BaseTable.tsx`
+
+`getRowBackgroundColor?: (row: TData) => string | undefined` задаёт фон строки.
+Если функция вернула цвет, он перекрывает зебру, синее выделение и hover:
+цвет пишется в `style` строки. Пустой результат оставляет прежнее поведение.
+Без пропа остальные таблицы не меняются.
+
+Потребитель — таблица параметров операции в карточке наряда.
+
 ## Файл `BaseTable/BaseTreeTable.tsx`
 
 Полная версия актуального `BaseTable/BaseTreeTable.tsx` пакета плюс два

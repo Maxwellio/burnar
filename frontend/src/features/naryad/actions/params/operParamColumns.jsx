@@ -9,7 +9,15 @@ import { useNaryadWorkspace } from '../../workspace/NaryadWorkspaceContext.jsx'
 import { continuousCommitValue, discreteCommitValue } from './operParamRules.js'
 
 const inputSx = {
-  '& .MuiInputBase-input': { py: 0, fontSize: '0.875rem', lineHeight: 1.15 },
+  bgcolor: 'transparent',
+  '& .MuiInputBase-root': { bgcolor: 'transparent' },
+  '& .MuiInputBase-input': {
+    py: 0,
+    fontSize: '0.875rem',
+    lineHeight: 1.15,
+    bgcolor: 'transparent',
+  },
+  '& .MuiSelect-select': { bgcolor: 'transparent' },
 }
 
 function wait(ms) {
@@ -175,6 +183,7 @@ function DiscreteParamEditor({ row }) {
             lineHeight: 1.15,
             paddingTop: 0,
             paddingBottom: 0,
+            bgcolor: 'transparent',
           },
         }}
       >
