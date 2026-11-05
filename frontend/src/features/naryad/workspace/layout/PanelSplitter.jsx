@@ -1,17 +1,25 @@
 import Box from '@mui/material/Box'
 
-/** Вертикальная полоса между деревом и правой панелью. */
-export default function PanelSplitter({ ariaLabel, dragging, onPointerDown }) {
+/** Полоса между деревом и правой панелью, либо над блоком итогов. */
+export default function PanelSplitter({
+  ariaLabel,
+  dragging,
+  onPointerDown,
+  orientation = 'vertical',
+}) {
+  const horizontal = orientation === 'horizontal'
   return (
     <Box
       role="separator"
-      aria-orientation="vertical"
+      aria-orientation={horizontal ? 'horizontal' : 'vertical'}
       aria-label={ariaLabel}
       onPointerDown={onPointerDown}
       sx={{
-        width: 6,
+        width: horizontal ? 'auto' : 6,
+        height: horizontal ? 6 : 'auto',
+        alignSelf: 'stretch',
         flexShrink: 0,
-        cursor: 'col-resize',
+        cursor: horizontal ? 'row-resize' : 'col-resize',
         touchAction: 'none',
         bgcolor: dragging ? 'action.selected' : 'divider',
         '&:hover': { bgcolor: 'action.selected' },

@@ -7,9 +7,10 @@ import Tooltip from '@mui/material/Tooltip'
 import { BaseTable } from 'mainComponent'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { COLUMN_SIZING_KEYS, naryadCompactTableSx } from '../naryadPageLayout.js'
+import PanelSplitter from './layout/PanelSplitter.jsx'
 import useColumnSizingPersistence from './layout/useColumnSizingPersistence.js'
+import usePeriodTotalsHeight from './layout/usePeriodTotalsHeight.js'
 import {
-  PERIOD_TOTALS_PANEL_HEIGHT,
   initialPeriodTotalsState,
   periodTotalColumnDefs,
   periodTotalsSucceeded,
@@ -40,6 +41,7 @@ export default function PeriodTotalsPanel({ naryadId, items }) {
   const [reloadSignal, setReloadSignal] = useState(0)
   const columns = useMemo(() => periodTotalColumnDefs(), [])
   const url = `/naryady/${naryadId}/vipolnenie/period-totals`
+  const totalsHeight = usePeriodTotalsHeight()
   useColumnSizingPersistence([[url, COLUMN_SIZING_KEYS.vipolneniePeriodTotals]])
 
   useEffect(() => {
@@ -90,11 +92,19 @@ export default function PeriodTotalsPanel({ naryadId, items }) {
   )
 
   return (
-    <>
+    <Box ref={totalsHeight.anchorRef} sx={{ display: 'contents' }}>
+      {session.open ? (
+        <PanelSplitter
+          orientation="horizontal"
+          ariaLabel="Высота итогов по периодам"
+          dragging={totalsHeight.dragging}
+          onPointerDown={totalsHeight.onPointerDown}
+        />
+      ) : null}
       {activated ? (
         <Box
           sx={{
-            height: session.open ? PERIOD_TOTALS_PANEL_HEIGHT : 0,
+            height: session.open ? totalsHeight.height : 0,
             flexShrink: 0,
             display: 'flex',
             flexDirection: 'column',
@@ -133,6 +143,6 @@ export default function PeriodTotalsPanel({ naryadId, items }) {
         </Box>
       ) : null}
       <TreeStatusBar items={items} actions={actions} />
-    </>
+    </Box>
   )
 }

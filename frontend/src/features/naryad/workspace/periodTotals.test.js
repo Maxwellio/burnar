@@ -1,10 +1,14 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 import {
+  PERIOD_TOTALS_MIN_HEIGHT,
   PERIOD_TOTALS_PANEL_HEIGHT,
   PERIOD_TOTAL_COLUMNS,
+  clampPeriodTotalsHeight,
   formatPeriodHours,
   periodTotalColumnDefs,
+  readStoredPeriodTotalsHeight,
+  writeStoredPeriodTotalsHeight,
   initialPeriodTotalsState,
   periodTotalsFailed,
   periodTotalsSucceeded,
@@ -126,7 +130,43 @@ describe('period totals panel state', () => {
 })
 
 describe('PERIOD_TOTALS_PANEL_HEIGHT', () => {
-  it('stays a short fixed block', () => {
+  it('starts at the short Delphi height', () => {
     assert.equal(PERIOD_TOTALS_PANEL_HEIGHT, 160)
+    assert.equal(PERIOD_TOTALS_MIN_HEIGHT, 96)
+  })
+})
+
+describe('clampPeriodTotalsHeight', () => {
+  it('keeps the default when the column height is unknown', () => {
+    assert.equal(clampPeriodTotalsHeight(null, 0), 160)
+    assert.equal(clampPeriodTotalsHeight(50, 0), PERIOD_TOTALS_MIN_HEIGHT)
+    assert.equal(clampPeriodTotalsHeight(400, 0), 400)
+  })
+
+  it('does not shrink below the minimum or cover the tree and status bar', () => {
+    assert.equal(clampPeriodTotalsHeight(160, 800), 160)
+    assert.equal(clampPeriodTotalsHeight(40, 800), PERIOD_TOTALS_MIN_HEIGHT)
+    assert.equal(clampPeriodTotalsHeight(900, 800), 800 - 32 - 120)
+  })
+
+  it('keeps the minimum when the column is already short', () => {
+    assert.equal(clampPeriodTotalsHeight(200, 200), PERIOD_TOTALS_MIN_HEIGHT)
+  })
+})
+
+describe('period totals height storage', () => {
+  it('remembers a dragged height', () => {
+    const store = new Map()
+    globalThis.localStorage = {
+      getItem: (key) => (store.has(key) ? store.get(key) : null),
+      setItem: (key, value) => {
+        store.set(key, String(value))
+      },
+    }
+    assert.equal(readStoredPeriodTotalsHeight(), null)
+    writeStoredPeriodTotalsHeight(240)
+    assert.equal(readStoredPeriodTotalsHeight(), 240)
+    writeStoredPeriodTotalsHeight(0)
+    assert.equal(readStoredPeriodTotalsHeight(), 240)
   })
 })

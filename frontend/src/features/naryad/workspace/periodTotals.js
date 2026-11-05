@@ -1,5 +1,48 @@
 /** Высота раскрытого блока «Итоги по периодам», как panelheight в Delphi. */
 export const PERIOD_TOTALS_PANEL_HEIGHT = 160
+/** Ниже уже не остаётся шапки таблицы. */
+export const PERIOD_TOTALS_MIN_HEIGHT = 96
+/** Строка состояния под блоком, её высоту у дерева не отбираем. */
+export const PERIOD_TOTALS_STATUS_HEIGHT = 32
+/** Минимум, который остаётся дереву работ. */
+export const PERIOD_TOTALS_TREE_MIN = 120
+const PERIOD_TOTALS_HEIGHT_KEY = 'naryad-period-totals-height'
+
+/**
+ * Высота блока итогов. Без известной колонки ограничивает только минимум.
+ * В колонке оставляет строку состояния и полосу дерева.
+ */
+export function clampPeriodTotalsHeight(height, containerHeight) {
+  const requested = Number(height)
+  const base = Number.isFinite(requested) && requested > 0
+    ? requested
+    : PERIOD_TOTALS_PANEL_HEIGHT
+  const atLeastMin = Math.max(Math.round(base), PERIOD_TOTALS_MIN_HEIGHT)
+  if (!(containerHeight > 0)) return atLeastMin
+  const max = Math.max(
+    PERIOD_TOTALS_MIN_HEIGHT,
+    containerHeight - PERIOD_TOTALS_STATUS_HEIGHT - PERIOD_TOTALS_TREE_MIN,
+  )
+  return Math.min(atLeastMin, max)
+}
+
+export function readStoredPeriodTotalsHeight() {
+  try {
+    const parsed = Number(localStorage.getItem(PERIOD_TOTALS_HEIGHT_KEY))
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : null
+  } catch {
+    return null
+  }
+}
+
+export function writeStoredPeriodTotalsHeight(height) {
+  if (!(Number.isFinite(height) && height > 0)) return
+  try {
+    localStorage.setItem(PERIOD_TOTALS_HEIGHT_KEY, String(Math.round(height)))
+  } catch {
+    // private mode / недоступен storage
+  }
+}
 
 /** Колонки кнопки «Обновить итоги»: без кодов наряда и периода и без вахтовых сумм. */
 export const PERIOD_TOTAL_COLUMNS = [
