@@ -4,6 +4,7 @@ import {
   PERIOD_TOTALS_PANEL_HEIGHT,
   PERIOD_TOTAL_COLUMNS,
   formatPeriodHours,
+  periodTotalColumnDefs,
   initialPeriodTotalsState,
   periodTotalsFailed,
   periodTotalsSucceeded,
@@ -47,6 +48,29 @@ describe('PERIOD_TOTAL_COLUMNS', () => {
       PERIOD_TOTAL_COLUMNS.map((column) => column.id),
       ['name', 'summN', 'summF', 'normativ', 'remontN', 'fact', 'remontF'],
     )
+  })
+})
+
+describe('periodTotalColumnDefs', () => {
+  it('matches BaseTable columns of the naryad card and hides filters', () => {
+    const columns = periodTotalColumnDefs()
+    assert.deepEqual(
+      columns.map((column) => column.accessorKey),
+      PERIOD_TOTAL_COLUMNS.map((column) => column.id),
+    )
+    assert.deepEqual(
+      columns.map((column) => column.header),
+      PERIOD_TOTAL_COLUMNS.map((column) => column.title),
+    )
+    assert.ok(columns.every((column) => column.id.startsWith('period_')))
+    assert.ok(columns.every((column) => column.enableColumnFilter === false))
+    assert.ok(columns.every((column) => column.maxSize === 4000))
+    const factTotal = columns.find((column) => column.accessorKey === 'summF')
+    assert.equal(factTotal.cell({ getValue: () => null }), '')
+    assert.equal(factTotal.cell({ getValue: () => 0 }), '0.00')
+    const name = columns.find((column) => column.accessorKey === 'name')
+    assert.equal(name.cell({ getValue: () => null }), '')
+    assert.equal(name.cell({ getValue: () => 'Январь' }), 'Январь')
   })
 })
 

@@ -12,6 +12,26 @@ export const PERIOD_TOTAL_COLUMNS = [
   { id: 'remontF', title: 'Ремонт Факт.', numeric: true },
 ]
 
+const PERIOD_NAME_WIDTH = 270
+const PERIOD_NUMBER_WIDTH = 120
+const PERIOD_COLUMN_MAX = 4000
+
+/** Колонки BaseTable: отдельные id, без фильтров, как у дерева и параметров наряда. */
+export function periodTotalColumnDefs() {
+  return PERIOD_TOTAL_COLUMNS.map((column) => ({
+    id: `period_${column.id}`,
+    accessorKey: column.id,
+    header: column.title,
+    size: column.id === 'name' ? PERIOD_NAME_WIDTH : PERIOD_NUMBER_WIDTH,
+    maxSize: PERIOD_COLUMN_MAX,
+    enableColumnFilter: false,
+    cell: ({ getValue }) => {
+      const value = getValue()
+      return column.numeric ? formatPeriodHours(value) : (value ?? '')
+    },
+  }))
+}
+
 /** Пустое значение остаётся пустым. Ноль и прочие числа — два знака, как NumberFormat грида. */
 export function formatPeriodHours(value) {
   if (value == null || value === '') return ''

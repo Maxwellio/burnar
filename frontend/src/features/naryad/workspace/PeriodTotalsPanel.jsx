@@ -3,22 +3,15 @@ import KeyboardArrowUp from '@mui/icons-material/KeyboardArrowUp'
 import Refresh from '@mui/icons-material/Refresh'
 import Box from '@mui/material/Box'
 import IconButton from '@mui/material/IconButton'
-import Table from '@mui/material/Table'
-import TableBody from '@mui/material/TableBody'
-import TableCell from '@mui/material/TableCell'
-import TableContainer from '@mui/material/TableContainer'
-import TableHead from '@mui/material/TableHead'
-import TableRow from '@mui/material/TableRow'
 import Tooltip from '@mui/material/Tooltip'
-import { useEffect, useRef, useState } from 'react'
-import { fetchVipolneniePeriodTotals } from '../../../api/naryadyApi.js'
-import { useAlert } from '../../../context/ConfirmContext.jsx'
+import { BaseTable } from 'mainComponent'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { COLUMN_SIZING_KEYS, naryadCompactTableSx } from '../naryadPageLayout.js'
+import useColumnSizingPersistence from './layout/useColumnSizingPersistence.js'
 import {
   PERIOD_TOTALS_PANEL_HEIGHT,
-  PERIOD_TOTAL_COLUMNS,
-  formatPeriodHours,
   initialPeriodTotalsState,
-  periodTotalsFailed,
+  periodTotalColumnDefs,
   periodTotalsSucceeded,
   reloadPeriodTotals,
   togglePeriodTotals,
@@ -32,23 +25,29 @@ const iconSx = {
   color: 'inherit',
 }
 
+const NO_FILTERS = []
+const ignoreFilters = () => {}
+
 /**
  * Строка состояния выполнения и раскрываемая таблица итогов по периодам.
- * Первое раскрытие читает GET .../period-totals, кнопка справа перечитывает его.
+ * Таблица — BaseTable, как параметры наряда. Первое чтение и пересчёт
+ * идут через reRenderSignal, повторное раскрытие таблицу не монтирует заново.
  */
 export default function PeriodTotalsPanel({ naryadId, items }) {
-  const showAlert = useAlert()
-  const requestRef = useRef(0)
   const sessionRef = useRef(initialPeriodTotalsState())
   const [session, setSession] = useState(initialPeriodTotalsState)
-  const [rows, setRows] = useState(null)
+  const [activated, setActivated] = useState(false)
+  const [reloadSignal, setReloadSignal] = useState(0)
+  const columns = useMemo(() => periodTotalColumnDefs(), [])
+  const url = `/naryady/${naryadId}/vipolnenie/period-totals`
+  useColumnSizingPersistence([[url, COLUMN_SIZING_KEYS.vipolneniePeriodTotals]])
 
   useEffect(() => {
-    requestRef.current += 1
     const fresh = initialPeriodTotalsState()
     sessionRef.current = fresh
     setSession(fresh)
-    setRows(null)
+    setActivated(false)
+    setReloadSignal(0)
   }, [naryadId])
 
   function remember(next) {
@@ -56,24 +55,14 @@ export default function PeriodTotalsPanel({ naryadId, items }) {
     return next
   }
 
-  async function load() {
-    const token = ++requestRef.current
-    try {
-      const data = await fetchVipolneniePeriodTotals(naryadId)
-      if (token !== requestRef.current) return
-      setRows(Array.isArray(data) ? data : [])
-      setSession((current) => remember(periodTotalsSucceeded(current)))
-    } catch (error) {
-      if (token !== requestRef.current) return
-      setSession((current) => remember(periodTotalsFailed(current)))
-      void showAlert(error?.message || 'Не удалось прочитать итоги по периодам')
-    }
-  }
-
   function apply(transition) {
     const result = transition(sessionRef.current)
-    setSession(remember(result.state))
-    if (result.fetch) void load()
+    const next = result.fetch ? periodTotalsSucceeded(result.state) : result.state
+    setSession(remember(next))
+    if (result.fetch) {
+      setActivated(true)
+      setReloadSignal((value) => value + 1)
+    }
   }
 
   const actions = (
@@ -89,34 +78,32 @@ export default function PeriodTotalsPanel({ naryadId, items }) {
         </IconButton>
       </Tooltip>
       <Tooltip title="Обновить итоги">
-        <Box component="span" sx={{ display: 'inline-flex' }}>
-          <IconButton
-            aria-label="Обновить итоги"
-            disabled={session.loading}
-            onClick={() => apply(reloadPeriodTotals)}
-            sx={iconSx}
-          >
-            <Refresh />
-          </IconButton>
-        </Box>
+        <IconButton
+          aria-label="Обновить итоги"
+          onClick={() => apply(reloadPeriodTotals)}
+          sx={iconSx}
+        >
+          <Refresh />
+        </IconButton>
       </Tooltip>
     </Box>
   )
 
   return (
     <>
-      {session.open ? (
+      {activated ? (
         <Box
           sx={{
-            height: PERIOD_TOTALS_PANEL_HEIGHT,
+            height: session.open ? PERIOD_TOTALS_PANEL_HEIGHT : 0,
             flexShrink: 0,
             display: 'flex',
             flexDirection: 'column',
             boxSizing: 'border-box',
-            borderTop: 1,
-            borderColor: 'divider',
-            bgcolor: '#fff',
+            overflow: 'hidden',
             minWidth: 0,
+            ...(session.open
+              ? { borderTop: 1, borderColor: 'divider', bgcolor: '#fff' }
+              : null),
           }}
         >
           <Box
@@ -131,44 +118,18 @@ export default function PeriodTotalsPanel({ naryadId, items }) {
           >
             Итоги по периодам
           </Box>
-          <TableContainer sx={{ flex: 1, minHeight: 0 }}>
-            <Table size="small" stickyHeader aria-label="Итоги по периодам" aria-busy={session.loading}>
-              <TableHead>
-                <TableRow>
-                  {PERIOD_TOTAL_COLUMNS.map((column) => (
-                    <TableCell
-                      key={column.id}
-                      align={column.numeric ? 'right' : 'left'}
-                      sx={{ fontWeight: 600, whiteSpace: 'nowrap' }}
-                    >
-                      {column.title}
-                    </TableCell>
-                  ))}
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {rows == null ? (
-                  <TableRow>
-                    <TableCell colSpan={PERIOD_TOTAL_COLUMNS.length}>Загрузка…</TableCell>
-                  </TableRow>
-                ) : (
-                  rows.map((row) => (
-                    <TableRow key={row.periodKey ?? 'unassigned'}>
-                      {PERIOD_TOTAL_COLUMNS.map((column) => (
-                        <TableCell
-                          key={column.id}
-                          align={column.numeric ? 'right' : 'left'}
-                          sx={{ whiteSpace: 'nowrap' }}
-                        >
-                          {column.numeric ? formatPeriodHours(row[column.id]) : (row.name ?? '')}
-                        </TableCell>
-                      ))}
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </TableContainer>
+          <Box
+            aria-label="Итоги по периодам"
+            sx={{ flex: 1, minHeight: 0, minWidth: 0, overflow: 'hidden', ...naryadCompactTableSx }}
+          >
+            <BaseTable
+              url={url}
+              columns={columns}
+              filters={NO_FILTERS}
+              setFilters={ignoreFilters}
+              reRenderSignal={reloadSignal}
+            />
+          </Box>
         </Box>
       ) : null}
       <TreeStatusBar items={items} actions={actions} />
