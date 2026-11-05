@@ -75,6 +75,12 @@ public class NaryadPartCommandService {
     static final String VIPOLNENIE_WORK_COUNT_SQL =
             "SELECT count(*) FROM burnar.vipolnenie_oper o WHERE o.narkey = :narkey";
 
+    static final String ZADANIE_PARENT_SQL =
+            "SELECT parent FROM burnar.zadanie_oper WHERE key = :nodeId AND narkey = :naryadId";
+
+    static final String VIPOLNENIE_PARENT_SQL =
+            "SELECT parent FROM burnar.vipolnenie_oper WHERE key = :nodeId AND narkey = :naryadId";
+
     private final NamedParameterJdbcTemplate jdbc;
     private final NaryadListService naryadListService;
     private final NaryadOperTreeService naryadOperTreeService;
@@ -104,6 +110,17 @@ public class NaryadPartCommandService {
 
     public NaryadClosedDto setVipolnenieClosed(int naryadId, Boolean closed) {
         return setPartClosed(naryadId, closed, false);
+    }
+
+    /**
+     * actReOrderRab. Номера 1..n у соседей строки (тот же parent). Детей процедура не трогает.
+     */
+    public void renumberZadanie(int naryadId, long nodeId) {
+        renumber(naryadId, nodeId, true);
+    }
+
+    public void renumberVipolnenie(int naryadId, long nodeId) {
+        renumber(naryadId, nodeId, false);
     }
 
     /**
@@ -249,6 +266,40 @@ public class NaryadPartCommandService {
                 : "CALL burnar.vipolnenie_un_lock_oper(?, ?)";
         callProcedure(sql, naryadId, target.key);
         return new NaryadLockTargetDto(target.key);
+    }
+
+    private void renumber(int naryadId, long nodeId, boolean zadanie) {
+        naryadListService.findHeader(naryadId);
+        if (partAccess.readClosed(zadanie, naryadId)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Naryad part is closed");
+        }
+        Long parent = requireParent(zadanie, naryadId, nodeId);
+        String sql = zadanie
+                ? "CALL burnar.zadanie_renumlevel(?, ?)"
+                : "CALL burnar.vipolnenie_renumlevel(?, ?)";
+        autocommit.runMapped(con -> {
+            try (CallableStatement cs = con.prepareCall(sql)) {
+                NaryadAutocommit.bindNullableKey(cs, 1, parent, !zadanie);
+                cs.setInt(2, naryadId);
+                cs.execute();
+            }
+        });
+    }
+
+    private Long requireParent(boolean zadanie, int naryadId, long nodeId) {
+        List<Long> parents = jdbc.query(
+                zadanie ? ZADANIE_PARENT_SQL : VIPOLNENIE_PARENT_SQL,
+                new MapSqlParameterSource()
+                        .addValue("nodeId", nodeId)
+                        .addValue("naryadId", naryadId),
+                (rs, rowNum) -> {
+                    long value = rs.getLong("parent");
+                    return rs.wasNull() ? null : value;
+                });
+        if (parents.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Naryad row not found");
+        }
+        return parents.get(0);
     }
 
     private long count(String sql, int naryadId) {

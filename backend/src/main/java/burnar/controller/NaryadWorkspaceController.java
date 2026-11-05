@@ -13,6 +13,7 @@ import burnar.dto.NaryadClosedRequest;
 import burnar.dto.NaryadDurationTotalsDto;
 import burnar.dto.NaryadHeaderDto;
 import burnar.dto.NaryadLockTargetDto;
+import burnar.dto.NaryadOcardFileDto;
 import burnar.dto.NaryadNodeIdsRequest;
 import burnar.dto.NaryadWorkActionDto;
 import burnar.dto.NaryadWorkLockDto;
@@ -22,6 +23,7 @@ import burnar.dto.NaryadRowColorDto;
 import burnar.dto.NaryadRowColorRequest;
 import burnar.dto.NaryadRowsColorDto;
 import burnar.dto.NaryadRowsColorRequest;
+import burnar.service.OcardService;
 import burnar.service.NaryadOperCalcService;
 import burnar.service.NaryadOperEditService;
 import burnar.service.NaryadOperParamsService;
@@ -60,6 +62,7 @@ public class NaryadWorkspaceController {
     private final NaryadPartCommandService naryadPartCommandService;
     private final NaryadOperEditService naryadOperEditService;
     private final NaryadOperCalcService naryadOperCalcService;
+    private final OcardService ocardService;
 
     public NaryadWorkspaceController(
             NaryadOperTreeService naryadOperTreeService,
@@ -67,13 +70,15 @@ public class NaryadWorkspaceController {
             NaryadRowColorService naryadRowColorService,
             NaryadPartCommandService naryadPartCommandService,
             NaryadOperEditService naryadOperEditService,
-            NaryadOperCalcService naryadOperCalcService) {
+            NaryadOperCalcService naryadOperCalcService,
+            OcardService ocardService) {
         this.naryadOperTreeService = naryadOperTreeService;
         this.naryadOperParamsService = naryadOperParamsService;
         this.naryadRowColorService = naryadRowColorService;
         this.naryadPartCommandService = naryadPartCommandService;
         this.naryadOperEditService = naryadOperEditService;
         this.naryadOperCalcService = naryadOperCalcService;
+        this.ocardService = ocardService;
     }
 
     @GetMapping("/{id:\\d+}/zadanie")
@@ -95,6 +100,17 @@ public class NaryadWorkspaceController {
     @PostMapping("/{id:\\d+}/zadanie/{nodeId:\\d+}/calc")
     public NaryadCalcResultDto calcZadanie(@PathVariable int id, @PathVariable long nodeId) {
         return naryadOperCalcService.calcZadanie(id, nodeId);
+    }
+
+    @PostMapping("/{id:\\d+}/zadanie/nodes/{nodeId:\\d+}/renumber")
+    public ResponseEntity<Void> renumberZadanie(@PathVariable int id, @PathVariable long nodeId) {
+        naryadPartCommandService.renumberZadanie(id, nodeId);
+        return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/{id:\\d+}/zadanie/nodes/{nodeId:\\d+}/ocards")
+    public List<NaryadOcardFileDto> zadanieOcards(@PathVariable int id, @PathVariable long nodeId) {
+        return ocardService.zadanieFiles(id, nodeId);
     }
 
     @PutMapping("/{id:\\d+}/zadanie/{nodeId:\\d+}/params/{parcode:\\d+}")
@@ -226,6 +242,17 @@ public class NaryadWorkspaceController {
     @PostMapping("/{id:\\d+}/vipolnenie/{nodeId:\\d+}/calc")
     public NaryadCalcResultDto calcVipolnenie(@PathVariable int id, @PathVariable long nodeId) {
         return naryadOperCalcService.calcVipolnenie(id, nodeId);
+    }
+
+    @PostMapping("/{id:\\d+}/vipolnenie/nodes/{nodeId:\\d+}/renumber")
+    public ResponseEntity<Void> renumberVipolnenie(@PathVariable int id, @PathVariable long nodeId) {
+        naryadPartCommandService.renumberVipolnenie(id, nodeId);
+        return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/{id:\\d+}/vipolnenie/nodes/{nodeId:\\d+}/ocards")
+    public List<NaryadOcardFileDto> vipolnenieOcards(@PathVariable int id, @PathVariable long nodeId) {
+        return ocardService.vipolnenieFiles(id, nodeId);
     }
 
     @PutMapping("/{id:\\d+}/vipolnenie/{nodeId:\\d+}/params/{parcode:\\d+}")

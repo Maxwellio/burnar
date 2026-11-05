@@ -177,6 +177,16 @@ export function calcNaryadOper(id, part, nodeId) {
   return requestAction(`/naryady/${id}/${part}/${nodeId}/calc`, { method: 'POST' })
 }
 
+/** actReOrderRab: номера соседей выбранной строки. Тело ответа пустое. */
+export function renumberNaryadLevel(id, part, nodeId) {
+  return requestAction(`/naryady/${id}/${part}/nodes/${nodeId}/renumber`, { method: 'POST' })
+}
+
+/** actShowOk: [{ fileName }] — имена htm из istochniki.lnkfile. */
+export function fetchNaryadOcards(id, part, nodeId) {
+  return requestAction(`/naryady/${id}/${part}/nodes/${nodeId}/ocards`)
+}
+
 /** Значение параметра операции. value — число или код списка, null очищает. */
 export function saveNaryadOperParam(id, part, nodeId, parcode, value) {
   return requestAction(`/naryady/${id}/${part}/${nodeId}/params/${parcode}`, {

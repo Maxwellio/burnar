@@ -1,4 +1,6 @@
 import { calcOperAction } from '../actions/calc/calcOperAction.js'
+import { showOperCardAction } from '../actions/ocard/showOperCardAction.js'
+import { renumberLevelAction } from '../actions/renumber/renumberLevelAction.js'
 import { closePartAction } from '../actions/close/closePartAction.js'
 import { importZadanieWorksAction } from '../actions/import/importZadanieWorksAction.js'
 import { replaceZadanieAction } from '../actions/replace/replaceZadanieAction.js'
@@ -56,8 +58,10 @@ export const vipolneniePart = {
     pasteWorkAction,
     addEmptyBlockAction,
     renameBlockAction,
+    renumberLevelAction,
     closePartAction,
     calcOperAction,
+    showOperCardAction,
     lockWorksAction,
     unlockWorksAction,
     rowColorAction,
