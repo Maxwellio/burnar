@@ -14,6 +14,7 @@ import {
   readRecentRowColors,
   rememberRecentRowColor,
   rowBackgroundColor,
+  workRowBackgroundColor,
   withRowColorOverride,
   withRowColorOverrides,
   withoutUnsavedColorOverride,
@@ -194,6 +195,71 @@ describe('canChangeRowColor', () => {
     assert.equal(canChangeRowColor([], false), false)
     assert.equal(canChangeRowColor([7, 8], true), false)
     assert.equal(canChangeRowColor([7], false, true), false)
+  })
+})
+
+describe('uncalculated operation row', () => {
+  const leaf = { id: 7, operlifetype: 79, hasChildren: false, n2: null, colorsel: 255 }
+  const cutColor = '#87ceeb'
+
+  it('paints a calculable leaf with an empty volume norm light red', () => {
+    assert.equal(workRowBackgroundColor(leaf, new Map(), new Map()), '#ffb3b3')
+    assert.equal(
+      workRowBackgroundColor({ ...leaf, operlifetype: '80' }, new Map(), new Map()),
+      '#ffb3b3',
+    )
+  })
+
+  it('hides the saved color until the volume norm is present', () => {
+    assert.equal(
+      workRowBackgroundColor({ ...leaf, n2: 1.5 }, new Map(), new Map()),
+      '#ff0000',
+    )
+    assert.equal(
+      workRowBackgroundColor({ ...leaf, n2: 0, colorsel: 0 }, new Map(), new Map()),
+      undefined,
+    )
+  })
+
+  it('follows a local norm patch from a parameter reset and from calculation', () => {
+    const cleared = workRowBackgroundColor(
+      { ...leaf, n2: 4 },
+      new Map(),
+      new Map([['7', { n2: null }]]),
+    )
+    const calculated = workRowBackgroundColor(
+      leaf,
+      new Map([[7, 16711680]]),
+      new Map([['7', { n2: 2 }]]),
+    )
+    assert.equal(cleared, '#ffb3b3')
+    assert.equal(calculated, '#0000ff')
+  })
+
+  it('leaves blocks, constants, manual norms and parents alone', () => {
+    assert.equal(
+      workRowBackgroundColor({ ...leaf, operlifetype: null, colorsel: 0 }, new Map(), new Map()),
+      undefined,
+    )
+    assert.equal(
+      workRowBackgroundColor({ ...leaf, operlifetype: 78, n2: 3, colorsel: 0 }, new Map(), new Map()),
+      undefined,
+    )
+    assert.equal(
+      workRowBackgroundColor({ ...leaf, operlifetype: 82, colorsel: 0 }, new Map(), new Map()),
+      undefined,
+    )
+    assert.equal(
+      workRowBackgroundColor({ ...leaf, hasChildren: true, colorsel: 0 }, new Map(), new Map()),
+      undefined,
+    )
+  })
+
+  it('keeps a cut mark above the uncalculated highlight', () => {
+    assert.equal(
+      workRowBackgroundColor(leaf, new Map(), new Map(), { cut: true, cutColor }),
+      cutColor,
+    )
   })
 })
 

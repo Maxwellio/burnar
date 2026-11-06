@@ -38,6 +38,7 @@ import {
   canSaveSkv,
   invalidSkvNumbers,
   isSkvDirty,
+  skvBegDateAppearance,
   skvNeedsResetConfirm,
 } from './skvRules.js'
 
@@ -56,7 +57,8 @@ const clockSectionSx = {
   },
 }
 
-function SkvBegDateField({ value, onChange, readOnly }) {
+function SkvBegDateField({ value, savedValue, onChange, readOnly }) {
+  const appearance = skvBegDateAppearance({ value, savedValue })
   return (
     <LocalizationProvider
       dateAdapter={AdapterDateFns}
@@ -82,6 +84,16 @@ function SkvBegDateField({ value, onChange, readOnly }) {
             size: 'small',
             fullWidth: true,
             InputLabelProps: { shrink: true },
+            sx: {
+              '& .MuiInputBase-input': { fontWeight: appearance.fontWeight },
+              ...(appearance.empty
+                ? {
+                    '& .MuiInputLabel-root, & .MuiInputLabel-root.Mui-disabled': {
+                      color: appearance.labelColor,
+                    },
+                  }
+                : {}),
+            },
           },
           popper: { sx: clockSectionSx },
           desktopPaper: { sx: clockSectionSx },
@@ -261,6 +273,7 @@ export default function SkvParamsDialog({
               <Box sx={{ width: 280 }}>
                 <SkvBegDateField
                   value={begDate}
+                  savedValue={header?.begDate ?? null}
                   onChange={setBegDate}
                   readOnly={readOnly || saving}
                 />
