@@ -122,7 +122,9 @@
 | Справа сверху | `BaseTable` `GET /api/naryady/{id}/vipolnenie/params?nodeId=` |
 | Справа снизу ~120px | `GET .../vipolnenie/algorithm?nodeId=` |
 
-Колонки дерева как у задания, плюс «Факт» сразу после «Н.в. на объём» и «Период» после него. «ЭКС» закомментирован между ними. Итоги по периодам (нижняя панель Delphi) пока не делаем.
+Колонки дерева как у задания, плюс «Факт» сразу после «Н.в. на объём» и «Период» после него. «ЭКС» закомментирован между ними.
+
+На правом краю строки состояния две кнопки. Стрелка вверх раскрывает над строкой блок «Итоги по периодам» и становится стрелкой вниз. Верхний край блока тянется; по умолчанию высота 160 px, меньше 96 px он не становится и не закрывает дерево работ. Выбранная высота пишется в `naryad-period-totals-height`. Таблица — тот же `BaseTable`, что параметры задания и выполнения: синяя шапка, зебра, плотные ячейки, ресайз колонок без фильтров. Ширины пишутся в `naryad-column-sizing:vipolnenie-period-totals` и общие для всех нарядов. Первое раскрытие вызывает `GET /api/naryady/{id}/vipolnenie/period-totals`. Повторное открытие показывает уже загруженные строки. Кнопка справа перечитывает тот же запрос и не трогает «Общую нормативную» и «Общую фактическую продолжительность». Колонки: название периода, Итог Н.В., Итог Факт., Сумма Н.В., Ремонт Н.В., Сумма Факт., Ремонт Факт. Пустая сумма остаётся пустой ячейкой. Запрос совпадает с Delphi `qrITOGtable`. Если на период приходится больше одной строки ремонта, чтение падает и таблица не обновляется — см. [delphi-commonnarvip-db.md](./delphi-commonnarvip-db.md), замечание 4, «На будущее».
 
 ---
 
@@ -396,7 +398,7 @@ export const deleteBlockAction = {
 | `features/naryad/workspace/useWorkTree.js` | выбор, фильтры и сигналы `BaseTreeTable` (`reload`, `clearHighlight`, `resetSelection`) |
 | `features/naryad/workspace/useMutationRunner.js` | общая блокировка «идёт запрос» и показ ошибки сервера |
 | `features/naryad/workspace/useAsyncValue.js`, `useWorkspaceData.js` | загрузка итогов, признаков блокировки, полей строки и алгоритма |
-| `features/naryad/workspace/TreeStatusBar.jsx`, `WorkDetailsPanel.jsx` | строка итогов, параметры и алгоритм |
+| `features/naryad/workspace/TreeStatusBar.jsx`, `PeriodTotalsPanel.jsx`, `WorkDetailsPanel.jsx` | строка итогов, итоги по периодам, параметры и алгоритм |
 | `features/naryad/workspace/layout/` | сплиттер правой панели и сохранение ширин колонок |
 | `features/naryad/workspace/naryadWorkspaceColumns.jsx`, `naryadOperIcons.js` | колонки деревьев и параметров, значки типов |
 | `features/naryad/workspace/naryadWorkspaceData.js` | фильтр `nodeId`, текст футера с итогами; детали только для одной выбранной строки |
@@ -419,7 +421,7 @@ export const deleteBlockAction = {
 | `frontend/src/App.jsx` | маршрут `/naryad/:id` |
 | `frontend/src/components/Navigation.jsx` | active для `/naryad/...` |
 | `NaryadListController` `GET /{id}` | заголовок (id, nm, описатели, closed) |
-| `NaryadWorkspaceController` | дерево / params / algorithm, итоги (`hasRoots`), закрытие, блокировка, удаление, пустое выполнение, импорт, замена, расчёт, сохранение параметра, перенумерация, список оперкарт |
+| `NaryadWorkspaceController` | дерево / params / algorithm, итоги (`hasRoots`), итоги по периодам, закрытие, блокировка, удаление, пустое выполнение, импорт, замена, расчёт, сохранение параметра, перенумерация, список оперкарт |
 | `OcardFileController`, `OcardStorage` | файл из `burnar.ocards.dir`; htm отдаётся как windows-1251 |
 | `NaryadOperCalcService`, `NaryadOperCalc` | расчёт и сохранение параметра; правила числа и списка без базы |
 | `NaryadSkvParamsController`, `NaryadSkvParamsService`, `NaryadSkvParams` | сквозные параметры: шапка, строки, список значений, сохранение; правила без базы |

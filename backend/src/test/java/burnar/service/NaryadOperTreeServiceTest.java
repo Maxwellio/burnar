@@ -2,6 +2,7 @@ package burnar.service;
 
 import org.junit.jupiter.api.Test;
 
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class NaryadOperTreeServiceTest {
@@ -38,6 +39,27 @@ class NaryadOperTreeServiceTest {
     void treeLevelWhereRootsAndChildren() {
         assertTrue(NaryadOperTreeService.TREE_ROOTS_WHERE.contains("parent IS NULL"));
         assertTrue(NaryadOperTreeService.TREE_CHILDREN_WHERE.contains(":parentId"));
+    }
+
+    @Test
+    void periodTotalsSqlMatchesDelphiQrItogTable() {
+        String sql = NaryadOperTreeService.VIPOLNENIE_PERIOD_TOTALS_SQL.toLowerCase();
+        assertTrue(sql.contains("burnar.vipolnenie_oper"), sql);
+        assertTrue(sql.contains("burnar.vipolnenie_norm"), sql);
+        assertTrue(sql.contains("burnar.vipolnenie_period"), sql);
+        assertTrue(sql.contains("burnar.znrepparsv"), sql);
+        assertTrue(sql.contains("n.prnum = 2"), sql);
+        assertTrue(sql.contains("f.parcode = 2683"), sql);
+        assertTrue(sql.contains("f.repid = 1"), sql);
+        assertTrue(sql.contains("0.053"), sql);
+        assertTrue(sql.contains("not in (200, 207, 208, 209)"), sql);
+        assertTrue(sql.contains("не включенные в периоды работы"), sql);
+        assertTrue(sql.contains("f.period_key = o.period"), sql);
+        assertTrue(sql.contains("f.period_key = p.key"), sql);
+        assertTrue(sql.contains("> sum(round("), sql);
+        assertTrue(sql.contains("vv.fact + vv.remont_f"), sql);
+        assertFalse(sql.contains("f.prnum"), sql);
+        assertFalse(sql.contains("f.defnar"), sql);
     }
 
     @Test
