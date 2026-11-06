@@ -148,6 +148,16 @@ export function skvBegDateChanged(savedBegDate, begDate) {
   return secondOf(savedBegDate) !== secondOf(begDate)
 }
 
+/** Пустая дата — красная подпись. Отличие от сохранённой — жирные дата и время. */
+export function skvBegDateAppearance({ value, savedValue }) {
+  const empty = value == null || String(value).trim() === ''
+  return {
+    empty,
+    labelColor: empty ? 'error.main' : undefined,
+    fontWeight: !empty && skvBegDateChanged(savedValue, value) ? 700 : 400,
+  }
+}
+
 export function isSkvDirty({ savedBegDate, begDate, draft }) {
   return skvBegDateChanged(savedBegDate, begDate) || changedSkvRows(draft).length > 0
 }

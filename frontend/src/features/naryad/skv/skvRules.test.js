@@ -10,6 +10,7 @@ import {
   parseSkvNumber,
   sanitizeSkvNumberInput,
   sideBySidePosition,
+  skvBegDateAppearance,
   skvBegDateChanged,
   skvCellValue,
   skvChangedFields,
@@ -102,6 +103,35 @@ describe('saving', () => {
     assert.equal(canSaveSkv({ ...base, dirty: false }), false)
     const bad = applySkvEdit({}, row, 'val', '1,2,3')
     assert.equal(canSaveSkv({ ...base, dirty: true, draft: bad }), false)
+  })
+})
+
+describe('start date appearance', () => {
+  it('marks an empty start date with a red label and a normal weight', () => {
+    assert.deepEqual(skvBegDateAppearance({ value: null, savedValue: null }), {
+      empty: true,
+      labelColor: 'error.main',
+      fontWeight: 400,
+    })
+    assert.deepEqual(skvBegDateAppearance({ value: '', savedValue: '2026-10-19T08:30:00' }), {
+      empty: true,
+      labelColor: 'error.main',
+      fontWeight: 400,
+    })
+  })
+
+  it('bolds date and time until they match the saved value', () => {
+    const saved = '2026-10-19T08:30:00'
+    assert.deepEqual(skvBegDateAppearance({ value: '2026-10-19T09:15:00', savedValue: saved }), {
+      empty: false,
+      labelColor: undefined,
+      fontWeight: 700,
+    })
+    assert.deepEqual(skvBegDateAppearance({ value: saved, savedValue: saved }), {
+      empty: false,
+      labelColor: undefined,
+      fontWeight: 400,
+    })
   })
 })
 
