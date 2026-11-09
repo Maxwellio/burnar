@@ -200,7 +200,7 @@ function PeriodsDialog({ open, naryadId, readOnly, onClose }) {
         onClose={onClose}
         maxWidth="md"
         fullWidth
-        PaperProps={{ sx: { height: '70vh' } }}
+        PaperProps={{ sx: { height: '30vh' } }}
       >
         <DialogTitle>Настройка периодов выполнения работ</DialogTitle>
         <DialogContent
