@@ -4,6 +4,7 @@ import {
   naryadCorrelationIconName,
   naryadLockIconName,
   naryadOperIconName,
+  naryadUncalculatedIconName,
 } from './naryadOperIcons.js'
 
 describe('naryadOperIconName', () => {
@@ -39,6 +40,40 @@ describe('naryadOperIconName', () => {
       naryadOperIconName({ operlifetype: 79, hasChildren: false, locked: 1, kor: 1 }),
       'calculator',
     )
+  })
+})
+
+describe('naryadUncalculatedIconName', () => {
+  const leaf = { id: 7, operlifetype: 79, hasChildren: false, n2: null }
+
+  it('warns in front of the calculator when the volume norm is empty', () => {
+    assert.equal(naryadUncalculatedIconName(leaf), 'triangle-alert')
+    assert.equal(naryadUncalculatedIconName({ ...leaf, operlifetype: '80' }), 'triangle-alert')
+    assert.equal(naryadOperIconName(leaf), 'calculator')
+  })
+
+  it('hides the warning once a volume norm exists, including zero', () => {
+    assert.equal(naryadUncalculatedIconName({ ...leaf, n2: 1.5 }), null)
+    assert.equal(naryadUncalculatedIconName({ ...leaf, n2: 0 }), null)
+  })
+
+  it('follows a local norm clear and a local calculation', () => {
+    assert.equal(
+      naryadUncalculatedIconName({ ...leaf, n2: 4 }, new Map([['7', { n2: null }]])),
+      'triangle-alert',
+    )
+    assert.equal(
+      naryadUncalculatedIconName(leaf, new Map([['7', { n2: 2 }]])),
+      null,
+    )
+  })
+
+  it('does not warn blocks, constants, manual norms or parents', () => {
+    assert.equal(naryadUncalculatedIconName({ ...leaf, operlifetype: null }), null)
+    assert.equal(naryadUncalculatedIconName({ ...leaf, operlifetype: 78 }), null)
+    assert.equal(naryadUncalculatedIconName({ ...leaf, operlifetype: 82 }), null)
+    assert.equal(naryadUncalculatedIconName({ ...leaf, hasChildren: true }), null)
+    assert.equal(naryadUncalculatedIconName(null), null)
   })
 })
 

@@ -2,7 +2,7 @@ import Box from '@mui/material/Box'
 import IconButton from '@mui/material/IconButton'
 import Add from '@mui/icons-material/Add'
 import Remove from '@mui/icons-material/Remove'
-import { Bell, Calculator, FolderTree, Link2, SquareArrowOutUpRight } from 'lucide-react'
+import { Bell, Calculator, FolderTree, Link2, SquareArrowOutUpRight, TriangleAlert } from 'lucide-react'
 import { paramColumnDefs, paramRowNumber } from '../actions/params/paramColumns.js'
 import { ParamValueCell } from '../actions/params/operParamColumns.jsx'
 import { workFieldValue } from '../actions/calc/workPatches.js'
@@ -11,6 +11,7 @@ import {
   naryadCorrelationIconName,
   naryadLockIconName,
   naryadOperIconName,
+  naryadUncalculatedIconName,
 } from './naryadOperIcons.js'
 
 /** Отступ одного уровня (~32px), как в каталоге тематических разделов. */
@@ -39,25 +40,48 @@ const OPER_TYPE_LABELS = {
 }
 
 function OperTypeMark({ node }) {
+  const { workValues } = useNaryadWorkspace()
   const name = naryadOperIconName(node)
   const Icon = name ? OPER_TYPE_ICONS[name] : null
-  if (!Icon) return null
+  const uncalculated = naryadUncalculatedIconName(node, workValues.overrides) != null
+  if (!Icon && !uncalculated) return null
   return (
-    <Box
-      component="span"
-      role="img"
-      aria-label={OPER_TYPE_LABELS[name]}
-      sx={{
-        display: 'inline-flex',
-        alignItems: 'center',
-        flexShrink: 0,
-        height: EXPANDER_SIZE,
-        mr: 0.75,
-        color: 'text.secondary',
-      }}
-    >
-      <Icon size={OPER_ICON_SIZE} aria-hidden />
-    </Box>
+    <>
+      {uncalculated ? (
+        <Box
+          component="span"
+          role="img"
+          aria-label="Операция не рассчитана"
+          sx={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            flexShrink: 0,
+            height: EXPANDER_SIZE,
+            mr: 0.5,
+            color: 'error.main',
+          }}
+        >
+          <TriangleAlert size={OPER_ICON_SIZE} aria-hidden />
+        </Box>
+      ) : null}
+      {Icon ? (
+        <Box
+          component="span"
+          role="img"
+          aria-label={OPER_TYPE_LABELS[name]}
+          sx={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            flexShrink: 0,
+            height: EXPANDER_SIZE,
+            mr: 0.75,
+            color: 'text.secondary',
+          }}
+        >
+          <Icon size={OPER_ICON_SIZE} aria-hidden />
+        </Box>
+      ) : null}
+    </>
   )
 }
 

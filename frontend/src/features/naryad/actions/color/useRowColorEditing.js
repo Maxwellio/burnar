@@ -194,7 +194,6 @@ export default function useRowColorEditing({
 
   return {
     enabled: canChangeRowColor(selectedIds, closed, mutation.pending),
-    overrides,
     getRowBackgroundColor,
     menuAnchor,
     isMenuOpen: () => Boolean(menuAnchorRef.current),

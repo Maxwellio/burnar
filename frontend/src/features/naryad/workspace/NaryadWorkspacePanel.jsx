@@ -7,7 +7,6 @@ import useColumnSizingPersistence from './layout/useColumnSizingPersistence.js'
 import useResizablePanel from './layout/useResizablePanel.js'
 import { NaryadWorkspaceProvider } from './NaryadWorkspaceContext.jsx'
 import { CUT_MARK_COLOR, isCutMarked } from '../actions/clipboard/clipboardRules.js'
-import { workRowBackgroundColor } from '../actions/color/naryadRowColors.js'
 import { nodeIdFilters, treeFooterStatusItems } from './naryadWorkspaceData.js'
 import PeriodTotalsPanel from './PeriodTotalsPanel.jsx'
 import TreeStatusBar from './TreeStatusBar.jsx'
@@ -96,14 +95,10 @@ export default function NaryadWorkspacePanel({
                   columns={part.treeColumns}
                   multiSelect
                   {...tree.tableProps}
-                  getRowBackgroundColor={(row) => workRowBackgroundColor(
-                    row,
-                    colors.overrides,
-                    workspace.workValues.overrides,
-                    {
-                      cut: isCutMarked(workspace.clipboard, row?.id),
-                      cutColor: CUT_MARK_COLOR,
-                    },
+                  getRowBackgroundColor={(row) => (
+                    isCutMarked(workspace.clipboard, row?.id)
+                      ? CUT_MARK_COLOR
+                      : colors.getRowBackgroundColor(row)
                   )}
                   initialState={TREE_INITIAL_STATE}
                 />

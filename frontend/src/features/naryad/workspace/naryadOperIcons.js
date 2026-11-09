@@ -1,5 +1,9 @@
+import { workFieldValue } from '../actions/calc/workPatches.js'
+
 /** Лист 79/80 — Delphi Image1. В lucide-react 0.469.0 это Calculator. */
 const ICON_CALCULATOR = 'calculator'
+/** Пустая норма на объём у листа 79/80. Стоит перед калькулятором. */
+const ICON_UNCALCULATED = 'triangle-alert'
 /**
  * Лист 82 — Delphi Image2.
  * square-arrow-right-exit есть только с lucide-react 0.575.0,
@@ -45,6 +49,20 @@ export function naryadOperIconName(node) {
     return null
   }
   return ICON_STRUCTURE
+}
+
+/**
+ * Красное предупреждение перед калькулятором, пока норма на объём пустая.
+ * Ноль уже считается рассчитанным. У блока, константы, типа 82 и родителя значка нет.
+ *
+ * @param {{ id?: number|string, operlifetype?: number|string|null, hasChildren?: boolean, n2?: unknown }|null|undefined} node
+ * @param {Map<string, object>|undefined} workOverrides
+ * @returns {'triangle-alert'|null}
+ */
+export function naryadUncalculatedIconName(node, workOverrides) {
+  if (naryadOperIconName(node) !== ICON_CALCULATOR) return null
+  const n2 = workFieldValue(node, 'n2', workOverrides)
+  return n2 === '' || n2 == null ? ICON_UNCALCULATED : null
 }
 
 function isFlagOn(value) {

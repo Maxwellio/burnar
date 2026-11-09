@@ -1,9 +1,4 @@
-import { workFieldValue } from '../calc/workPatches.js'
-
 export const NARYAD_DEFAULT_PICKER_COLOR = '#ffff00'
-
-/** Светло-красный фон листа 79/80, пока норма на объём пустая. */
-export const UNCALCULATED_ROW_COLOR = '#ffb3b3'
 
 /** Готовые цвета маркировки. Чёрный не входит: в Delphi он совпадает с «цвета нет». */
 export const NARYAD_COLOR_SWATCHES = [
@@ -48,25 +43,6 @@ export function cssColorToDelphi(value) {
 export function rowBackgroundColor(row, overrides) {
   const color = overrides.has(row.id) ? overrides.get(row.id) : row.colorsel
   return delphiColorToCss(color)
-}
-
-/** Лист комбинации или алгоритма без нормы на объём. Ноль уже считается рассчитанным. */
-export function isUncalculatedOper(row, workOverrides) {
-  if (!row || row.hasChildren === true) return false
-  const type = Number(row.operlifetype)
-  if (type !== 79 && type !== 80) return false
-  const n2 = workFieldValue(row, 'n2', workOverrides)
-  return n2 === '' || n2 == null
-}
-
-/**
- * Фон строки дерева. Вырезание важнее нерассчитанной нормы, нерассчитанная норма
- * важнее сохранённого colorsel.
- */
-export function workRowBackgroundColor(row, colorOverrides, workOverrides, options = {}) {
-  if (options.cut) return options.cutColor
-  if (isUncalculatedOper(row, workOverrides)) return UNCALCULATED_ROW_COLOR
-  return rowBackgroundColor(row, colorOverrides)
 }
 
 export function canChangeRowColor(selectedId, closed, pending = false) {
