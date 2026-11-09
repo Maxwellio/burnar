@@ -1,18 +1,14 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import Alert from '@mui/material/Alert'
+import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
 import DialogActions from '@mui/material/DialogActions'
 import DialogContent from '@mui/material/DialogContent'
 import DialogTitle from '@mui/material/DialogTitle'
 import Stack from '@mui/material/Stack'
-import Table from '@mui/material/Table'
-import TableBody from '@mui/material/TableBody'
-import TableCell from '@mui/material/TableCell'
-import TableHead from '@mui/material/TableHead'
-import TableRow from '@mui/material/TableRow'
 import TextField from '@mui/material/TextField'
-import Typography from '@mui/material/Typography'
 import DateRange from '@mui/icons-material/DateRange'
+import { AxiosProvider, BaseTable } from 'mainComponent'
 import { LocalizationProvider } from '@mui/x-date-pickers'
 import { DesktopDateTimePicker } from '@mui/x-date-pickers/DesktopDateTimePicker'
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns'
@@ -27,13 +23,15 @@ import {
 } from '../../../../api/naryadyApi.js'
 import DraggableDialog from '../../../../components/DraggableDialog'
 import { useConfirm } from '../../../../context/ConfirmContext.jsx'
+import { COLUMN_SIZING_KEYS, naryadCompactTableSx } from '../../naryadPageLayout.js'
 import ActionButton from '../../workspace/ActionButton.jsx'
+import useColumnSizingPersistence from '../../workspace/layout/useColumnSizingPersistence.js'
 import { useNaryadWorkspace } from '../../workspace/NaryadWorkspaceContext.jsx'
 import {
   PERIOD_DELETE_CONFIRM,
   PERIOD_NAME_MAX,
-  formatPeriodStamp,
   periodFormError,
+  periodListColumnDefs,
 } from './periodRules.js'
 
 const STAMP = "yyyy-MM-dd'T'HH:mm:ss"
@@ -132,58 +130,54 @@ function PeriodEditDialog({ open, naryadId, period, onClose, onSaved }) {
   )
 }
 
+const NO_FILTERS = []
+const ignoreFilters = () => {}
+
+function samePeriodId(row, id) {
+  return String(row?.id ?? row?.key) === String(id)
+}
+
 function PeriodsDialog({ open, naryadId, readOnly, onClose }) {
   const confirm = useConfirm()
-  const [periods, setPeriods] = useState([])
-  const [selectedKey, setSelectedKey] = useState(null)
-  const [loading, setLoading] = useState(false)
+  const [selectedId, setSelectedId] = useState(null)
   const [error, setError] = useState('')
   const [editor, setEditor] = useState(null)
-  const selected = periods.find((period) => period.key === selectedKey) ?? null
+  const [renderSignal, setRenderSignal] = useState(0)
+  const columns = useMemo(() => periodListColumnDefs(), [])
+  const url = `/naryady/${naryadId}/vipolnenie/periods`
+  useColumnSizingPersistence([[url, COLUMN_SIZING_KEYS.vipolneniePeriods]])
 
-  async function load() {
-    setLoading(true)
-    setError('')
-    try {
-      const rows = await fetchVipolneniePeriods(naryadId)
-      setPeriods(Array.isArray(rows) ? rows : [])
-      setSelectedKey((current) => (
-        Array.isArray(rows) && rows.some((period) => period.key === current) ? current : null
-      ))
-    } catch (loadError) {
-      setError(loadError?.message || 'Не удалось загрузить периоды')
-    } finally {
-      setLoading(false)
-    }
+  function reloadTable() {
+    setRenderSignal((value) => value + 1)
   }
 
   useEffect(() => {
-    if (!open) {
-      setEditor(null)
-      return undefined
-    }
-    let cancelled = false
-    setLoading(true)
+    if (open) return
+    setEditor(null)
+    setSelectedId(null)
     setError('')
-    fetchVipolneniePeriods(naryadId)
-      .then((rows) => {
-        if (cancelled) return
-        setPeriods(Array.isArray(rows) ? rows : [])
-        setSelectedKey(null)
-      })
-      .catch((loadError) => {
-        if (!cancelled) setError(loadError?.message || 'Не удалось загрузить периоды')
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false)
-      })
-    return () => {
-      cancelled = true
+  }, [open])
+
+  async function editSelected(idArg) {
+    const id = typeof idArg === 'number' || typeof idArg === 'string' ? idArg : selectedId
+    if (id == null || readOnly) return
+    setSelectedId(id)
+    setError('')
+    try {
+      const rows = await fetchVipolneniePeriods(naryadId)
+      const period = (Array.isArray(rows) ? rows : []).find((row) => samePeriodId(row, id))
+      if (!period) {
+        setError('Период не найден')
+        return
+      }
+      setEditor({ period })
+    } catch (loadError) {
+      setError(loadError?.message || 'Не удалось загрузить период')
     }
-  }, [open, naryadId])
+  }
 
   async function removeSelected() {
-    if (!selected || readOnly) return
+    if (selectedId == null || readOnly) return
     const accepted = await confirm(PERIOD_DELETE_CONFIRM, {
       action: 'удаление',
       confirmLabel: 'Удалить',
@@ -191,8 +185,9 @@ function PeriodsDialog({ open, naryadId, readOnly, onClose }) {
     if (!accepted) return
     setError('')
     try {
-      await deleteVipolneniePeriod(naryadId, selected.key)
-      await load()
+      await deleteVipolneniePeriod(naryadId, selectedId)
+      setSelectedId(null)
+      reloadTable()
     } catch (deleteError) {
       setError(deleteError?.message || 'Не удалось удалить период')
     }
@@ -200,59 +195,62 @@ function PeriodsDialog({ open, naryadId, readOnly, onClose }) {
 
   return (
     <>
-      <DraggableDialog open={open} onClose={onClose} maxWidth="md" fullWidth>
+      <DraggableDialog
+        open={open}
+        onClose={onClose}
+        maxWidth="md"
+        fullWidth
+        PaperProps={{ sx: { height: '70vh' } }}
+      >
         <DialogTitle>Настройка периодов выполнения работ</DialogTitle>
-        <DialogContent>
-          <Stack direction="row" spacing={1} sx={{ mb: 1 }}>
+        <DialogContent
+          sx={{
+            display: 'flex',
+            flexDirection: 'column',
+            minHeight: 0,
+            overflow: 'hidden',
+          }}
+        >
+          <Stack direction="row" spacing={1} sx={{ mb: 1, flexShrink: 0 }}>
             <Button size="small" disabled={readOnly} onClick={() => setEditor({ period: null })}>
               Добавить период
             </Button>
             <Button
               size="small"
-              disabled={readOnly || !selected}
-              onClick={() => setEditor({ period: selected })}
+              disabled={readOnly || selectedId == null}
+              onClick={() => {
+                void editSelected()
+              }}
             >
               Редактировать период
             </Button>
-            <Button size="small" color="error" disabled={readOnly || !selected} onClick={removeSelected}>
+            <Button
+              size="small"
+              color="error"
+              disabled={readOnly || selectedId == null}
+              onClick={() => {
+                void removeSelected()
+              }}
+            >
               Удалить период
             </Button>
           </Stack>
-          {error ? <Alert severity="error" sx={{ mb: 1 }}>{error}</Alert> : null}
-          {loading ? (
-            <Typography variant="body2" color="text.secondary">Загрузка…</Typography>
-          ) : (
-            <Table size="small" aria-label="Периоды выполнения">
-              <TableHead>
-                <TableRow>
-                  <TableCell>Название</TableCell>
-                  <TableCell>Дата начала работ</TableCell>
-                  <TableCell>Дата окончания работ</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {periods.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={3}>
-                      <Typography variant="body2" color="text.secondary">Периодов нет</Typography>
-                    </TableCell>
-                  </TableRow>
-                ) : periods.map((period) => (
-                  <TableRow
-                    key={period.key}
-                    hover
-                    selected={period.key === selectedKey}
-                    onClick={() => setSelectedKey(period.key)}
-                    sx={{ cursor: 'pointer' }}
-                  >
-                    <TableCell>{period.nm}</TableCell>
-                    <TableCell>{formatPeriodStamp(period.begoperdate)}</TableCell>
-                    <TableCell>{formatPeriodStamp(period.outoperdate)}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          )}
+          {error ? <Alert severity="error" sx={{ mb: 1, flexShrink: 0 }}>{error}</Alert> : null}
+          <Box sx={{ flex: 1, minHeight: 0, overflow: 'hidden', ...naryadCompactTableSx }}>
+            {open ? (
+              <AxiosProvider baseapi="/api">
+                <BaseTable
+                  url={url}
+                  columns={columns}
+                  filters={NO_FILTERS}
+                  setFilters={ignoreFilters}
+                  setSelectedId={setSelectedId}
+                  handleDoubleClick={readOnly ? undefined : editSelected}
+                  reRenderSignal={renderSignal}
+                />
+              </AxiosProvider>
+            ) : null}
+          </Box>
         </DialogContent>
         <DialogActions>
           <Button variant="contained" onClick={onClose}>ОК</Button>
@@ -263,7 +261,7 @@ function PeriodsDialog({ open, naryadId, readOnly, onClose }) {
         naryadId={naryadId}
         period={editor?.period ?? null}
         onClose={() => setEditor(null)}
-        onSaved={load}
+        onSaved={reloadTable}
       />
     </>
   )

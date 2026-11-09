@@ -23,7 +23,7 @@ function BindPeriodDialog({ open, periods, onClose, onConfirm, pending }) {
   const [periodKey, setPeriodKey] = useState(periods[0]?.key ?? '')
 
   return (
-    <DraggableDialog open={open} onClose={pending ? undefined : onClose} maxWidth="xs" fullWidth>
+    <DraggableDialog open={open} onClose={pending ? undefined : onClose} maxWidth="sm" fullWidth>
       <DialogTitle>Выберите период</DialogTitle>
       <DialogContent>
         <TextField
@@ -52,20 +52,16 @@ function BindPeriodDialog({ open, periods, onClose, onConfirm, pending }) {
   )
 }
 
-/** Delphi actSelPeriodOper: период пишется только строкам, которые грид умеет выделить. */
+/** Период пишется любой выбранной операции и любому блоку, если они заблокированы. */
 export function BindPeriodButton() {
   const ctx = useNaryadWorkspace()
   const [busy, setBusy] = useState(false)
   const [dialog, setDialog] = useState(null)
-  const rows = periodBindRows(ctx.tree.selectedIds, ctx.structureById, ctx.lockFlags)
+  const rows = periodBindRows(ctx.tree.selectedIds, ctx.lockFlags)
   const disabled = busy || !canOpenPeriodBind(rows, ctx.closed, ctx.mutation.pending)
 
   async function open() {
-    const current = periodBindRows(
-      ctx.tree.getSelectedIds(),
-      ctx.getStructure(),
-      ctx.getLockFlags(),
-    )
+    const current = periodBindRows(ctx.tree.getSelectedIds(), ctx.getLockFlags())
     if (!canOpenPeriodBind(current, ctx.getClosed(), ctx.mutation.isPending())) return
     const refusal = periodBindRefusal(current)
     if (refusal) {

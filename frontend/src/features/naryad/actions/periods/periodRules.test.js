@@ -10,16 +10,9 @@ import {
   periodBindRefusal,
   periodBindRows,
   periodFormError,
+  periodListColumnDefs,
   periodOptionLabel,
 } from './periodRules.js'
-
-const structure = new Map([
-  [1, { id: 1, operlifetype: 80, locked: 1 }],
-  [2, { id: 2, operlifetype: 79, locked: 0 }],
-  [3, { id: 3, operlifetype: null, locked: 1 }],
-  [4, { id: 4, operlifetype: 81, locked: 1 }],
-  [5, { id: 5, operlifetype: 82, locked: 1 }],
-])
 
 describe('period form', () => {
   it('requires a name, both timestamps, and an end that is not earlier than the start', () => {
@@ -54,26 +47,46 @@ describe('period form', () => {
   })
 })
 
+describe('period list columns', () => {
+  it('shows the name and both dates without filters', () => {
+    const columns = periodListColumnDefs()
+    assert.deepEqual(columns.map((column) => column.header), [
+      'Название',
+      'Дата начала работ',
+      'Дата окончания работ',
+    ])
+    assert.equal(columns.every((column) => column.enableColumnFilter === false), true)
+    const begin = columns[1].cell({ getValue: () => '2026-01-01T08:30:00' })
+    assert.equal(begin, '01.01.2026 08:30:00')
+  })
+})
+
 describe('period bind selection', () => {
-  it('keeps only rows Delphi can select: not a block and not type 81', () => {
-    const rows = periodBindRows([1, 2, 3, 4, 5, 9], structure, new Map())
-    assert.deepEqual(periodBindIds(rows), [1, 2, 5])
+  const flags = new Map([
+    ['1', 1],
+    ['2', 0],
+    ['3', 1],
+    ['4', 1],
+    ['5', 1],
+  ])
+
+  it('keeps every selected row, including a block and type 81', () => {
+    const rows = periodBindRows([1, 2, 3, 4, 5, 9], flags)
+    assert.deepEqual(periodBindIds(rows), [1, 2, 3, 4, 5])
   })
 
-  it('enables the button when such a row is selected and the part is open', () => {
-    const rows = periodBindRows([1], structure, new Map())
-    assert.equal(canOpenPeriodBind(rows, false, false), true)
-    assert.equal(canOpenPeriodBind(rows, true, false), false)
-    assert.equal(canOpenPeriodBind(rows, false, true), false)
-    assert.equal(canOpenPeriodBind(periodBindRows([3, 4], structure, new Map()), false, false), false)
-    assert.equal(canOpenPeriodBind(periodBindRows([1], null, new Map()), false, false), false)
+  it('enables the button for an operation or a block when the part is open', () => {
+    assert.equal(canOpenPeriodBind(periodBindRows([1], flags), false, false), true)
+    assert.equal(canOpenPeriodBind(periodBindRows([3, 4], flags), false, false), true)
+    assert.equal(canOpenPeriodBind(periodBindRows([1], flags), true, false), false)
+    assert.equal(canOpenPeriodBind(periodBindRows([1], flags), false, true), false)
+    assert.equal(canOpenPeriodBind(periodBindRows([1], null), false, false), false)
   })
 
-  it('refuses the bind unless every bindable row is locked', () => {
-    const locked = periodBindRows([1, 5], structure, new Map([['1', 1], ['5', 1]]))
-    assert.equal(periodBindRefusal(locked), null)
-    const mixed = periodBindRows([1, 2], structure, new Map([['1', 1], ['2', 0]]))
-    assert.equal(periodBindRefusal(mixed), NOT_ALL_LOCKED_MESSAGE)
+  it('refuses the bind unless every selected row is locked', () => {
+    assert.equal(periodBindRefusal(periodBindRows([1, 5], flags)), null)
+    assert.equal(periodBindRefusal(periodBindRows([3, 4], flags)), null)
+    assert.equal(periodBindRefusal(periodBindRows([1, 2], flags)), NOT_ALL_LOCKED_MESSAGE)
     assert.equal(NOT_ALL_LOCKED_MESSAGE, 'Не все работы заблокированы!')
   })
 })

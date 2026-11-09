@@ -21,6 +21,11 @@ public class NaryadPeriodDto {
         return key;
     }
 
+    /** BaseTable выбирает строку по id. */
+    public long getId() {
+        return key;
+    }
+
     public String getNm() {
         return nm;
     }

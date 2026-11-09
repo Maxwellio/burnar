@@ -1,4 +1,3 @@
-import { isBlock } from '../clipboard/clipboardRules.js'
 import { isWorkLocked } from '../lock/lockRules.js'
 
 /** varchar(128) у burnar.vipolnenie_period.nm. */
@@ -15,9 +14,6 @@ const NAME_REQUIRED = 'Укажите название периода'
 const NAME_TOO_LONG = 'Название периода не длиннее 128 символов'
 const DATES_REQUIRED = 'Укажите дату и время начала и окончания'
 const END_BEFORE_BEGIN = 'Окончание не может быть раньше начала'
-
-/** Тип 81 в Delphi нельзя выделить, как и блок с пустым operlifetype. */
-const STRUCTURE_TYPE = 81
 
 const STAMP = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})$/
 
@@ -44,32 +40,57 @@ export function formatPeriodStamp(value) {
   return `${day}.${month}.${year} ${hour}:${minute}:${second}`
 }
 
+const PERIOD_COLUMN_MAX = 4000
+
+/** Колонки BaseTable списка периодов. id строки таблица берёт из поля id. */
+export function periodListColumnDefs() {
+  return [
+    {
+      id: 'period_nm',
+      accessorKey: 'nm',
+      header: 'Название',
+      size: 250,
+      maxSize: PERIOD_COLUMN_MAX,
+      enableColumnFilter: false,
+    },
+    {
+      id: 'period_beg',
+      accessorKey: 'begoperdate',
+      header: 'Дата начала работ',
+      size: 180,
+      maxSize: PERIOD_COLUMN_MAX,
+      enableColumnFilter: false,
+      cell: ({ getValue }) => formatPeriodStamp(getValue()),
+    },
+    {
+      id: 'period_end',
+      accessorKey: 'outoperdate',
+      header: 'Дата окончания работ',
+      size: 190,
+      maxSize: PERIOD_COLUMN_MAX,
+      enableColumnFilter: false,
+      cell: ({ getValue }) => formatPeriodStamp(getValue()),
+    },
+  ]
+}
+
 /** Подпись пункта, как ComboBox Delphi: имя и обе границы. */
 export function periodOptionLabel(period) {
   const name = period?.nm ?? ''
   return `${name} (${formatPeriodStamp(period?.begoperdate)} - ${formatPeriodStamp(period?.outoperdate)})`
 }
 
-function isPeriodBindable(node) {
-  if (isBlock(node)) return false
-  return Number(node.operlifetype) !== STRUCTURE_TYPE
-}
-
 /**
- * Строки, которые попали бы в SelectedRecs Delphi: не блок и не тип 81.
- * Признак блокировки берётся из свежего списка, если он уже загружен.
+ * Любая выбранная строка выполнения: операция, блок и тип 81.
+ * Пока список блокировок не загружен, привязывать нечего.
  */
-export function periodBindRows(selectedIds, structureById, lockFlags) {
-  if (!(structureById instanceof Map) || !Array.isArray(selectedIds)) return []
+export function periodBindRows(selectedIds, lockFlags) {
+  if (!(lockFlags instanceof Map) || !Array.isArray(selectedIds)) return []
   const rows = []
   for (const id of selectedIds) {
-    const node = structureById.get(Number(id))
-    if (!node || !isPeriodBindable(node)) continue
-    const key = String(node.id)
-    const locked = lockFlags instanceof Map && lockFlags.has(key)
-      ? lockFlags.get(key)
-      : node.locked
-    rows.push({ id: node.id, locked })
+    const key = String(id)
+    if (!lockFlags.has(key)) continue
+    rows.push({ id, locked: lockFlags.get(key) })
   }
   return rows
 }
