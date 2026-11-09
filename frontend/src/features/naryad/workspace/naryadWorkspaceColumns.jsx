@@ -1,8 +1,9 @@
 import Box from '@mui/material/Box'
 import IconButton from '@mui/material/IconButton'
+import Tooltip from '@mui/material/Tooltip'
 import Add from '@mui/icons-material/Add'
 import Remove from '@mui/icons-material/Remove'
-import { Bell, Calculator, FolderTree, Link2, SquareArrowOutUpRight } from 'lucide-react'
+import { Bell, Calculator, FolderTree, Link2, SquareArrowOutUpRight, TriangleAlert } from 'lucide-react'
 import { paramColumnDefs, paramRowNumber } from '../actions/params/paramColumns.js'
 import { ParamValueCell } from '../actions/params/operParamColumns.jsx'
 import { workFieldValue } from '../actions/calc/workPatches.js'
@@ -11,13 +12,14 @@ import {
   naryadCorrelationIconName,
   naryadLockIconName,
   naryadOperIconName,
+  naryadUncalculatedIconName,
 } from './naryadOperIcons.js'
 
 /** Отступ одного уровня (~32px), как в каталоге тематических разделов. */
 const LEVEL_INDENT = 4
 /** Кнопка раскрытия задаёт нижнюю границу высоты строки дерева. */
 const EXPANDER_SIZE = 20
-const OPER_ICON_SIZE = 16
+const OPER_ICON_SIZE = 22
 
 /**
  * Потолок ресайза. В mainComponent defaultColumn.maxSize = 500.
@@ -32,6 +34,8 @@ const OPER_TYPE_ICONS = {
   'folder-tree': FolderTree,
 }
 
+const UNCALCULATED_HINT = 'операция не рассчитана'
+
 const OPER_TYPE_LABELS = {
   calculator: 'Комбинация или алгоритм',
   'square-arrow-out-up-right': 'Ненормируемая работа',
@@ -39,25 +43,50 @@ const OPER_TYPE_LABELS = {
 }
 
 function OperTypeMark({ node }) {
+  const { workValues } = useNaryadWorkspace()
   const name = naryadOperIconName(node)
   const Icon = name ? OPER_TYPE_ICONS[name] : null
-  if (!Icon) return null
+  const uncalculated = naryadUncalculatedIconName(node, workValues.overrides) != null
+  if (!Icon && !uncalculated) return null
   return (
-    <Box
-      component="span"
-      role="img"
-      aria-label={OPER_TYPE_LABELS[name]}
-      sx={{
-        display: 'inline-flex',
-        alignItems: 'center',
-        flexShrink: 0,
-        height: EXPANDER_SIZE,
-        mr: 0.75,
-        color: 'text.secondary',
-      }}
-    >
-      <Icon size={OPER_ICON_SIZE} aria-hidden />
-    </Box>
+    <>
+      {uncalculated ? (
+        <Tooltip title={UNCALCULATED_HINT}>
+          <Box
+            component="span"
+            role="img"
+            aria-label={UNCALCULATED_HINT}
+            sx={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              flexShrink: 0,
+              height: EXPANDER_SIZE,
+              mr: 0.5,
+              color: 'error.main',
+            }}
+          >
+            <TriangleAlert size={OPER_ICON_SIZE} aria-hidden />
+          </Box>
+        </Tooltip>
+      ) : null}
+      {Icon ? (
+        <Box
+          component="span"
+          role="img"
+          aria-label={OPER_TYPE_LABELS[name]}
+          sx={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            flexShrink: 0,
+            height: EXPANDER_SIZE,
+            mr: 0.75,
+            color: 'text.secondary',
+          }}
+        >
+          <Icon size={OPER_ICON_SIZE} aria-hidden />
+        </Box>
+      ) : null}
+    </>
   )
 }
 
@@ -96,9 +125,9 @@ function WorkNameCell({ row, getValue }) {
           }}
         >
           {row.getIsExpanded() ? (
-            <Remove sx={{ fontSize: 18 }} />
+            <Remove sx={{ fontSize: 26 }} />
           ) : (
-            <Add sx={{ fontSize: 18 }} />
+            <Add sx={{ fontSize: 26 }} />
           )}
         </IconButton>
       ) : (
