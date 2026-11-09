@@ -1,5 +1,6 @@
 import Box from '@mui/material/Box'
 import IconButton from '@mui/material/IconButton'
+import Tooltip from '@mui/material/Tooltip'
 import Add from '@mui/icons-material/Add'
 import Remove from '@mui/icons-material/Remove'
 import { Bell, Calculator, FolderTree, Link2, SquareArrowOutUpRight, TriangleAlert } from 'lucide-react'
@@ -33,6 +34,8 @@ const OPER_TYPE_ICONS = {
   'folder-tree': FolderTree,
 }
 
+const UNCALCULATED_HINT = 'операция не рассчитана'
+
 const OPER_TYPE_LABELS = {
   calculator: 'Комбинация или алгоритм',
   'square-arrow-out-up-right': 'Ненормируемая работа',
@@ -48,21 +51,23 @@ function OperTypeMark({ node }) {
   return (
     <>
       {uncalculated ? (
-        <Box
-          component="span"
-          role="img"
-          aria-label="Операция не рассчитана"
-          sx={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            flexShrink: 0,
-            height: EXPANDER_SIZE,
-            mr: 0.5,
-            color: 'error.main',
-          }}
-        >
-          <TriangleAlert size={OPER_ICON_SIZE} aria-hidden />
-        </Box>
+        <Tooltip title={UNCALCULATED_HINT}>
+          <Box
+            component="span"
+            role="img"
+            aria-label={UNCALCULATED_HINT}
+            sx={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              flexShrink: 0,
+              height: EXPANDER_SIZE,
+              mr: 0.5,
+              color: 'error.main',
+            }}
+          >
+            <TriangleAlert size={OPER_ICON_SIZE} aria-hidden />
+          </Box>
+        </Tooltip>
       ) : null}
       {Icon ? (
         <Box
