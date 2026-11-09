@@ -14,6 +14,7 @@ import {
   initialPeriodTotalsState,
   periodTotalColumnDefs,
   periodTotalsSucceeded,
+  refreshOpenPeriodTotals,
   reloadPeriodTotals,
   togglePeriodTotals,
 } from './periodTotals.js'
@@ -34,7 +35,7 @@ const ignoreFilters = () => {}
  * Таблица — BaseTable, как параметры наряда. Первое чтение и пересчёт
  * идут через reRenderSignal, повторное раскрытие таблицу не монтирует заново.
  */
-export default function PeriodTotalsPanel({ naryadId, items }) {
+export default function PeriodTotalsPanel({ naryadId, items, refreshRequest = 0 }) {
   const sessionRef = useRef(initialPeriodTotalsState())
   const [session, setSession] = useState(initialPeriodTotalsState)
   const [activated, setActivated] = useState(false)
@@ -51,6 +52,18 @@ export default function PeriodTotalsPanel({ naryadId, items }) {
     setActivated(false)
     setReloadSignal(0)
   }, [naryadId])
+
+  useEffect(() => {
+    if (!refreshRequest) return
+    const result = refreshOpenPeriodTotals(sessionRef.current)
+    if (result.fetch) {
+      setSession(remember(periodTotalsSucceeded(result.state)))
+      setActivated(true)
+      setReloadSignal((value) => value + 1)
+      return
+    }
+    setSession(remember(result.state))
+  }, [refreshRequest])
 
   function remember(next) {
     sessionRef.current = next

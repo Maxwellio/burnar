@@ -13,6 +13,8 @@ import { renameBlockAction } from '../actions/clipboard/renameBlockAction.js'
 import { deleteBlockAction } from '../actions/delete/deleteBlockAction.js'
 import { deleteMarkedWorksAction } from '../actions/delete/deleteMarkedWorksAction.js'
 import { lockWorksAction, unlockWorksAction } from '../actions/lock/lockWorksActions.js'
+import { bindPeriodAction } from '../actions/periods/BindPeriodButton.jsx'
+import { listPeriodsAction } from '../actions/periods/PeriodsDialog.jsx'
 import { openSkvParamsAction } from '../actions/skv/openSkvParamsAction.js'
 import { COLUMN_SIZING_KEYS, RIGHT_PANEL_WIDTH_KEYS } from '../naryadPageLayout.js'
 import {
@@ -64,6 +66,8 @@ export const vipolneniePart = {
     showOperCardAction,
     lockWorksAction,
     unlockWorksAction,
+    listPeriodsAction,
+    bindPeriodAction,
     rowColorAction,
   ],
 }

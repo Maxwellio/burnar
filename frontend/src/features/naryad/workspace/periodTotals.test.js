@@ -12,6 +12,7 @@ import {
   initialPeriodTotalsState,
   periodTotalsFailed,
   periodTotalsSucceeded,
+  refreshOpenPeriodTotals,
   reloadPeriodTotals,
   togglePeriodTotals,
 } from './periodTotals.js'
@@ -31,6 +32,22 @@ describe('formatPeriodHours', () => {
     assert.equal(formatPeriodHours(8), '8.00')
     assert.equal(formatPeriodHours(1.2), '1.20')
     assert.equal(formatPeriodHours('3.256'), '3.26')
+  })
+})
+
+describe('refreshOpenPeriodTotals', () => {
+  it('refetches an open table and forgets a closed one that was already loaded', () => {
+    const open = refreshOpenPeriodTotals({ open: true, loaded: true, loading: false })
+    assert.equal(open.fetch, true)
+    assert.equal(open.state.loading, true)
+
+    const closed = refreshOpenPeriodTotals({ open: false, loaded: true, loading: false })
+    assert.equal(closed.fetch, false)
+    assert.equal(closed.state.loaded, false)
+
+    const fresh = refreshOpenPeriodTotals({ open: false, loaded: false, loading: false })
+    assert.equal(fresh.fetch, false)
+    assert.equal(fresh.state.loaded, false)
   })
 })
 
