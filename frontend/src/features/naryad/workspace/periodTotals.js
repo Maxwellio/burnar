@@ -105,6 +105,16 @@ export function reloadPeriodTotals(state) {
   return { state: { ...state, loading: true }, fetch: true }
 }
 
+/**
+ * После правки периодов открытая таблица перечитывается.
+ * Закрытая, но уже загруженная, забывает строки: следующее раскрытие читает заново.
+ */
+export function refreshOpenPeriodTotals(state) {
+  if (state.open) return reloadPeriodTotals(state)
+  if (!state.loaded) return { state, fetch: false }
+  return { state: { ...state, loaded: false }, fetch: false }
+}
+
 export function periodTotalsSucceeded(state) {
   return { ...state, loaded: true, loading: false }
 }

@@ -11,7 +11,10 @@ import burnar.dto.NaryadOperParamSaveDto;
 import burnar.dto.NaryadOperParamValueRequest;
 import burnar.dto.NaryadClosedRequest;
 import burnar.dto.NaryadDurationTotalsDto;
+import burnar.dto.NaryadPeriodBindRequest;
+import burnar.dto.NaryadPeriodDto;
 import burnar.dto.NaryadPeriodTotalDto;
+import burnar.dto.NaryadPeriodWriteRequest;
 import burnar.dto.NaryadHeaderDto;
 import burnar.dto.NaryadLockTargetDto;
 import burnar.dto.NaryadOcardFileDto;
@@ -30,9 +33,11 @@ import burnar.service.NaryadOperEditService;
 import burnar.service.NaryadOperParamsService;
 import burnar.service.NaryadOperTreeService;
 import burnar.service.NaryadPartCommandService;
+import burnar.service.NaryadPeriodService;
 import burnar.service.NaryadRowColorService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -64,6 +69,7 @@ public class NaryadWorkspaceController {
     private final NaryadOperEditService naryadOperEditService;
     private final NaryadOperCalcService naryadOperCalcService;
     private final OcardService ocardService;
+    private final NaryadPeriodService naryadPeriodService;
 
     public NaryadWorkspaceController(
             NaryadOperTreeService naryadOperTreeService,
@@ -72,7 +78,8 @@ public class NaryadWorkspaceController {
             NaryadPartCommandService naryadPartCommandService,
             NaryadOperEditService naryadOperEditService,
             NaryadOperCalcService naryadOperCalcService,
-            OcardService ocardService) {
+            OcardService ocardService,
+            NaryadPeriodService naryadPeriodService) {
         this.naryadOperTreeService = naryadOperTreeService;
         this.naryadOperParamsService = naryadOperParamsService;
         this.naryadRowColorService = naryadRowColorService;
@@ -80,6 +87,7 @@ public class NaryadWorkspaceController {
         this.naryadOperEditService = naryadOperEditService;
         this.naryadOperCalcService = naryadOperCalcService;
         this.ocardService = ocardService;
+        this.naryadPeriodService = naryadPeriodService;
     }
 
     @GetMapping("/{id:\\d+}/zadanie")
@@ -289,6 +297,43 @@ public class NaryadWorkspaceController {
     @GetMapping("/{id:\\d+}/vipolnenie/period-totals")
     public List<NaryadPeriodTotalDto> vipolneniePeriodTotals(@PathVariable int id) {
         return naryadOperTreeService.vipolneniePeriodTotals(id);
+    }
+
+    @GetMapping("/{id:\\d+}/vipolnenie/periods")
+    public List<NaryadPeriodDto> vipolneniePeriods(@PathVariable int id) {
+        return naryadPeriodService.list(id);
+    }
+
+    @PostMapping("/{id:\\d+}/vipolnenie/periods")
+    public NaryadPeriodDto createVipolneniePeriod(
+            @PathVariable int id,
+            @RequestBody(required = false) NaryadPeriodWriteRequest request) {
+        return naryadPeriodService.create(id, request);
+    }
+
+    @PutMapping("/{id:\\d+}/vipolnenie/periods/{periodKey:\\d+}")
+    public NaryadPeriodDto updateVipolneniePeriod(
+            @PathVariable int id,
+            @PathVariable int periodKey,
+            @RequestBody(required = false) NaryadPeriodWriteRequest request) {
+        return naryadPeriodService.update(id, periodKey, request);
+    }
+
+    @DeleteMapping("/{id:\\d+}/vipolnenie/periods/{periodKey:\\d+}")
+    public ResponseEntity<Void> deleteVipolneniePeriod(@PathVariable int id, @PathVariable int periodKey) {
+        naryadPeriodService.delete(id, periodKey);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/{id:\\d+}/vipolnenie/periods/bind")
+    public ResponseEntity<Void> bindVipolneniePeriod(
+            @PathVariable int id,
+            @RequestBody(required = false) NaryadPeriodBindRequest request) {
+        naryadPeriodService.bind(
+                id,
+                request == null ? null : request.getPeriodKey(),
+                request == null ? null : request.getNodeIds());
+        return ResponseEntity.noContent().build();
     }
 
     @PostMapping("/{id:\\d+}/vipolnenie/closed")

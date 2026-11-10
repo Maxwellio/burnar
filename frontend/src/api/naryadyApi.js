@@ -196,6 +196,43 @@ export function saveNaryadOperParam(id, part, nodeId, parcode, value) {
   })
 }
 
+/** Периоды выполнения наряда, по началу и окончанию. */
+export function fetchVipolneniePeriods(id) {
+  return requestAction(`/naryady/${id}/vipolnenie/periods`)
+}
+
+/** Новый период. Ключ назначает триггер вставки. */
+export function createVipolneniePeriod(id, body) {
+  return requestAction(`/naryady/${id}/vipolnenie/periods`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  })
+}
+
+export function updateVipolneniePeriod(id, periodKey, body) {
+  return requestAction(`/naryady/${id}/vipolnenie/periods/${periodKey}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  })
+}
+
+export function deleteVipolneniePeriod(id, periodKey) {
+  return requestAction(`/naryady/${id}/vipolnenie/periods/${periodKey}`, {
+    method: 'DELETE',
+  })
+}
+
+/** Пишет период выбранным работам выполнения. */
+export function bindVipolneniePeriod(id, periodKey, nodeIds) {
+  return requestAction(`/naryady/${id}/vipolnenie/periods/bind`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ periodKey, nodeIds }),
+  })
+}
+
 /** Дата начала работ и изменённые строки сквозных параметров: { dateChanged, paramsChanged }. */
 export function saveNaryadSkv(id, part, payload) {
   return requestAction(`/naryady/${id}/${part}/skv`, {

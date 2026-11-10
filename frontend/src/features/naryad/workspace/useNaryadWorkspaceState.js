@@ -49,9 +49,11 @@ export default function useNaryadWorkspaceState({
   const { detailId, reloadSignal } = tree
 
   const [totalsEpoch, setTotalsEpoch] = useState(0)
+  const [periodTotalsReload, setPeriodTotalsReload] = useState(0)
   const [paramsReloadSignal, setParamsReloadSignal] = useState(0)
   const [workPatches, setWorkPatches] = useState(() => new Map())
   const refreshTotals = useCallback(() => setTotalsEpoch((value) => value + 1), [])
+  const refreshPeriodTotals = useCallback(() => setPeriodTotalsReload((value) => value + 1), [])
   const reloadParams = useCallback(() => setParamsReloadSignal((value) => value + 1), [])
   const applyWorkPatches = useCallback((patches) => {
     setWorkPatches((current) => mergeWorkPatches(current, patches))
@@ -166,6 +168,8 @@ export default function useNaryadWorkspaceState({
     colors,
     workValues: { overrides: workPatches, apply: applyWorkPatches },
     refreshTotals,
+    refreshPeriodTotals,
+    periodTotalsReload,
     reloadParams,
     paramsReloadSignal,
     enqueueSave,

@@ -107,6 +107,7 @@ export default function NaryadWorkspacePanel({
                 <PeriodTotalsPanel
                   naryadId={naryadId}
                   items={treeFooterStatusItems(tree.selectedIds, part.id, workspace.totals)}
+                  refreshRequest={workspace.periodTotalsReload}
                 />
               ) : (
                 <TreeStatusBar
