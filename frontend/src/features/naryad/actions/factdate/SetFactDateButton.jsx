@@ -30,6 +30,16 @@ import {
 
 const STAMP = "yyyy-MM-dd'T'HH:mm:ss"
 
+/** Как в сквозных параметрах: колонка MUI прокручивается, полосы не видно. */
+const clockSectionSx = {
+  '& .MuiMultiSectionDigitalClockSection-root': {
+    scrollbarWidth: 'none',
+    msOverflowStyle: 'none',
+    '&::-webkit-scrollbar': { display: 'none' },
+    '&::after': { content: 'none', height: 0 },
+  },
+}
+
 function nowStamp() {
   return format(new Date(), STAMP)
 }
@@ -65,6 +75,8 @@ function FactDateDialog({ open, value, pending, onClose, onConfirm }) {
               timeSteps={{ hours: 1, minutes: 1, seconds: 1 }}
               slotProps={{
                 textField: { size: 'small', fullWidth: true, required: true },
+                popper: { sx: clockSectionSx },
+                desktopPaper: { sx: clockSectionSx },
               }}
             />
           </LocalizationProvider>
