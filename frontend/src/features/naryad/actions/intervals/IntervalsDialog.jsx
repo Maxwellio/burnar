@@ -74,9 +74,6 @@ function IntervalTables({ naryadId, tab }) {
               width: '100%',
               minWidth: 0,
               minHeight: 0,
-              borderRadius: 0,
-              boxShadow: 'none',
-              border: 'none',
             },
           }}
         >
@@ -112,23 +109,22 @@ function IntervalsDialog({ open, naryadId, onClose }) {
           flex: '1 1 auto',
           minHeight: 0,
           overflow: 'hidden',
-          p: 0,
         }}
       >
         <Tabs
           value={tab}
           onChange={(_event, next) => setTab(next)}
-          sx={{ flexShrink: 0, px: 2, borderBottom: 1, borderColor: 'divider' }}
+          sx={{ flexShrink: 0, borderBottom: 1, borderColor: 'divider' }}
         >
           {INTERVAL_TABS.map((item) => (
             <Tab key={item.path} label={item.title} />
           ))}
         </Tabs>
-        <Box sx={{ flex: 1, minHeight: 0, minWidth: 0, width: '100%', display: 'flex', flexDirection: 'column' }}>
+        <Box sx={{ flex: 1, minHeight: 0, minWidth: 0, width: '100%', mt: 1, display: 'flex', flexDirection: 'column' }}>
           {open ? <IntervalTables naryadId={naryadId} tab={tab} /> : null}
         </Box>
       </DialogContent>
-      <DialogActions sx={{ borderTop: 1, borderColor: 'divider' }}>
+      <DialogActions>
         <Button variant="contained" onClick={onClose}>ОК</Button>
       </DialogActions>
     </DraggableDialog>
