@@ -39,6 +39,8 @@ export const COLUMN_SIZING_KEYS = {
   vipolnenieParams: 'naryad-column-sizing:vipolnenie-params',
   vipolneniePeriodTotals: 'naryad-column-sizing:vipolnenie-period-totals',
   vipolneniePeriods: 'naryad-column-sizing:vipolnenie-periods',
+  vipolnenieIntervalsMehbur: 'naryad-column-sizing:vipolnenie-intervals-mehbur',
+  vipolnenieIntervalsNar: 'naryad-column-sizing:vipolnenie-intervals-nar',
   skvZadanie: 'naryad-column-sizing:skv-zadanie',
   skvVipolnenie: 'naryad-column-sizing:skv-vipolnenie',
 }

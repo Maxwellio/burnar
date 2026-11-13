@@ -11,6 +11,9 @@ import burnar.dto.NaryadOperParamSaveDto;
 import burnar.dto.NaryadOperParamValueRequest;
 import burnar.dto.NaryadClosedRequest;
 import burnar.dto.NaryadDurationTotalsDto;
+import burnar.dto.NaryadFactDateDto;
+import burnar.dto.NaryadFactDateRequest;
+import burnar.dto.NaryadIntervalRowDto;
 import burnar.dto.NaryadPeriodBindRequest;
 import burnar.dto.NaryadPeriodDto;
 import burnar.dto.NaryadPeriodTotalDto;
@@ -28,6 +31,8 @@ import burnar.dto.NaryadRowColorRequest;
 import burnar.dto.NaryadRowsColorDto;
 import burnar.dto.NaryadRowsColorRequest;
 import burnar.service.OcardService;
+import burnar.service.NaryadFactDateService;
+import burnar.service.NaryadIntervalService;
 import burnar.service.NaryadOperCalcService;
 import burnar.service.NaryadOperEditService;
 import burnar.service.NaryadOperParamsService;
@@ -70,6 +75,8 @@ public class NaryadWorkspaceController {
     private final NaryadOperCalcService naryadOperCalcService;
     private final OcardService ocardService;
     private final NaryadPeriodService naryadPeriodService;
+    private final NaryadFactDateService naryadFactDateService;
+    private final NaryadIntervalService naryadIntervalService;
 
     public NaryadWorkspaceController(
             NaryadOperTreeService naryadOperTreeService,
@@ -79,7 +86,9 @@ public class NaryadWorkspaceController {
             NaryadOperEditService naryadOperEditService,
             NaryadOperCalcService naryadOperCalcService,
             OcardService ocardService,
-            NaryadPeriodService naryadPeriodService) {
+            NaryadPeriodService naryadPeriodService,
+            NaryadFactDateService naryadFactDateService,
+            NaryadIntervalService naryadIntervalService) {
         this.naryadOperTreeService = naryadOperTreeService;
         this.naryadOperParamsService = naryadOperParamsService;
         this.naryadRowColorService = naryadRowColorService;
@@ -88,6 +97,8 @@ public class NaryadWorkspaceController {
         this.naryadOperCalcService = naryadOperCalcService;
         this.ocardService = ocardService;
         this.naryadPeriodService = naryadPeriodService;
+        this.naryadFactDateService = naryadFactDateService;
+        this.naryadIntervalService = naryadIntervalService;
     }
 
     @GetMapping("/{id:\\d+}/zadanie")
@@ -358,6 +369,29 @@ public class NaryadWorkspaceController {
     @GetMapping("/{id:\\d+}/vipolnenie/nodes/{nodeId:\\d+}/action")
     public NaryadWorkActionDto vipolnenieWorkAction(@PathVariable int id, @PathVariable long nodeId) {
         return naryadOperTreeService.vipolnenieWorkAction(id, nodeId);
+    }
+
+    @GetMapping("/{id:\\d+}/vipolnenie/nodes/{nodeId:\\d+}/begoperdate")
+    public NaryadFactDateDto vipolnenieBegoperdate(@PathVariable int id, @PathVariable long nodeId) {
+        return naryadFactDateService.read(id, nodeId);
+    }
+
+    @PutMapping("/{id:\\d+}/vipolnenie/nodes/{nodeId:\\d+}/begoperdate")
+    public NaryadFactDateDto setVipolnenieBegoperdate(
+            @PathVariable int id,
+            @PathVariable long nodeId,
+            @RequestBody(required = false) NaryadFactDateRequest request) {
+        return naryadFactDateService.update(id, nodeId, request);
+    }
+
+    @GetMapping("/{id:\\d+}/vipolnenie/intervals/mehbur")
+    public List<NaryadIntervalRowDto> vipolnenieMehburIntervals(@PathVariable int id) {
+        return naryadIntervalService.mehbur(id);
+    }
+
+    @GetMapping("/{id:\\d+}/vipolnenie/intervals/narashchivanie")
+    public List<NaryadIntervalRowDto> vipolnenieNarashchivanieIntervals(@PathVariable int id) {
+        return naryadIntervalService.narashchivanie(id);
     }
 
     @PostMapping("/{id:\\d+}/vipolnenie/works/delete")

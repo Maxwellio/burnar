@@ -13,6 +13,8 @@ import { renameBlockAction } from '../actions/clipboard/renameBlockAction.js'
 import { deleteBlockAction } from '../actions/delete/deleteBlockAction.js'
 import { deleteMarkedWorksAction } from '../actions/delete/deleteMarkedWorksAction.js'
 import { lockWorksAction, unlockWorksAction } from '../actions/lock/lockWorksActions.js'
+import { setFactDateAction } from '../actions/factdate/SetFactDateButton.jsx'
+import { intervalsAction } from '../actions/intervals/IntervalsDialog.jsx'
 import { bindPeriodAction } from '../actions/periods/BindPeriodButton.jsx'
 import { listPeriodsAction } from '../actions/periods/PeriodsDialog.jsx'
 import { openSkvParamsAction } from '../actions/skv/openSkvParamsAction.js'
@@ -66,8 +68,10 @@ export const vipolneniePart = {
     showOperCardAction,
     lockWorksAction,
     unlockWorksAction,
+    intervalsAction,
     listPeriodsAction,
     bindPeriodAction,
+    setFactDateAction,
     rowColorAction,
   ],
 }
