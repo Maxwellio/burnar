@@ -21,9 +21,10 @@ describe('catalogInsertRules', () => {
     assert.equal(catalogDateFromPicker(new Date(2026, 0, 5, 23, 15)), '2026-01-05T00:00:00')
   })
 
-  it('treats catalog section vs operation', () => {
+  it('treats catalog section vs operation and unknown oper', () => {
     assert.equal(isCatalogSection({ id: 1, oper: null }), true)
     assert.equal(isCatalogSection({ id: 1, oper: 44 }), false)
+    assert.equal(isCatalogSection({ id: 1 }), false)
   })
 
   it('requires date, catalog node and open part', () => {
@@ -40,8 +41,10 @@ describe('catalogInsertRules', () => {
     assert.equal(canInsertFromCatalog(base), true)
     assert.equal(canInsertFromCatalog({ ...base, dateIn: null }), false)
     assert.equal(canInsertFromCatalog({ ...base, mode: 'empty', catalogNode: { id: 2, oper: 9 } }), false)
+    assert.equal(canInsertFromCatalog({ ...base, mode: 'empty', catalogNode: { id: 2 } }), false)
     assert.equal(canInsertFromCatalog({ ...base, treeEmpty: false, anchor: null }), false)
     assert.equal(canInsertFromCatalog({ ...base, hasPart: false }), false)
+    assert.equal(canInsertFromCatalog({ ...base, mode: 'full', catalogNode: { id: 2 } }), true)
   })
 
   it('disables end/inside on operation anchors and before on locked', () => {

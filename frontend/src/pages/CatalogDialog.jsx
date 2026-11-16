@@ -34,6 +34,7 @@ import {
   catalogTreeEmpty,
   defaultCatalogDateIso,
   needsEmptyBlockPlacePrompt,
+  normalizeCatalogNode,
   normalizeCatalogPlace,
 } from './catalogInsertRules.js'
 
@@ -97,6 +98,8 @@ export default function CatalogDialog({
   const filtersRef = useRef(filters)
   const expandTokenRef = useRef(expandToken)
   const selectSeq = useRef(0)
+  /** id → { id, oper, name }; повторный клик не ходит на сервер. */
+  const catalogNodeCacheRef = useRef(new Map())
   filtersRef.current = filters
   expandTokenRef.current = expandToken
 
@@ -129,15 +132,25 @@ export default function CatalogDialog({
       setCatalogNode(null)
       return
     }
-    setCatalogNode({ id: Number(id) })
+    const key = Number(id)
+    const cached = catalogNodeCacheRef.current.get(key)
+    if (cached) {
+      setCatalogNode(cached)
+      return
+    }
+    // Без oper: кнопки «полного» раздела уже можно, «пустой раздел» ждёт ответ/кэш.
+    setCatalogNode({ id: key })
     fetchTematicRazdel(id)
       .then((node) => {
         if (selectSeq.current !== seq) return
-        setCatalogNode(node)
+        const normalized = normalizeCatalogNode(node) ?? { id: key }
+        catalogNodeCacheRef.current.set(key, normalized)
+        setCatalogNode(normalized)
       })
       .catch(() => {
         if (selectSeq.current !== seq) return
-        setCatalogNode({ id: Number(id), oper: null })
+        // Не считаем раздел по умолчанию — иначе мигает «пустой раздел».
+        setCatalogNode({ id: key })
       })
   }
 

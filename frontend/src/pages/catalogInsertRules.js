@@ -44,8 +44,29 @@ export function normalizeCatalogPlace(value) {
   return null
 }
 
+/**
+ * Раздел каталога: oper явно null/''.
+ * oper === undefined — ещё не известно (ждём кэш/запрос); для пустого раздела кнопку не включаем.
+ */
 export function isCatalogSection(node) {
-  return node != null && (node.oper == null || node.oper === '')
+  if (node == null || node.oper === undefined) return false
+  return node.oper == null || node.oper === ''
+}
+
+/** Нормализация ответа API / кэша: у раздела oper = null, у операции — число. */
+export function normalizeCatalogNode(node) {
+  if (node == null || node.id == null) return null
+  let oper = node.oper
+  if (oper === undefined || oper === null || oper === '') {
+    oper = null
+  } else {
+    oper = Number(oper)
+  }
+  return {
+    id: Number(node.id),
+    name: node.name ?? null,
+    oper,
+  }
 }
 
 export function resolveCatalogAnchor(selectedIds, structureById) {
