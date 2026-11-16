@@ -16,6 +16,7 @@ import { LocalizationProvider } from '@mui/x-date-pickers'
 import { DesktopDatePicker } from '@mui/x-date-pickers/DesktopDatePicker'
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns'
 import { ruRU } from '@mui/x-date-pickers/locales'
+import { format, isValid, parseISO, startOfDay } from 'date-fns'
 import { ru } from 'date-fns/locale'
 import { AxiosProvider, BaseTreeTable } from 'mainComponent'
 import { insertNaryadCatalog } from '../api/naryadyApi.js'
@@ -29,14 +30,15 @@ import {
 import {
   CATALOG_EMPTY_BLOCK_MESSAGE,
   canInsertFromCatalog,
-  catalogDateFromPicker,
-  catalogDateToPicker,
   catalogPlaceChoices,
   catalogTreeEmpty,
   defaultCatalogDateIso,
   needsEmptyBlockPlacePrompt,
   normalizeCatalogPlace,
 } from './catalogInsertRules.js'
+
+/** Тот же stamp, что у фактической даты / сквозных: date-only кладём в 00:00:00. */
+const DATE_STAMP = "yyyy-MM-dd'T'HH:mm:ss"
 import {
   applyCatalogFilterChange,
   buildCatalogTableFilters,
@@ -306,8 +308,14 @@ export default function CatalogDialog({
           >
             <DesktopDatePicker
               label="Дата выполнения операции"
-              value={catalogDateToPicker(dateIn)}
-              onChange={(next) => setDateIn(catalogDateFromPicker(next))}
+              value={dateIn ? startOfDay(parseISO(dateIn)) : null}
+              onChange={(next) => {
+                setDateIn(
+                  next && isValid(next)
+                    ? format(startOfDay(next), DATE_STAMP)
+                    : null,
+                )
+              }}
               format="dd.MM.yyyy"
               views={['year', 'month', 'day']}
               minDate={new Date(2000, 0, 1)}
@@ -316,6 +324,7 @@ export default function CatalogDialog({
                 textField: {
                   size: 'small',
                   sx: { width: 220 },
+                  required: true,
                   InputLabelProps: { shrink: true },
                 },
               }}
@@ -389,6 +398,8 @@ export default function CatalogDialog({
         anchorEl={menu?.anchorEl}
         open={Boolean(menu)}
         onClose={() => setMenu(null)}
+        disableScrollLock
+        sx={{ zIndex: (theme) => theme.zIndex.modal + 2 }}
       >
         {placeItems.map((item) => (
           <MenuItem
