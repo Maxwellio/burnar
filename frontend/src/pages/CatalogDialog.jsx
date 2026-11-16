@@ -37,13 +37,14 @@ import {
   normalizeCatalogPlace,
 } from './catalogInsertRules.js'
 
-/** Тот же stamp, что у фактической даты / сквозных: date-only кладём в 00:00:00. */
-const DATE_STAMP = "yyyy-MM-dd'T'HH:mm:ss"
 import {
   applyCatalogFilterChange,
   buildCatalogTableFilters,
 } from './catalogTreeFilters.js'
 import { tematicRazdelColumns } from './tematicRazdelColumns.jsx'
+
+/** Тот же stamp, что у фактической даты / сквозных: date-only кладём в 00:00:00. */
+const DATE_STAMP = "yyyy-MM-dd'T'HH:mm:ss"
 
 const buttonOutlinedSx = {
   textTransform: 'none',
@@ -55,6 +56,15 @@ const buttonOutlinedSx = {
 const insertButtonSx = {
   ...buttonOutlinedSx,
   pr: 0.5,
+}
+
+const toolbarRowSx = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: 1,
+  flexWrap: 'wrap',
+  flexShrink: 0,
+  width: '100%',
 }
 
 /**
@@ -276,104 +286,101 @@ export default function CatalogDialog({
           overflow: 'hidden',
         }}
       >
-        <Box
-          sx={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 1,
-            flexWrap: 'wrap',
-            flexShrink: 0,
-          }}
-        >
-          <Button
-            variant="outlined"
-            startIcon={<UnfoldMore />}
-            sx={buttonOutlinedSx}
-            onClick={() => setExpandToken((token) => (token ?? 0) + 1)}
-          >
-            Раскрыть все
-          </Button>
-          <Button
-            variant="outlined"
-            startIcon={<UnfoldLess />}
-            sx={buttonOutlinedSx}
-            onClick={() => setFilterEpoch((epoch) => epoch + 1)}
-          >
-            Свернуть все
-          </Button>
-          <LocalizationProvider
-            dateAdapter={AdapterDateFns}
-            adapterLocale={ru}
-            localeText={ruRU.components.MuiLocalizationProvider.defaultProps.localeText}
-          >
-            <DesktopDatePicker
-              label="Дата выполнения операции"
-              value={dateIn ? startOfDay(parseISO(dateIn)) : null}
-              onChange={(next) => {
-                setDateIn(
-                  next && isValid(next)
-                    ? format(startOfDay(next), DATE_STAMP)
-                    : null,
-                )
-              }}
-              format="dd.MM.yyyy"
-              views={['year', 'month', 'day']}
-              minDate={new Date(2000, 0, 1)}
-              maxDate={new Date(2101, 0, 1)}
-              slotProps={{
-                textField: {
-                  size: 'small',
-                  sx: { width: 220 },
-                  required: true,
-                  InputLabelProps: { shrink: true },
-                },
-              }}
-            />
-          </LocalizationProvider>
-          {insertActions.map((action) => {
-            const treeEmpty = catalogTreeEmpty(action.structureById)
-            const selectedIds = action.selectedIds
-            const anchorId = Array.isArray(selectedIds) && selectedIds.length === 1
-              ? Number(selectedIds[0])
-              : null
-            const anchor = anchorId == null
-              ? null
-              : {
-                  id: anchorId,
-                  node: action.structureById instanceof Map
-                    ? action.structureById.get(anchorId)
-                    : null,
-                }
-            const enabled = canInsertFromCatalog({
-              dateIn,
-              catalogNode,
-              mode: action.mode,
-              partClosed: action.closed,
-              hasPart: action.hasPart,
-              pending,
-              treeEmpty,
-              anchor,
-            })
-            return (
-              <Button
-                key={action.key}
-                variant="outlined"
-                disabled={!enabled}
-                startIcon={action.icon}
-                endIcon={<ArrowDropDown />}
-                sx={insertButtonSx}
-                onClick={(event) => openPlaceMenu(event, action)}
-              >
-                {action.label}
-              </Button>
-            )
-          })}
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, flexShrink: 0 }}>
+          <Box sx={toolbarRowSx}>
+            <Button
+              variant="outlined"
+              startIcon={<UnfoldMore />}
+              sx={buttonOutlinedSx}
+              onClick={() => setExpandToken((token) => (token ?? 0) + 1)}
+            >
+              Раскрыть все
+            </Button>
+            <Button
+              variant="outlined"
+              startIcon={<UnfoldLess />}
+              sx={buttonOutlinedSx}
+              onClick={() => setFilterEpoch((epoch) => epoch + 1)}
+            >
+              Свернуть все
+            </Button>
+            <Box sx={{ flex: 1, minWidth: 8 }} />
+            <LocalizationProvider
+              dateAdapter={AdapterDateFns}
+              adapterLocale={ru}
+              localeText={ruRU.components.MuiLocalizationProvider.defaultProps.localeText}
+            >
+              <DesktopDatePicker
+                label="Дата выполнения операции"
+                value={dateIn ? startOfDay(parseISO(dateIn)) : null}
+                onChange={(next) => {
+                  setDateIn(
+                    next && isValid(next)
+                      ? format(startOfDay(next), DATE_STAMP)
+                      : null,
+                  )
+                }}
+                format="dd.MM.yyyy"
+                views={['year', 'month', 'day']}
+                minDate={new Date(2000, 0, 1)}
+                maxDate={new Date(2101, 0, 1)}
+                slotProps={{
+                  textField: {
+                    size: 'small',
+                    sx: { width: 220 },
+                    required: true,
+                    InputLabelProps: { shrink: true },
+                  },
+                }}
+              />
+            </LocalizationProvider>
+          </Box>
+          {!dateIn ? (
+            <Typography variant="caption" color="error">
+              Укажите дату выполнения операции
+            </Typography>
+          ) : null}
+          <Box sx={toolbarRowSx}>
+            {insertActions.map((action) => {
+              const treeEmpty = catalogTreeEmpty(action.structureById)
+              const selectedIds = action.selectedIds
+              const anchorId = Array.isArray(selectedIds) && selectedIds.length === 1
+                ? Number(selectedIds[0])
+                : null
+              const anchor = anchorId == null
+                ? null
+                : {
+                    id: anchorId,
+                    node: action.structureById instanceof Map
+                      ? action.structureById.get(anchorId)
+                      : null,
+                  }
+              const enabled = canInsertFromCatalog({
+                dateIn,
+                catalogNode,
+                mode: action.mode,
+                partClosed: action.closed,
+                hasPart: action.hasPart,
+                pending,
+                treeEmpty,
+                anchor,
+              })
+              return (
+                <Button
+                  key={action.key}
+                  variant="outlined"
+                  disabled={!enabled}
+                  startIcon={action.icon}
+                  endIcon={<ArrowDropDown />}
+                  sx={insertButtonSx}
+                  onClick={(event) => openPlaceMenu(event, action)}
+                >
+                  {action.label}
+                </Button>
+              )
+            })}
+          </Box>
         </Box>
-        {!dateIn ? (
-          <Typography variant="caption" color="error" sx={{ mt: -1 }}>
-            Укажите дату выполнения операции
-          </Typography>
-        ) : null}
         <Box sx={{ flex: 1, minHeight: 0, minWidth: 0, overflow: 'hidden' }}>
           {hasOpened ? (
             <AxiosProvider baseapi="/api">

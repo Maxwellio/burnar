@@ -8,6 +8,7 @@ export const CATALOG_EMPTY_BLOCK_MESSAGE =
 
 export const PLACE_BEFORE = { result: 'before', label: 'Перед текущей' }
 export const PLACE_AFTER = { result: 'after', label: 'После текущей' }
+export const PLACE_INSIDE = { result: 'inside', label: 'В блок' }
 export const PLACE_END = { result: 'end', label: 'В конец раздела' }
 
 function pad2(value) {
@@ -87,17 +88,20 @@ export function canUseCatalogPlace(place, { treeEmpty, anchor, refuseLocked }) {
   if (!normalized) return false
   if (treeEmpty) return normalized === 'before' || normalized === 'after' || normalized === 'end'
   if (!anchor?.node) return false
-  if (normalized === 'end') return isBlock(anchor.node)
+  if (normalized === 'end' || normalized === 'inside') {
+    if (!isBlock(anchor.node)) return false
+    if (refuseLocked && isWorkLocked(anchor.node.locked)) return false
+    return true
+  }
   if (normalized === 'before' || normalized === 'after') {
     if (refuseLocked && isWorkLocked(anchor.node.locked)) return false
     return true
   }
-  if (normalized === 'inside') return isBlock(anchor.node)
   return false
 }
 
 export function catalogPlaceChoices({ treeEmpty, anchor, refuseLocked }) {
-  return [PLACE_BEFORE, PLACE_AFTER, PLACE_END].filter((item) =>
+  return [PLACE_BEFORE, PLACE_AFTER, PLACE_INSIDE, PLACE_END].filter((item) =>
     canUseCatalogPlace(item.result, { treeEmpty, anchor, refuseLocked }))
 }
 

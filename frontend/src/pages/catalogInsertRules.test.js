@@ -44,12 +44,14 @@ describe('catalogInsertRules', () => {
     assert.equal(canInsertFromCatalog({ ...base, hasPart: false }), false)
   })
 
-  it('disables end on operation anchors and before on locked', () => {
-    const block = { id: 10, parentId: null, prnum: 1, operlifetype: null, locked: 0, hasChildren: false }
+  it('disables end/inside on operation anchors and before on locked', () => {
+    const block = { id: 10, parentId: null, prnum: 1, operlifetype: null, locked: 0, hasChildren: true }
     const work = { id: 11, parentId: 10, prnum: 1, operlifetype: 80, locked: 0, hasChildren: false }
     const locked = { ...work, locked: 1 }
     assert.equal(canUseCatalogPlace('end', { treeEmpty: false, anchor: { id: 10, node: block } }), true)
+    assert.equal(canUseCatalogPlace('inside', { treeEmpty: false, anchor: { id: 10, node: block } }), true)
     assert.equal(canUseCatalogPlace('end', { treeEmpty: false, anchor: { id: 11, node: work } }), false)
+    assert.equal(canUseCatalogPlace('inside', { treeEmpty: false, anchor: { id: 11, node: work } }), false)
     assert.equal(canUseCatalogPlace('before', {
       treeEmpty: false,
       anchor: { id: 11, node: locked },
@@ -60,6 +62,11 @@ describe('catalogInsertRules', () => {
       anchor: { id: 11, node: work },
       refuseLocked: true,
     }).map((item) => item.result).join(','), 'before,after')
+    assert.equal(catalogPlaceChoices({
+      treeEmpty: false,
+      anchor: { id: 10, node: block },
+      refuseLocked: false,
+    }).map((item) => item.result).join(','), 'before,after,inside,end')
   })
 
   it('prompts only for empty block before', () => {

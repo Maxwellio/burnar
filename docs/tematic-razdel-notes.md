@@ -93,7 +93,7 @@ Delphi LoadTree скрывает `parent_id`, `ord`, `nartype`. В JSON они �
 | Поиск + Locate | ToolButton1 — в вебе три поля в шапке колонок, не Locate |
 | Collapse/expand | ToolButton2 — «Раскрыть все» (`?expandAll=N`, полный лес) / «Свернуть все» (только UI, дети в памяти) |
 | Автоширина | ToolButton3 |
-| «В задание» / «В выполнение» | `*_add_razdel`, place before/after/end (+ inside для пустого блока) |
+| «В задание» / «В выполнение» | `*_add_razdel`, place before/after/в блок/в конец раздела |
 | «Пустой раздел → …» | `*_add_emp_razdel`; disabled, если в каталоге выбрана операция |
 | Дата операции | date-only → `datein` (начало суток) |
 | Drag-and-drop на дерево наряда | отложено |
