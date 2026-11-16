@@ -154,18 +154,21 @@ public class NaryadOperTreeService {
      * Итоги по периодам, текст Delphi qrITOGtable.
      * Скалярный ремонт не фильтрует defnar и prnum: несколько строк znrepparsv
      * роняют запрос. См. docs/delphi-commonnarvip-db.md, замечание 4.
+     * Нет часов или строки ремонта — 0. Иначе NULL ремонта обнуляет итог,
+     * в том числе у «Не включенные в периоды работы», где ключа периода нет.
      */
     static final String VIPOLNENIE_PERIOD_TOTALS_SQL =
             "select vv.period_key, "
                     + "case when vv.begoperdate is null and vv.outoperdate is null then vv.nm "
                     + "else vv.nm || ' ( ' || to_char(vv.begoperdate, 'dd.mm.yyyy') || '-' "
                     + "|| to_char(vv.outoperdate, 'dd.mm.yyyy') || ' )' end as name, "
-                    + "vv.normativ + vv.remont_n as summ_n, "
-                    + "vv.fact + vv.remont_f as summ_f, "
-                    + "vv.normativ, vv.remont_n, vv.fact, vv.remont_f "
+                    + "coalesce(vv.normativ, 0) + coalesce(vv.remont_n, 0) as summ_n, "
+                    + "coalesce(vv.fact, 0) + coalesce(vv.remont_f, 0) as summ_f, "
+                    + "coalesce(vv.normativ, 0) as normativ, coalesce(vv.remont_n, 0) as remont_n, "
+                    + "coalesce(vv.fact, 0) as fact, coalesce(vv.remont_f, 0) as remont_f "
                     + "from ( select o.narkey, p.key as period_key, p.begoperdate, p.outoperdate, "
                     + "case when p.key is null then 'Не включенные в периоды работы' else p.nm end as nm, "
-                    + "sum(round(n.norma / 60, 2)) as normativ, "
+                    + "coalesce(sum(round(n.norma / 60, 2)), 0) as normativ, "
                     + "round(case when coalesce((select f.val from burnar.znrepparsv f "
                     + "where f.period_key = o.period and f.parcode = 2683 and f.repid = 1), 0) "
                     + "> sum(round(case when coalesce(o.operlifetypeoper, 0) not in (200, 207, 208, 209) "
@@ -175,9 +178,9 @@ public class NaryadOperTreeService {
                     + "else coalesce((select f.val from burnar.znrepparsv f "
                     + "where f.period_key = o.period and f.parcode = 2683 and f.repid = 1), 0) "
                     + "end, 2) as remont_n, "
-                    + "sum(round(n.fact / 60, 2)) as fact, "
-                    + "(select coalesce(f.val, 0) from burnar.znrepparsv f "
-                    + "where f.parcode = 2683 and f.period_key = p.key and f.repid = 1) as remont_f "
+                    + "coalesce(sum(round(n.fact / 60, 2)), 0) as fact, "
+                    + "coalesce((select coalesce(f.val, 0) from burnar.znrepparsv f "
+                    + "where f.parcode = 2683 and f.period_key = p.key and f.repid = 1), 0) as remont_f "
                     + "from burnar.vipolnenie_oper o "
                     + "join burnar.vipolnenie_norm n on n.vip_key = o.key "
                     + "left join burnar.vipolnenie_period p on o.period = p.key "
@@ -372,13 +375,18 @@ public class NaryadOperTreeService {
         NaryadPeriodTotalDto dto = new NaryadPeriodTotalDto();
         dto.setPeriodKey(getLong(rs, "period_key"));
         dto.setName(rs.getString("name"));
-        dto.setSummN(rs.getBigDecimal("summ_n"));
-        dto.setSummF(rs.getBigDecimal("summ_f"));
-        dto.setNormativ(rs.getBigDecimal("normativ"));
-        dto.setRemontN(rs.getBigDecimal("remont_n"));
-        dto.setFact(rs.getBigDecimal("fact"));
-        dto.setRemontF(rs.getBigDecimal("remont_f"));
+        dto.setSummN(hoursOrZero(rs.getBigDecimal("summ_n")));
+        dto.setSummF(hoursOrZero(rs.getBigDecimal("summ_f")));
+        dto.setNormativ(hoursOrZero(rs.getBigDecimal("normativ")));
+        dto.setRemontN(hoursOrZero(rs.getBigDecimal("remont_n")));
+        dto.setFact(hoursOrZero(rs.getBigDecimal("fact")));
+        dto.setRemontF(hoursOrZero(rs.getBigDecimal("remont_f")));
         return dto;
+    }
+
+    /** Нет часов — ноль. Иначе пустая ячейка на карточке итогов. */
+    static BigDecimal hoursOrZero(BigDecimal value) {
+        return value == null ? BigDecimal.ZERO : value;
     }
 
     private static Integer getInteger(ResultSet rs, String column) throws SQLException {

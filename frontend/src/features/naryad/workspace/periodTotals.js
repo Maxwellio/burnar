@@ -75,9 +75,9 @@ export function periodTotalColumnDefs() {
   }))
 }
 
-/** Пустое значение остаётся пустым. Ноль и прочие числа — два знака, как NumberFormat грида. */
+/** Нет числа — 0.00. Ноль и прочие числа — два знака, как NumberFormat грида. */
 export function formatPeriodHours(value) {
-  if (value == null || value === '') return ''
+  if (value == null || value === '') return '0.00'
   const number = Number(value)
   if (!Number.isFinite(number)) return ''
   return number.toFixed(2)
