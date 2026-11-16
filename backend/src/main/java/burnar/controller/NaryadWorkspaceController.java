@@ -3,6 +3,7 @@ package burnar.controller;
 import burnar.dto.NaryadAlgorithmDto;
 import burnar.dto.NaryadCalcResultDto;
 import burnar.dto.NaryadClosedDto;
+import burnar.dto.NaryadCatalogInsertRequest;
 import burnar.dto.NaryadEmptyBlockRequest;
 import burnar.dto.NaryadPasteRequest;
 import burnar.dto.NaryadRenameBlockRequest;
@@ -204,6 +205,13 @@ public class NaryadWorkspaceController {
     public ResponseEntity<Void> addZadanieEmptyBlock(
             @PathVariable int id, @RequestBody(required = false) NaryadEmptyBlockRequest request) {
         naryadOperEditService.addZadanieEmptyBlock(id, request);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/{id:\\d+}/zadanie/catalog")
+    public ResponseEntity<Void> insertZadanieFromCatalog(
+            @PathVariable int id, @RequestBody(required = false) NaryadCatalogInsertRequest request) {
+        naryadOperEditService.insertZadanieFromCatalog(id, request);
         return ResponseEntity.noContent().build();
     }
 
@@ -423,6 +431,13 @@ public class NaryadWorkspaceController {
     public ResponseEntity<Void> addVipolnenieEmptyBlock(
             @PathVariable int id, @RequestBody(required = false) NaryadEmptyBlockRequest request) {
         naryadOperEditService.addVipolnenieEmptyBlock(id, request);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/{id:\\d+}/vipolnenie/catalog")
+    public ResponseEntity<Void> insertVipolnenieFromCatalog(
+            @PathVariable int id, @RequestBody(required = false) NaryadCatalogInsertRequest request) {
+        naryadOperEditService.insertVipolnenieFromCatalog(id, request);
         return ResponseEntity.noContent().build();
     }
 

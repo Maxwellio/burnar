@@ -162,6 +162,21 @@ public class TematicRazdelService {
         return queryNodes("WHERE t.parent_id = :parentId ", params);
     }
 
+    /** Один узел для кнопок каталога (oper → раздел или операция). Чужой id — null. */
+    public TematicRazdelNodeDto findById(int id) {
+        String username = currentUsername();
+        if (!StringUtils.hasText(username)) {
+            return null;
+        }
+        if (!isParentVisible(username, id)) {
+            return null;
+        }
+        List<TematicRazdelNodeDto> rows = queryNodes(
+                "WHERE t.id = :id ",
+                new MapSqlParameterSource("id", id));
+        return rows.isEmpty() ? null : rows.get(0);
+    }
+
     private List<TematicRazdelNodeDto> queryNodes(String where, MapSqlParameterSource params) {
         return jdbc.query(NODE_SELECT + where + NODE_ORDER, params, MAPPER);
     }

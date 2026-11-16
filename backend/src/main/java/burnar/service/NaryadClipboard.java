@@ -26,6 +26,14 @@ public final class NaryadClipboard {
             "Не допускается перемещение заблокированных работ!";
     public static final String PASTE_LOCKED_MESSAGE =
             "Не допускается вставка работы перед заблокированными!";
+    public static final String CATALOG_BEFORE_LOCKED_MESSAGE =
+            "Нельзя добавлять работы перед заблокированной!";
+    public static final String CATALOG_END_NOT_BLOCK_MESSAGE =
+            "В конец раздела можно добавлять только в раздел";
+    public static final String CATALOG_ANCHOR_REQUIRED_MESSAGE =
+            "Выберите строку в наряде";
+    public static final String CATALOG_EMPTY_NEEDS_SECTION_MESSAGE =
+            "Пустой раздел можно добавить только из раздела каталога";
     public static final String EMPTY_BLOCK_ROOT_MESSAGE =
             "Создавать блоки можно только в основных разделах!";
     public static final String NOT_EMPTY_BLOCK_MESSAGE =
@@ -191,6 +199,31 @@ public final class NaryadClipboard {
             return new Slot(target.parentId, prnum);
         }
         throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "place is required");
+    }
+
+    /**
+     * Место вставки из каталога. Пустое дерево — корень prnum=1.
+     * end — последний ребёнок выбранного раздела (aprnum null).
+     * before/after/inside — как pasteSlot; перед locked — текст Delphi каталога.
+     */
+    public static Slot catalogSlot(Node anchor, String place, boolean treeEmpty) {
+        if (treeEmpty) {
+            return new Slot(null, BigDecimal.ONE);
+        }
+        if (anchor == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, CATALOG_ANCHOR_REQUIRED_MESSAGE);
+        }
+        place = place == null ? "" : place.trim();
+        if ("end".equals(place)) {
+            if (!isBlock(anchor)) {
+                throw new ResponseStatusException(HttpStatus.CONFLICT, CATALOG_END_NOT_BLOCK_MESSAGE);
+            }
+            return new Slot(anchor.id, null);
+        }
+        if (("before".equals(place) || "after".equals(place)) && isLocked(anchor)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, CATALOG_BEFORE_LOCKED_MESSAGE);
+        }
+        return pasteSlot(anchor, place);
     }
 
     /**

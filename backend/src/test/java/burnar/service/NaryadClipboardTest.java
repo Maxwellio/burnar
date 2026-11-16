@@ -120,6 +120,38 @@ class NaryadClipboardTest {
     }
 
     @Test
+    void catalogSlotEmptyTreeUsesRoot() {
+        NaryadClipboard.Slot slot = NaryadClipboard.catalogSlot(null, "before", true);
+        assertNull(slot.parentId);
+        assertEquals(BigDecimal.ONE, slot.prnum);
+    }
+
+    @Test
+    void catalogSlotEndUsesBlockAsParentWithNullPrnum() {
+        NaryadClipboard.Node section = block(10, null, "1");
+        NaryadClipboard.Slot slot = NaryadClipboard.catalogSlot(section, "end", false);
+        assertEquals(10L, slot.parentId);
+        assertNull(slot.prnum);
+        ResponseStatusException error = assertThrows(ResponseStatusException.class, () ->
+                NaryadClipboard.catalogSlot(work(11, 10L, "1"), "end", false));
+        assertEquals(NaryadClipboard.CATALOG_END_NOT_BLOCK_MESSAGE, error.getReason());
+    }
+
+    @Test
+    void catalogSlotBeforeLockedUsesDelphiCatalogText() {
+        ResponseStatusException error = assertThrows(ResponseStatusException.class, () ->
+                NaryadClipboard.catalogSlot(work(4, 1L, "1", 1), "before", false));
+        assertEquals(NaryadClipboard.CATALOG_BEFORE_LOCKED_MESSAGE, error.getReason());
+    }
+
+    @Test
+    void catalogSlotRequiresAnchorWhenTreeHasRows() {
+        ResponseStatusException error = assertThrows(ResponseStatusException.class, () ->
+                NaryadClipboard.catalogSlot(null, "after", false));
+        assertEquals(NaryadClipboard.CATALOG_ANCHOR_REQUIRED_MESSAGE, error.getReason());
+    }
+
+    @Test
     void cutOfLockedVipolnenieStopsBeforeAnyMove() {
         ResponseStatusException error = assertThrows(ResponseStatusException.class, () ->
                 NaryadClipboard.requireCutAllowed(List.of(work(1, null, "1", 1)), true));

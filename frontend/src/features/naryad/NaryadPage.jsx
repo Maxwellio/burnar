@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import Box from '@mui/material/Box'
 import IconButton from '@mui/material/IconButton'
@@ -117,7 +117,7 @@ function paneSx(visible, bothOpen, dividerSide) {
  * Карточка наряда /naryad/:id.
  * Action bar: включаемые вкладки (повторный клик по единственной переключает
  * на другую, если она есть), кнопка деления, подпись наряда,
- * заглушка параметров, модальный каталог и выход на список.
+ * заглушка параметров, немодальный каталог и выход на список.
  * Обе вкладки при включении делят область пополам: слева-направо или
  * сверху-вниз. Направление хранится в localStorage. Панели остаются
  * смонтированными при скрытии, чтобы ширины колонок сохранялись.
@@ -136,8 +136,20 @@ export default function NaryadPage() {
   const [zadanieReloadSignal, setZadanieReloadSignal] = useState(0)
   const [vipolnenieReloadSignal, setVipolnenieReloadSignal] = useState(0)
   const [catalogOpen, setCatalogOpen] = useState(false)
+  const [zadanieCatalogTarget, setZadanieCatalogTarget] = useState(null)
+  const [vipolnenieCatalogTarget, setVipolnenieCatalogTarget] = useState(null)
   const skvWindows = useSkvWindows()
   const { closeAll: closeAllSkvWindows, open: openSkvWindow } = skvWindows
+
+  const handleCatalogTargetChange = useCallback((snapshot) => {
+    if (snapshot?.partId === zadaniePart.id) {
+      setZadanieCatalogTarget(snapshot)
+      return
+    }
+    if (snapshot?.partId === vipolneniePart.id) {
+      setVipolnenieCatalogTarget(snapshot)
+    }
+  }, [])
 
   function applyHeader(header) {
     setNameNar(header?.nameNar ?? '')
@@ -173,6 +185,8 @@ export default function NaryadPage() {
     setOpenPanels([])
     setMountedPanels({ zad: false, vip: false })
     setCatalogOpen(false)
+    setZadanieCatalogTarget(null)
+    setVipolnenieCatalogTarget(null)
     closeAllSkvWindows()
     if (id == null || id === '') return undefined
     fetchNaryadHeader(id)
@@ -202,6 +216,11 @@ export default function NaryadPage() {
       cancelled = true
     }
   }, [id, closeAllSkvWindows])
+
+  useEffect(() => {
+    if (!catalogOpen || !hasVipolnenie) return
+    setMountedPanels((mounted) => (mounted.vip ? mounted : { ...mounted, vip: true }))
+  }, [catalogOpen, hasVipolnenie])
 
   useEffect(() => {
     setMountedPanels((mounted) => ({
@@ -309,7 +328,12 @@ export default function NaryadPage() {
         <Tooltip title="Каталог">
           <IconButton
             aria-label="Каталог"
-            onClick={() => setCatalogOpen(true)}
+            onClick={() => {
+              if (hasVipolnenie) {
+                setMountedPanels((mounted) => ({ ...mounted, vip: true }))
+              }
+              setCatalogOpen(true)
+            }}
             sx={stubIconSx}
           >
             <MenuBook />
@@ -346,6 +370,7 @@ export default function NaryadPage() {
               hasVipolnenie={hasVipolnenie}
               externalReloadSignal={zadanieReloadSignal}
               onOpenSkv={openSkvWindow}
+              onCatalogTargetChange={handleCatalogTargetChange}
               onVipolnenieCreated={(header) => {
                 applyHeader(header)
                 setOpenPanels(['zad', 'vip'])
@@ -362,6 +387,7 @@ export default function NaryadPage() {
               onClosedChange={setVipolnenieClosed}
               externalReloadSignal={vipolnenieReloadSignal}
               onOpenSkv={openSkvWindow}
+              onCatalogTargetChange={handleCatalogTargetChange}
               onZadanieReplaced={(header) => {
                 applyHeader(header)
                 setZadanieReloadSignal((value) => value + 1)
@@ -375,6 +401,23 @@ export default function NaryadPage() {
         key={id}
         open={catalogOpen}
         onClose={() => setCatalogOpen(false)}
+        naryadId={id}
+        zadanieTarget={{
+          ...(zadanieCatalogTarget || {}),
+          closed: zadanieClosed,
+        }}
+        vipolnenieTarget={{
+          ...(vipolnenieCatalogTarget || {}),
+          available: hasVipolnenie,
+          closed: vipolnenieClosed,
+        }}
+        onInserted={(partId) => {
+          if (partId === zadaniePart.id) {
+            setZadanieReloadSignal((value) => value + 1)
+          } else {
+            setVipolnenieReloadSignal((value) => value + 1)
+          }
+        }}
       />
 
       <SkvParamsWindows

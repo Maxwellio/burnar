@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useEffect, useMemo } from 'react'
 import Box from '@mui/material/Box'
 import { AxiosProvider, BaseTreeTable } from 'mainComponent'
 import { naryadCompactTableSx, RIGHT_PANEL_DEFAULT_RATIO } from '../naryadPageLayout.js'
@@ -32,6 +32,7 @@ export default function NaryadWorkspacePanel({
   onZadanieReplaced,
   externalReloadSignal,
   onOpenSkv,
+  onCatalogTargetChange,
 }) {
   const workspace = useNaryadWorkspaceState({
     naryadId,
@@ -44,13 +45,22 @@ export default function NaryadWorkspacePanel({
     externalReloadSignal,
     onOpenSkv,
   })
-  const { urls, tree, colors } = workspace
+  const { urls, tree, colors, structureById } = workspace
   useColumnSizingPersistence([
     [urls.tree, part.storage.treeSizing],
     [urls.params, part.storage.paramsSizing],
   ])
   const rightPanel = useResizablePanel(part.storage.rightPanel)
   const paramFilters = useMemo(() => nodeIdFilters(tree.detailId), [tree.detailId])
+
+  useEffect(() => {
+    onCatalogTargetChange?.({
+      partId: part.id,
+      selectedIds: tree.selectedIds,
+      structureById,
+      closed,
+    })
+  }, [onCatalogTargetChange, part.id, tree.selectedIds, structureById, closed])
 
   return (
     <NaryadWorkspaceProvider value={workspace}>

@@ -16,12 +16,14 @@
 | Тулбар: «Раскрыть все» / «Свернуть все» | **сделано** |
 | Тулбар: поиск (шапка колонок) | **сделано** |
 | Тулбар: автоширина | отложено |
-| Дата операции | отложено |
-| Вставка в задание / выполнение (`*_Add_Razdel`, `*_Add_Emp_Razdel`) | отложено |
+| Дата операции | **сделано** (date-only, немодальный каталог) |
+| Вставка в задание / выполнение (`*_Add_Razdel`, `*_Add_Emp_Razdel`) | **сделано** (before/after/end; пустой раздел отдельно) |
 | Модальный `GetHierarchyItem` | отложено |
 | Хаб прочих справочников | отложено |
 
-Открытие: кнопка «Каталог» на карточке наряда (`/naryad/:id`) → модалка. Отдельной страницы и пункта меню нет; `/catalog` не обслуживается.
+Открытие: кнопка «Каталог» на карточке наряда (`/naryad/:id`) → **немодальное** окно без затемнения (`DraggableDialog modeless`), чтобы можно было выбрать якорь в дереве наряда. Отдельной страницы и пункта меню нет; `/catalog` не обслуживается.
+
+Спека: [superpowers/specs/2026-11-16-catalog-insert-design.md](./superpowers/specs/2026-11-16-catalog-insert-design.md).
 
 ---
 
@@ -91,12 +93,14 @@ Delphi LoadTree скрывает `parent_id`, `ord`, `nartype`. В JSON они �
 | Поиск + Locate | ToolButton1 — в вебе три поля в шапке колонок, не Locate |
 | Collapse/expand | ToolButton2 — «Раскрыть все» (`?expandAll=N`, полный лес) / «Свернуть все» (только UI, дети в памяти) |
 | Автоширина | ToolButton3 |
-| «Задание» N1/N2/N5 | `Zadanie_Add_Razdel` / `Zadanie_Add_Emp_Razdel` |
-| «Выполнение» N3/N4/N6 | `vipolnenie_Add_Razdel` / `Vipolnenie_Add_Emp_Razdel` |
-| Дата операции | `DateTimePicker1` → параметр `datein` |
-| Drag-and-drop на дерево наряда | `CatalogMouseDown` → CommonNarZad/Vip |
+| «В задание» / «В выполнение» | `*_add_razdel`, place before/after/end (+ inside для пустого блока) |
+| «Пустой раздел → …» | `*_add_emp_razdel`; disabled, если в каталоге выбрана операция |
+| Дата операции | date-only → `datein` (начало суток) |
+| Drag-and-drop на дерево наряда | отложено |
 
 `razdel` в процедурах = выбранный `id` (код раздела).
+
+API: `POST /api/naryady/{id}/{zadanie|vipolnenie}/catalog`, `GET /api/tematic-razdels/{id}` (oper для кнопок).
 
 ---
 

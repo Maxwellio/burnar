@@ -1,5 +1,6 @@
 package burnar.service;
 
+import burnar.dto.NaryadCatalogInsertRequest;
 import burnar.dto.NaryadEmptyBlockRequest;
 import burnar.dto.NaryadPasteRequest;
 import burnar.dto.NaryadRenameBlockRequest;
@@ -17,6 +18,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.sql.Types;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -153,6 +155,16 @@ public class NaryadOperEditService {
 
     public void renameVipolnenieBlock(int naryadId, long nodeId, NaryadRenameBlockRequest request) {
         renameBlock(naryadId, nodeId, request, false, VIPOLNENIE_STRUCTURE_SQL, VIPOLNENIE_RENAME_SQL);
+    }
+
+    /** formStructNur → burnar.zadanie_add_razdel / zadanie_add_emp_razdel. */
+    public void insertZadanieFromCatalog(int naryadId, NaryadCatalogInsertRequest request) {
+        insertFromCatalog(naryadId, request, false, true, ZADANIE_STRUCTURE_SQL);
+    }
+
+    /** formStructNur → burnar.vipolnenie_add_razdel / vipolnenie_add_emp_razdel. */
+    public void insertVipolnenieFromCatalog(int naryadId, NaryadCatalogInsertRequest request) {
+        insertFromCatalog(naryadId, request, true, false, VIPOLNENIE_STRUCTURE_SQL);
     }
 
     private List<Long> deleteWorks(
@@ -301,6 +313,111 @@ public class NaryadOperEditService {
         BigDecimal prnum = NaryadClipboard.emptyBlockPrnum(before, request.getPlace());
         Timestamp date = loadBegoperdate(operTable, naryadId, before.id);
         callEmptyBlock(vip, naryadId, date, before.parentId, prnum, request.getName());
+    }
+
+    private void insertFromCatalog(
+            int naryadId,
+            NaryadCatalogInsertRequest request,
+            boolean vip,
+            boolean zadanie,
+            String structureSql) {
+        naryadListService.findHeader(naryadId);
+        if (partAccess.readClosed(zadanie, naryadId)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Naryad part is closed");
+        }
+        if (request == null || request.getRazdelId() == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "razdelId is required");
+        }
+        boolean empty = "empty".equals(request.getMode());
+        boolean full = "full".equals(request.getMode());
+        if (!empty && !full) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "mode is required");
+        }
+        LocalDateTime dateIn = NaryadSkvParams.parseBegDate(request.getDateIn());
+        if (dateIn == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "dateIn is required");
+        }
+        Integer catalogOper = loadCatalogOper(request.getRazdelId());
+        if (catalogOper == null && !catalogRazdelExists(request.getRazdelId())) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Catalog node not found");
+        }
+        if (empty && catalogOper != null) {
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT, NaryadClipboard.CATALOG_EMPTY_NEEDS_SECTION_MESSAGE);
+        }
+        List<NaryadClipboard.Node> tree = loadClipboardTree(structureSql, naryadId);
+        boolean treeEmpty = tree.isEmpty();
+        NaryadClipboard.Node anchor = null;
+        if (!treeEmpty) {
+            if (request.getAnchorNodeId() == null) {
+                throw new ResponseStatusException(
+                        HttpStatus.BAD_REQUEST, NaryadClipboard.CATALOG_ANCHOR_REQUIRED_MESSAGE);
+            }
+            anchor = findClipboardNode(tree, request.getAnchorNodeId());
+            if (anchor == null) {
+                throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Naryad row not found");
+            }
+        }
+        NaryadClipboard.Slot slot = NaryadClipboard.catalogSlot(anchor, request.getPlace(), treeEmpty);
+        callCatalogInsert(
+                vip,
+                empty,
+                naryadId,
+                Timestamp.valueOf(dateIn),
+                slot.parentId,
+                slot.prnum,
+                request.getRazdelId());
+    }
+
+    private Integer loadCatalogOper(long razdelId) {
+        List<Integer> rows = jdbc.query(
+                "SELECT t.oper FROM public.tematic_razdel t WHERE t.id = :id",
+                new MapSqlParameterSource("id", razdelId),
+                (rs, rowNum) -> {
+                    int value = rs.getInt("oper");
+                    return rs.wasNull() ? null : value;
+                });
+        return rows.isEmpty() ? null : rows.get(0);
+    }
+
+    private boolean catalogRazdelExists(long razdelId) {
+        Integer count = jdbc.queryForObject(
+                "SELECT COUNT(*) FROM public.tematic_razdel t WHERE t.id = :id",
+                new MapSqlParameterSource("id", razdelId),
+                Integer.class);
+        return count != null && count > 0;
+    }
+
+    private void callCatalogInsert(
+            boolean vip,
+            boolean empty,
+            int naryadId,
+            Timestamp date,
+            Long parentId,
+            BigDecimal prnum,
+            long razdelId) {
+        String sql;
+        if (vip) {
+            sql = empty
+                    ? "CALL burnar.vipolnenie_add_emp_razdel(?, ?, ?, ?, ?, ?, ?)"
+                    : "CALL burnar.vipolnenie_add_razdel(?, ?, ?, ?, ?, ?, ?)";
+        } else {
+            sql = empty
+                    ? "CALL burnar.zadanie_add_emp_razdel(?, ?, ?, ?, ?, ?, ?)"
+                    : "CALL burnar.zadanie_add_razdel(?, ?, ?, ?, ?, ?, ?)";
+        }
+        autocommit.runMapped(con -> {
+            try (CallableStatement cs = con.prepareCall(sql)) {
+                cs.setInt(1, naryadId);
+                cs.setTimestamp(2, date);
+                NaryadAutocommit.bindNullableKey(cs, 3, parentId, vip);
+                NaryadAutocommit.bindPrnum(cs, 4, prnum);
+                cs.setBigDecimal(5, BigDecimal.valueOf(razdelId));
+                cs.setNull(6, Types.INTEGER);
+                cs.setBigDecimal(7, BigDecimal.ONE);
+                cs.execute();
+            }
+        });
     }
 
     private void renameBlock(
