@@ -224,6 +224,20 @@ export function deleteVipolneniePeriod(id, periodKey) {
   })
 }
 
+/** Текущая дата начала работы. null — в диалоге стоит текущий момент. */
+export function fetchVipolnenieBegoperdate(id, nodeId) {
+  return requestAction(`/naryady/${id}/vipolnenie/nodes/${nodeId}/begoperdate`)
+}
+
+/** Ручная дата начала. Ответ — текст колонки дерева. */
+export function setVipolnenieBegoperdate(id, nodeId, begoperdate) {
+  return requestAction(`/naryady/${id}/vipolnenie/nodes/${nodeId}/begoperdate`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ begoperdate }),
+  })
+}
+
 /** Пишет период выбранным работам выполнения. */
 export function bindVipolneniePeriod(id, periodKey, nodeIds) {
   return requestAction(`/naryady/${id}/vipolnenie/periods/bind`, {
