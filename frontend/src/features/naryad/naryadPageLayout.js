@@ -19,6 +19,15 @@ export const naryadCompactTableSx = {
 /** Вертикальное или горизонтальное деление задания и выполнения. */
 export const SPLIT_ORIENTATION_KEY = 'naryad-split-orientation'
 
+/** Доля первой половины. Вертикаль и горизонталь помнятся отдельно. */
+export const SPLIT_RATIO_DEFAULT = 0.5
+export const SPLIT_PANE_MIN = 240
+export const SPLITTER_THICKNESS = 6
+export const SPLIT_RATIO_KEYS = {
+  vertical: 'naryad-split-ratio:vertical',
+  horizontal: 'naryad-split-ratio:horizontal',
+}
+
 /** Прежний общий ключ — читаем как fallback, новые записи идут в per-tab ключи. */
 export const RIGHT_PANEL_WIDTH_KEY = 'naryad-right-panel-width'
 export const RIGHT_PANEL_WIDTH_KEYS = {
@@ -91,6 +100,36 @@ export function readStoredSplitOrientation() {
 export function writeStoredSplitOrientation(orientation) {
   if (orientation !== 'horizontal' && orientation !== 'vertical') return
   writeStorage(SPLIT_ORIENTATION_KEY, orientation)
+}
+
+function splitRatioStorageKey(orientation) {
+  return orientation === 'horizontal' ? SPLIT_RATIO_KEYS.horizontal : SPLIT_RATIO_KEYS.vertical
+}
+
+export function readStoredSplitRatio(orientation) {
+  const parsed = Number(readStorage(splitRatioStorageKey(orientation)))
+  return parsed > 0 && parsed < 1 ? parsed : SPLIT_RATIO_DEFAULT
+}
+
+export function writeStoredSplitRatio(orientation, ratio) {
+  if (!(ratio > 0 && ratio < 1)) return
+  writeStorage(splitRatioStorageKey(orientation), String(ratio))
+}
+
+/**
+ * Ширина или высота первой половины. splitterSize вычитается из контейнера.
+ * Когда два минимума не помещаются, остаток делится поровну.
+ */
+export function clampSplitFirstPane(ratio, containerSize, splitterSize = SPLITTER_THICKNESS) {
+  if (!(containerSize > 0)) return null
+  const available = containerSize - splitterSize
+  if (!(available > 0)) return null
+  if (available <= SPLIT_PANE_MIN * 2) {
+    return Math.floor(available / 2)
+  }
+  const share = Number.isFinite(ratio) ? ratio : SPLIT_RATIO_DEFAULT
+  const raw = Math.round(share * available)
+  return Math.min(Math.max(raw, SPLIT_PANE_MIN), available - SPLIT_PANE_MIN)
 }
 
 export function clampRightPanelWidth(width, containerWidth) {

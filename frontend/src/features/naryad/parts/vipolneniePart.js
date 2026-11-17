@@ -17,6 +17,7 @@ import { setFactDateAction } from '../actions/factdate/SetFactDateButton.jsx'
 import { intervalsAction } from '../actions/intervals/IntervalsDialog.jsx'
 import { bindPeriodAction } from '../actions/periods/BindPeriodButton.jsx'
 import { listPeriodsAction } from '../actions/periods/PeriodsDialog.jsx'
+import { collapseAllNodesAction, expandAllNodesAction } from '../actions/expand/expandTreeActions.js'
 import { openSkvParamsAction } from '../actions/skv/openSkvParamsAction.js'
 import { COLUMN_SIZING_KEYS, RIGHT_PANEL_WIDTH_KEYS } from '../naryadPageLayout.js'
 import {
@@ -53,6 +54,8 @@ export const vipolneniePart = {
   },
   actions: [
     openSkvParamsAction,
+    expandAllNodesAction,
+    collapseAllNodesAction,
     importZadanieWorksAction,
     replaceZadanieAction,
     deleteMarkedWorksAction,

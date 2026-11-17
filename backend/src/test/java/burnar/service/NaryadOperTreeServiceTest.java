@@ -1,11 +1,14 @@
 package burnar.service;
 
+import burnar.dto.NaryadOperNodeDto;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class NaryadOperTreeServiceTest {
@@ -42,6 +45,47 @@ class NaryadOperTreeServiceTest {
     void treeLevelWhereRootsAndChildren() {
         assertTrue(NaryadOperTreeService.TREE_ROOTS_WHERE.contains("parent IS NULL"));
         assertTrue(NaryadOperTreeService.TREE_CHILDREN_WHERE.contains(":parentId"));
+    }
+
+    @Test
+    void forestWhereDoesNotRestrictTheLevel() {
+        assertFalse(NaryadOperTreeService.TREE_FOREST_WHERE.toLowerCase().contains("parent"));
+    }
+
+    @Test
+    void nestForestKeepsSiblingOrderAndLeavesChildrenUnset() {
+        NaryadOperNodeDto root = node(1L, null);
+        NaryadOperNodeDto firstChild = node(2L, 1L);
+        NaryadOperNodeDto grandchild = node(4L, 2L);
+        NaryadOperNodeDto secondChild = node(3L, 1L);
+        NaryadOperNodeDto orphan = node(9L, 99L);
+
+        List<NaryadOperNodeDto> forest = NaryadOperTreeService.nestForest(
+                List.of(root, firstChild, grandchild, secondChild, orphan));
+
+        assertEquals(List.of(1L, 9L), ids(forest));
+        assertEquals(List.of(2L, 3L), ids(root.getChildren()));
+        assertEquals(List.of(4L), ids(firstChild.getChildren()));
+        assertNull(secondChild.getChildren());
+        assertNull(grandchild.getChildren());
+        assertNull(orphan.getChildren());
+    }
+
+    @Test
+    void nestForestOfNothingIsEmpty() {
+        assertTrue(NaryadOperTreeService.nestForest(null).isEmpty());
+        assertTrue(NaryadOperTreeService.nestForest(List.of()).isEmpty());
+    }
+
+    private static NaryadOperNodeDto node(Long id, Long parentId) {
+        NaryadOperNodeDto dto = new NaryadOperNodeDto();
+        dto.setId(id);
+        dto.setParentId(parentId);
+        return dto;
+    }
+
+    private static List<Long> ids(List<NaryadOperNodeDto> nodes) {
+        return nodes.stream().map(NaryadOperNodeDto::getId).toList();
     }
 
     @Test

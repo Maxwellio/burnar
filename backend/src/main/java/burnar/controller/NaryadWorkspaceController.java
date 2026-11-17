@@ -55,6 +55,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
+import org.springframework.util.StringUtils;
 
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -103,8 +104,9 @@ public class NaryadWorkspaceController {
     }
 
     @GetMapping("/{id:\\d+}/zadanie")
-    public List<NaryadOperNodeDto> zadanieRoots(@PathVariable int id) {
-        return naryadOperTreeService.findZadanieRoots(id);
+    public List<NaryadOperNodeDto> zadanieRoots(
+            @PathVariable int id, @RequestParam(required = false) String expandAll) {
+        return naryadOperTreeService.findZadanieRoots(id, StringUtils.hasText(expandAll));
     }
 
     @GetMapping("/{id:\\d+}/zadanie/{nodeId:\\d+}/children")
@@ -251,8 +253,9 @@ public class NaryadWorkspaceController {
     }
 
     @GetMapping("/{id:\\d+}/vipolnenie")
-    public List<NaryadOperNodeDto> vipolnenieRoots(@PathVariable int id) {
-        return naryadOperTreeService.findVipolnenieRoots(id);
+    public List<NaryadOperNodeDto> vipolnenieRoots(
+            @PathVariable int id, @RequestParam(required = false) String expandAll) {
+        return naryadOperTreeService.findVipolnenieRoots(id, StringUtils.hasText(expandAll));
     }
 
     @GetMapping("/{id:\\d+}/vipolnenie/{nodeId:\\d+}/children")

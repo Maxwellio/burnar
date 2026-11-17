@@ -2,14 +2,19 @@ import assert from 'node:assert/strict'
 import { beforeEach, describe, it } from 'node:test'
 import {
   NARYAD_CELL_PADDING_Y,
+  SPLIT_PANE_MIN,
+  SPLIT_RATIO_DEFAULT,
+  clampSplitFirstPane,
   naryadCompactTableSx,
   persistTableColumnSizing,
   readStoredRightPanelWidth,
   readStoredSplitOrientation,
+  readStoredSplitRatio,
   seedTableColumnSizing,
   tableColumnSizingUrlKey,
   writeStoredRightPanelWidth,
   writeStoredSplitOrientation,
+  writeStoredSplitRatio,
 } from './naryadPageLayout.js'
 
 function installMemoryStorage() {
@@ -70,6 +75,49 @@ describe('split orientation', () => {
   it('falls back to vertical when storage has an unknown value', () => {
     localStorage.setItem('naryad-split-orientation', 'diagonal')
     assert.equal(readStoredSplitOrientation(), 'vertical')
+  })
+})
+
+describe('split ratio', () => {
+  it('defaults each orientation to half', () => {
+    assert.equal(SPLIT_RATIO_DEFAULT, 0.5)
+    assert.equal(readStoredSplitRatio('vertical'), 0.5)
+    assert.equal(readStoredSplitRatio('horizontal'), 0.5)
+  })
+
+  it('stores vertical and horizontal shares apart', () => {
+    writeStoredSplitRatio('vertical', 0.35)
+    writeStoredSplitRatio('horizontal', 0.7)
+    assert.equal(readStoredSplitRatio('vertical'), 0.35)
+    assert.equal(readStoredSplitRatio('horizontal'), 0.7)
+  })
+
+  it('ignores a share that would hide a pane', () => {
+    writeStoredSplitRatio('vertical', 0.4)
+    writeStoredSplitRatio('vertical', 0)
+    writeStoredSplitRatio('vertical', 1)
+    assert.equal(readStoredSplitRatio('vertical'), 0.4)
+  })
+
+  it('falls back to half when storage is not a share', () => {
+    localStorage.setItem('naryad-split-ratio:vertical', 'wide')
+    assert.equal(readStoredSplitRatio('vertical'), 0.5)
+  })
+
+  it('keeps each pane at least 240 px', () => {
+    assert.equal(SPLIT_PANE_MIN, 240)
+    const wide = 1000
+    assert.equal(clampSplitFirstPane(0.1, wide), 240)
+    assert.equal(clampSplitFirstPane(0.9, wide), wide - 6 - 240)
+    assert.equal(clampSplitFirstPane(0.5, wide), Math.round((wide - 6) * 0.5))
+  })
+
+  it('splits the remainder when both minimums do not fit', () => {
+    assert.equal(clampSplitFirstPane(0.2, 400), Math.floor((400 - 6) / 2))
+  })
+
+  it('returns nothing until the container is measured', () => {
+    assert.equal(clampSplitFirstPane(0.5, 0), null)
   })
 })
 

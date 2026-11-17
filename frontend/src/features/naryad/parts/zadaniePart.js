@@ -11,6 +11,7 @@ import { pasteWorkAction } from '../actions/clipboard/pasteWorkAction.js'
 import { renameBlockAction } from '../actions/clipboard/renameBlockAction.js'
 import { deleteBlockAction } from '../actions/delete/deleteBlockAction.js'
 import { deleteMarkedWorksAction } from '../actions/delete/deleteMarkedWorksAction.js'
+import { collapseAllNodesAction, expandAllNodesAction } from '../actions/expand/expandTreeActions.js'
 import { openSkvParamsAction } from '../actions/skv/openSkvParamsAction.js'
 import { COLUMN_SIZING_KEYS, RIGHT_PANEL_WIDTH_KEYS } from '../naryadPageLayout.js'
 import {
@@ -44,6 +45,8 @@ export const zadaniePart = {
   },
   actions: [
     openSkvParamsAction,
+    expandAllNodesAction,
+    collapseAllNodesAction,
     createEmptyVipolnenieAction,
     deleteMarkedWorksAction,
     deleteBlockAction,
