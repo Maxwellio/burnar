@@ -141,6 +141,15 @@ export function addNaryadEmptyBlock(id, part, beforeNodeId, name, place) {
   })
 }
 
+/** Вставка из каталога: mode full|empty, place before|after|end|inside. */
+export function insertNaryadCatalog(id, part, payload) {
+  return requestAction(`/naryady/${id}/${part}/catalog`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+}
+
 /** actRenameBlock. */
 export function renameNaryadBlock(id, part, nodeId, name) {
   return requestAction(`/naryady/${id}/${part}/blocks/${nodeId}/name`, {
