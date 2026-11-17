@@ -1,11 +1,14 @@
 package burnar.service;
 
+import burnar.dto.NaryadOperNodeDto;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class NaryadOperTreeServiceTest {
@@ -88,5 +91,63 @@ class NaryadOperTreeServiceTest {
         assertTrue(NaryadOperTreeService.ZADANIE_WORK_ROWS_SQL.contains("burnar.zadanie_oper"));
         assertTrue(NaryadOperTreeService.VIPOLNENIE_WORK_ROWS_SQL.contains("burnar.vipolnenie_oper"));
         assertTrue(NaryadOperTreeService.ZADANIE_WORK_ROWS_SQL.contains("key IN (:nodeIds)"));
+    }
+
+    @Test
+    void expandAllWhereDoesNotBindAParent() {
+        assertFalse(NaryadOperTreeService.TREE_ALL_WHERE.contains(":parentId"));
+        assertFalse(NaryadOperTreeService.TREE_ALL_WHERE.contains("IS NULL"));
+    }
+
+    @Test
+    void nestOperTreeKeepsSiblingOrderAndClearsLeaves() {
+        NaryadOperNodeDto root = node(1L, null);
+        NaryadOperNodeDto child = node(2L, 1L);
+        NaryadOperNodeDto leaf = node(3L, 2L);
+        NaryadOperNodeDto sibling = node(4L, 1L);
+
+        List<NaryadOperNodeDto> roots = NaryadOperTreeService.nestOperTree(List.of(root, child, leaf, sibling));
+
+        assertEquals(1, roots.size());
+        assertEquals(1L, roots.get(0).getId());
+        assertTrue(roots.get(0).getHasChildren());
+        assertEquals(2L, roots.get(0).getChildren().get(0).getId());
+        assertEquals(4L, roots.get(0).getChildren().get(1).getId());
+        assertEquals(3L, roots.get(0).getChildren().get(0).getChildren().get(0).getId());
+        assertNull(roots.get(0).getChildren().get(0).getChildren().get(0).getChildren());
+        assertFalse(roots.get(0).getChildren().get(0).getChildren().get(0).getHasChildren());
+        assertNull(roots.get(0).getChildren().get(1).getChildren());
+        assertFalse(roots.get(0).getChildren().get(1).getHasChildren());
+    }
+
+    @Test
+    void nestOperTreeTreatsMissingParentAsRoot() {
+        assertTrue(NaryadOperTreeService.nestOperTree(null).isEmpty());
+        assertTrue(NaryadOperTreeService.nestOperTree(List.of()).isEmpty());
+
+        List<NaryadOperNodeDto> roots = NaryadOperTreeService.nestOperTree(List.of(node(9L, 8L)));
+
+        assertEquals(1, roots.size());
+        assertEquals(9L, roots.get(0).getId());
+        assertNull(roots.get(0).getChildren());
+        assertFalse(roots.get(0).getHasChildren());
+    }
+
+    @Test
+    void nestOperTreeKeepsTheFirstCopyOfARepeatedId() {
+        List<NaryadOperNodeDto> roots = NaryadOperTreeService.nestOperTree(
+                List.of(node(1L, null), node(1L, null), node(2L, 1L), node(2L, 1L)));
+
+        assertEquals(1, roots.size());
+        assertEquals(1, roots.get(0).getChildren().size());
+        assertEquals(2L, roots.get(0).getChildren().get(0).getId());
+    }
+
+    private static NaryadOperNodeDto node(long id, Long parentId) {
+        NaryadOperNodeDto node = new NaryadOperNodeDto();
+        node.setId(id);
+        node.setParentId(parentId);
+        node.setHasChildren(true);
+        return node;
     }
 }

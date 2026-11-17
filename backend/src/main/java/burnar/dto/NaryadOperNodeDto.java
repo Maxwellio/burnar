@@ -8,7 +8,8 @@ import java.util.List;
 
 /**
  * Узел дерева работ наряда для BaseTreeTable (Delphi trGrdNar).
- * id = zadanie_oper.key / vipolnenie_oper.key; children при ленивой загрузке не отдаём.
+ * id = zadanie_oper.key / vipolnenie_oper.key.
+ * children при ленивой загрузке не отдаём; при expandAll — вложенный лес.
  */
 public class NaryadOperNodeDto {
 

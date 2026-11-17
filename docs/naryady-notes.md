@@ -17,7 +17,7 @@
 | Action bar (подпись наряда, параметры, каталог немодально, выход на список) | **сделано** |
 | Вкладка «Задание»: дерево / параметры + алгоритм | **сделано** (данные из qrNarZad / qrParamZ / qrAlgInfo; дерево свёрнуто) |
 | Вкладка «Выполнение»: тот же лейаут, отдельный инстанс | **сделано** (данные из qrNarVip / qrParamV / qrAlgInfo; колонки плюс «Факт» и «Период») |
-| Обе вкладки сразу: 50/50 слева-направо | **сделано** (скрытая вкладка остаётся смонтированной) |
+| Обе вкладки сразу, доля тянется | **сделано** (по умолчанию 50/50, направление и доля в localStorage; скрытая вкладка остаётся смонтированной) |
 | localStorage ширин колонок и правой панели | **сделано** (стабильные ключи, не id наряда) |
 | Цветовая маркировка строк задания / выполнения | **сделано** (кнопки на каждой панели; `Ctrl`/`Cmd` и `Shift` красят весь набор) |
 | Футер: общая продолжительность (задание) и норматив + факт (выполнение) | **сделано** (сумма листьев, всегда видна, вертикальные разделители между кусками) |
@@ -81,7 +81,7 @@
 
 Пункт меню «Наряды» остаётся активным на `/naryad/:id`.
 
-Рабочая область: при одной вкладке — 100%; при обеих — две колонки 50/50 (задание слева, выполнение справа), без drag-сплиттера между вкладками. Выключенная вкладка скрывается через `display: none` и **не размонтируется**, чтобы ширины колонок сохранились.
+Рабочая область: при одной вкладке — 100%; при обеих — задание и выполнение рядом (слева-направо или сверху-вниз). Полоса между ними тянется; доля первой половины пишется в `naryad-split-ratio` (по умолчанию 0.5, ни одна сторона не становится меньше 240px, пока контейнер это позволяет). Выключенная вкладка скрывается через `display: none` и **не размонтируется**, чтобы ширины колонок сохранились.
 
 Ресайз колонок изолирован: у задания и выполнения свои массивы колонок (уникальные `id`) и свои экземпляры `BaseTreeTable` / `BaseTable`. Раньше один workspace подменял `columns` — ширины «уезжали» на соседней вкладке.
 
@@ -103,6 +103,7 @@
 | Элемент | Поведение |
 |---------|-----------|
 | Action bar задания (48px) | сквозные параметры, создать пустое выполнение, удалить помеченные работы, удалить блок без вложенных, перенумеровать уровень, закрыть/открыть, расчёт нормы, оперкарта, затем цвет выбранных строк |
+| Над деревом | «Раскрыть все» / «Свернуть все», как в окне каталога. «Раскрыть все» запрашивает `GET .../zadanie?expandAll=` и раскрывает вложенный лес. «Свернуть все» закрывает узлы и снимает `expandAll`, следующее обновление снова отдаёт только корни |
 | Слева | `BaseTreeTable` `GET /api/naryady/{id}/zadanie` (корни, свёрнуто); дети — `GET .../zadanie/{nodeId}/children` |
 | Справа сверху | `BaseTable` `GET /api/naryady/{id}/zadanie/params?nodeId=` — массив; пусто без выбора или если тип не 79/80 |
 | Справа снизу ~120px | read-only поле алгоритма: `GET .../zadanie/algorithm?nodeId=` (`algs.ops`, только тип 80) |
@@ -122,6 +123,7 @@
 | Элемент | Поведение |
 |---------|-----------|
 | Action bar выполнения (48px) | сквозные параметры, импорт работ из задания, замена задания выполнением, удалить помеченные работы, удалить блок без вложенных, перенумеровать уровень, закрыть/открыть, расчёт нормы, оперкарта, блокировка и разблокировка, проверка интервалов, настройка периодов, привязка работ к периоду, фактическая дата начала, затем цвет выбранных строк |
+| Над деревом | те же «Раскрыть все» / «Свернуть все»; `GET .../vipolnenie?expandAll=` отдаёт вложенный лес |
 | Слева | `BaseTreeTable` `GET /api/naryady/{id}/vipolnenie` + `/{nodeId}/children` |
 | Справа сверху | `BaseTable` `GET /api/naryady/{id}/vipolnenie/params?nodeId=` |
 | Справа снизу ~120px | `GET .../vipolnenie/algorithm?nodeId=` |
@@ -404,16 +406,17 @@ export const deleteBlockAction = {
 | `frontend/src/pages/CatalogDialog.jsx` | модальный каталог тематических разделов |
 | `features/naryad/NaryadPage.jsx` | карточка: action bar + две вкладки + CatalogDialog |
 | `features/naryad/naryadTabs.js` | стартовый набор, запрет снять последнюю вкладку, неактивное выполнение |
-| `features/naryad/naryadPageLayout.js` | ключи и чтение/запись ширин в localStorage, ограничения сплиттера |
+| `features/naryad/naryadPageLayout.js` | ключи и чтение/запись ширин в localStorage, доля задания/выполнения, ограничения сплиттеров |
 | `features/naryad/parts/*Part.js` | описание задания и выполнения |
 | `features/naryad/workspace/NaryadWorkspacePanel.jsx` | раскладка одной вкладки |
 | `features/naryad/workspace/useNaryadWorkspaceState.js`, `NaryadWorkspaceContext.jsx` | состояние вкладки и контекст для кнопок |
 | `features/naryad/workspace/WorkspaceActions.jsx`, `ActionButton.jsx`, `WorkspaceActionBar.jsx` | панель кнопок по списку `actions` |
-| `features/naryad/workspace/useWorkTree.js` | выбор, фильтры и сигналы `BaseTreeTable` (`reload`, `clearHighlight`, `resetSelection`) |
+| `features/naryad/workspace/useWorkTree.js` | выбор, фильтры и сигналы `BaseTreeTable` (`reload`, `clearHighlight`, `resetSelection`, `expandAll`, `collapseAll`) |
 | `features/naryad/workspace/useMutationRunner.js` | общая блокировка «идёт запрос» и показ ошибки сервера |
 | `features/naryad/workspace/useAsyncValue.js`, `useWorkspaceData.js` | загрузка итогов, признаков блокировки, полей строки и алгоритма |
 | `features/naryad/workspace/TreeStatusBar.jsx`, `PeriodTotalsPanel.jsx`, `WorkDetailsPanel.jsx` | строка итогов, итоги по периодам, параметры и алгоритм |
-| `features/naryad/workspace/layout/` | сплиттер правой панели и сохранение ширин колонок |
+| `features/naryad/workspace/TreeFoldButtons.jsx` | «Раскрыть все» / «Свернуть все» над деревом задания и выполнения |
+| `features/naryad/workspace/layout/` | сплиттер правой панели, доля задания/выполнения и сохранение ширин колонок |
 | `features/naryad/workspace/naryadWorkspaceColumns.jsx`, `naryadOperIcons.js` | колонки деревьев и параметров, значки типов |
 | `features/naryad/workspace/naryadWorkspaceData.js` | фильтр `nodeId`, текст футера с итогами; детали только для одной выбранной строки |
 | `features/naryad/actions/create/` | пустое выполнение; `createRules.js` |

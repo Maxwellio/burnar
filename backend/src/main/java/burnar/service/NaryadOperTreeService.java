@@ -13,7 +13,10 @@ import org.springframework.web.server.ResponseStatusException;
 import java.math.BigDecimal;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Ленивое дерево работ, итоги продолжительности и признак кнопок строки.
@@ -24,6 +27,8 @@ public class NaryadOperTreeService {
 
     static final String TREE_ROOTS_WHERE = "WHERE tmp.parent IS NULL ";
     static final String TREE_CHILDREN_WHERE = "WHERE tmp.parent = :parentId ";
+    /** Без отбора уровня: весь лес наряда, затем {@link #nestOperTree}. */
+    static final String TREE_ALL_WHERE = "";
 
     private static final String RS_SQL =
             "(WITH vars(npi) AS ("
@@ -232,23 +237,38 @@ public class NaryadOperTreeService {
     }
 
     public List<NaryadOperNodeDto> findZadanieRoots(int naryadId) {
+        return findZadanieRoots(naryadId, false);
+    }
+
+    /**
+     * {@code expandAll} отдаёт вложенный лес для кнопки «Раскрыть все».
+     * Без него — только корни, дети грузятся отдельно.
+     */
+    public List<NaryadOperNodeDto> findZadanieRoots(int naryadId, boolean expandAll) {
         naryadListService.findHeader(naryadId);
-        return queryTree(ZADANIE_TREE_SQL, naryadId, null, false);
+        List<NaryadOperNodeDto> nodes = queryTree(ZADANIE_TREE_SQL, naryadId, null, false, expandAll);
+        return expandAll ? nestOperTree(nodes) : nodes;
     }
 
     public List<NaryadOperNodeDto> findZadanieChildren(int naryadId, long parentId) {
         naryadListService.findHeader(naryadId);
-        return queryTree(ZADANIE_TREE_SQL, naryadId, parentId, false);
+        return queryTree(ZADANIE_TREE_SQL, naryadId, parentId, false, false);
     }
 
     public List<NaryadOperNodeDto> findVipolnenieRoots(int naryadId) {
+        return findVipolnenieRoots(naryadId, false);
+    }
+
+    /** {@code expandAll} — вложенный лес выполнения, иначе только корни. */
+    public List<NaryadOperNodeDto> findVipolnenieRoots(int naryadId, boolean expandAll) {
         naryadListService.findHeader(naryadId);
-        return queryTree(VIPOLNENIE_TREE_SQL, naryadId, null, true);
+        List<NaryadOperNodeDto> nodes = queryTree(VIPOLNENIE_TREE_SQL, naryadId, null, true, expandAll);
+        return expandAll ? nestOperTree(nodes) : nodes;
     }
 
     public List<NaryadOperNodeDto> findVipolnenieChildren(int naryadId, long parentId) {
         naryadListService.findHeader(naryadId);
-        return queryTree(VIPOLNENIE_TREE_SQL, naryadId, parentId, true);
+        return queryTree(VIPOLNENIE_TREE_SQL, naryadId, parentId, true, false);
     }
 
     public NaryadDurationTotalsDto zadanieTotals(int naryadId) {
@@ -329,12 +349,51 @@ public class NaryadOperTreeService {
         return sum == null ? BigDecimal.ZERO : sum;
     }
 
+    /**
+     * Собирает плоский список {@code ORDER BY ord2} во вложенный лес.
+     * Листья остаются без {@code children}. Узел без родителя в выборке становится корнем.
+     */
+    static List<NaryadOperNodeDto> nestOperTree(List<NaryadOperNodeDto> flat) {
+        if (flat == null || flat.isEmpty()) {
+            return List.of();
+        }
+        Map<Long, NaryadOperNodeDto> byId = new LinkedHashMap<>();
+        for (NaryadOperNodeDto node : flat) {
+            if (node.getId() == null || byId.containsKey(node.getId())) {
+                continue;
+            }
+            node.setChildren(new ArrayList<>());
+            byId.put(node.getId(), node);
+        }
+        List<NaryadOperNodeDto> roots = new ArrayList<>();
+        for (NaryadOperNodeDto node : byId.values()) {
+            Long parentId = node.getParentId();
+            NaryadOperNodeDto parent = parentId == null ? null : byId.get(parentId);
+            if (parent == null || parent == node) {
+                roots.add(node);
+            } else {
+                parent.getChildren().add(node);
+            }
+        }
+        for (NaryadOperNodeDto node : byId.values()) {
+            if (node.getChildren() == null || node.getChildren().isEmpty()) {
+                node.setChildren(null);
+                node.setHasChildren(false);
+            } else {
+                node.setHasChildren(true);
+            }
+        }
+        return roots;
+    }
+
     private List<NaryadOperNodeDto> queryTree(
-            String sqlTemplate, int naryadId, Long parentId, boolean vip) {
-        String levelWhere = parentId == null ? TREE_ROOTS_WHERE : TREE_CHILDREN_WHERE;
+            String sqlTemplate, int naryadId, Long parentId, boolean vip, boolean expandAll) {
+        String levelWhere = expandAll
+                ? TREE_ALL_WHERE
+                : (parentId == null ? TREE_ROOTS_WHERE : TREE_CHILDREN_WHERE);
         String sql = String.format(sqlTemplate, levelWhere) + "ORDER BY ord2 ";
         MapSqlParameterSource params = new MapSqlParameterSource("narkey", naryadId);
-        if (parentId != null) {
+        if (!expandAll && parentId != null) {
             params.addValue("parentId", parentId);
         }
         return jdbc.query(sql, params, (rs, rowNum) -> mapNode(rs, vip));

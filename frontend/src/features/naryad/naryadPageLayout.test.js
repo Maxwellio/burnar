@@ -3,13 +3,17 @@ import { beforeEach, describe, it } from 'node:test'
 import {
   NARYAD_CELL_PADDING_Y,
   naryadCompactTableSx,
+  clampSplitRatio,
+  firstPaneFlex,
   persistTableColumnSizing,
   readStoredRightPanelWidth,
   readStoredSplitOrientation,
+  readStoredSplitRatio,
   seedTableColumnSizing,
   tableColumnSizingUrlKey,
   writeStoredRightPanelWidth,
   writeStoredSplitOrientation,
+  writeStoredSplitRatio,
 } from './naryadPageLayout.js'
 
 function installMemoryStorage() {
@@ -70,6 +74,43 @@ describe('split orientation', () => {
   it('falls back to vertical when storage has an unknown value', () => {
     localStorage.setItem('naryad-split-orientation', 'diagonal')
     assert.equal(readStoredSplitOrientation(), 'vertical')
+  })
+})
+
+describe('split ratio', () => {
+  it('defaults to an empty store', () => {
+    assert.equal(readStoredSplitRatio(), null)
+  })
+
+  it('writes and reads a ratio between the panes', () => {
+    writeStoredSplitRatio(0.7)
+    assert.equal(readStoredSplitRatio(), 0.7)
+  })
+
+  it('ignores a ratio outside (0, 1)', () => {
+    writeStoredSplitRatio(0.35)
+    writeStoredSplitRatio(0)
+    writeStoredSplitRatio(1)
+    writeStoredSplitRatio(1.2)
+    assert.equal(readStoredSplitRatio(), 0.35)
+  })
+
+  it('keeps the preferred ratio when the container size is unknown', () => {
+    assert.equal(clampSplitRatio(0.7, 0), 0.7)
+    assert.equal(clampSplitRatio(null, 0), 0.5)
+  })
+
+  it('keeps both panes at least 240px', () => {
+    assert.equal(clampSplitRatio(0.1, 1000), 0.24)
+    assert.equal(clampSplitRatio(0.9, 1000), 0.76)
+  })
+
+  it('locks the split at half when the container cannot fit two minima', () => {
+    assert.equal(clampSplitRatio(0.2, 400), 0.5)
+  })
+
+  it('builds the first pane flex from the ratio and the splitter thickness', () => {
+    assert.equal(firstPaneFlex(0.5), '0 0 calc((100% - 6px) * 0.5)')
   })
 })
 

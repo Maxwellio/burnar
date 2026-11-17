@@ -14,12 +14,15 @@ import VerticalSplit from '@mui/icons-material/VerticalSplit'
 import { fetchNaryadHeader } from '../../api/naryadyApi.js'
 import CatalogDialog from '../../pages/CatalogDialog.jsx'
 import NaryadWorkspacePanel from './workspace/NaryadWorkspacePanel.jsx'
+import PanelSplitter from './workspace/layout/PanelSplitter.jsx'
+import useResizableSplit from './workspace/layout/useResizableSplit.js'
 import { vipolneniePart } from './parts/vipolneniePart.js'
 import { zadaniePart } from './parts/zadaniePart.js'
 import SkvParamsWindows from './skv/SkvParamsWindows.jsx'
 import useSkvWindows from './skv/useSkvWindows.js'
 import {
   ACTION_BAR_HEIGHT,
+  firstPaneFlex,
   readStoredSplitOrientation,
   writeStoredSplitOrientation,
 } from './naryadPageLayout.js'
@@ -96,20 +99,17 @@ const splitButtonSx = {
   },
 }
 
-function paneSx(visible, bothOpen, dividerSide) {
+function paneSx(visible, bothOpen, role, ratio) {
+  let flex = '1 1 100%'
+  if (bothOpen && role === 'first') flex = firstPaneFlex(ratio)
+  else if (bothOpen && role === 'second') flex = '1 1 0'
   return {
     display: visible ? 'flex' : 'none',
     flexDirection: 'column',
-    flex: bothOpen ? '1 1 50%' : '1 1 100%',
+    flex,
     minWidth: 0,
     minHeight: 0,
     overflow: 'hidden',
-    ...(dividerSide === 'right'
-      ? { borderRight: 1, borderColor: 'divider' }
-      : null),
-    ...(dividerSide === 'bottom'
-      ? { borderBottom: 1, borderColor: 'divider' }
-      : null),
   }
 }
 
@@ -118,9 +118,9 @@ function paneSx(visible, bothOpen, dividerSide) {
  * Action bar: включаемые вкладки (повторный клик по единственной переключает
  * на другую, если она есть), кнопка деления, подпись наряда,
  * заглушка параметров, немодальный каталог и выход на список.
- * Обе вкладки при включении делят область пополам: слева-направо или
- * сверху-вниз. Направление хранится в localStorage. Панели остаются
- * смонтированными при скрытии, чтобы ширины колонок сохранялись.
+ * Обе вкладки при включении делят область: слева-направо или сверху-вниз.
+ * Полосу между ними можно тянуть; доля и направление хранятся в localStorage.
+ * Панели остаются смонтированными при скрытии, чтобы ширины колонок сохранялись.
  */
 export default function NaryadPage() {
   const { id } = useParams()
@@ -128,6 +128,7 @@ export default function NaryadPage() {
   const [openPanels, setOpenPanels] = useState([])
   const [mountedPanels, setMountedPanels] = useState({ zad: false, vip: false })
   const [splitOrientation, setSplitOrientation] = useState(readStoredSplitOrientation)
+  const split = useResizableSplit(splitOrientation)
   const [nameNar, setNameNar] = useState('')
   const [zadanieClosed, setZadanieClosed] = useState(null)
   const [vipolnenieClosed, setVipolnenieClosed] = useState(null)
@@ -351,6 +352,7 @@ export default function NaryadPage() {
       </Box>
 
       <Box
+        ref={split.containerRef}
         sx={{
           flex: 1,
           minHeight: 0,
@@ -361,7 +363,7 @@ export default function NaryadPage() {
         }}
       >
         {mountedPanels.zad ? (
-          <Box sx={paneSx(showZad, bothOpen, bothOpen ? (horizontalSplit ? 'bottom' : 'right') : null)}>
+          <Box sx={paneSx(showZad, bothOpen, 'first', split.ratio)}>
             <NaryadWorkspacePanel
               part={zadaniePart}
               naryadId={id}
@@ -378,8 +380,16 @@ export default function NaryadPage() {
             />
           </Box>
         ) : null}
+        {bothOpen ? (
+          <PanelSplitter
+            ariaLabel="Размер задания и выполнения"
+            dragging={split.dragging}
+            onPointerDown={split.onSplitterPointerDown}
+            orientation={horizontalSplit ? 'horizontal' : 'vertical'}
+          />
+        ) : null}
         {mountedPanels.vip ? (
-          <Box sx={paneSx(showVip, bothOpen, null)}>
+          <Box sx={paneSx(showVip, bothOpen, 'second', split.ratio)}>
             <NaryadWorkspacePanel
               part={vipolneniePart}
               naryadId={id}

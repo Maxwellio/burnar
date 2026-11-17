@@ -19,6 +19,14 @@ export const naryadCompactTableSx = {
 /** Вертикальное или горизонтальное деление задания и выполнения. */
 export const SPLIT_ORIENTATION_KEY = 'naryad-split-orientation'
 
+/** Доля первой половины (задание). 0.5 — поровну. */
+export const SPLIT_RATIO_KEY = 'naryad-split-ratio'
+export const SPLIT_DEFAULT_RATIO = 0.5
+/** Ни одна половина не становится уже/ниже этого, пока контейнер позволяет. */
+export const SPLIT_PANE_MIN = 240
+/** Толщина полосы между заданием и выполнением, как у PanelSplitter. */
+export const SPLITTER_SIZE = 6
+
 /** Прежний общий ключ — читаем как fallback, новые записи идут в per-tab ключи. */
 export const RIGHT_PANEL_WIDTH_KEY = 'naryad-right-panel-width'
 export const RIGHT_PANEL_WIDTH_KEYS = {
@@ -91,6 +99,41 @@ export function readStoredSplitOrientation() {
 export function writeStoredSplitOrientation(orientation) {
   if (orientation !== 'horizontal' && orientation !== 'vertical') return
   writeStorage(SPLIT_ORIENTATION_KEY, orientation)
+}
+
+function parseSplitRatio(raw) {
+  const parsed = Number(raw)
+  return Number.isFinite(parsed) && parsed > 0 && parsed < 1 ? parsed : null
+}
+
+export function readStoredSplitRatio() {
+  return parseSplitRatio(readStorage(SPLIT_RATIO_KEY))
+}
+
+export function writeStoredSplitRatio(ratio) {
+  const parsed = parseSplitRatio(ratio)
+  if (parsed == null) return
+  const rounded = Math.round(parsed * 10000) / 10000
+  if (!(rounded > 0 && rounded < 1)) return
+  writeStorage(SPLIT_RATIO_KEY, String(rounded))
+}
+
+/**
+ * Доля первой половины. При неизвестной ширине контейнера доля не зажимается:
+ * ResizeObserver поджимает только показ и не затирает сохранённое значение.
+ */
+export function clampSplitRatio(ratio, containerSize) {
+  const raw = parseSplitRatio(ratio) ?? SPLIT_DEFAULT_RATIO
+  if (!(containerSize > 0)) return raw
+  const minRatio = Math.min(SPLIT_DEFAULT_RATIO, SPLIT_PANE_MIN / containerSize)
+  const maxRatio = 1 - minRatio
+  return Math.min(Math.max(raw, minRatio), maxRatio)
+}
+
+/** flex первой половины: остаток после полосы сплиттера, умноженный на долю. */
+export function firstPaneFlex(ratio) {
+  const share = clampSplitRatio(ratio, 0)
+  return `0 0 calc((100% - ${SPLITTER_SIZE}px) * ${share})`
 }
 
 export function clampRightPanelWidth(width, containerWidth) {

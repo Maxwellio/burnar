@@ -9,6 +9,7 @@ import { NaryadWorkspaceProvider } from './NaryadWorkspaceContext.jsx'
 import { CUT_MARK_COLOR, isCutMarked } from '../actions/clipboard/clipboardRules.js'
 import { nodeIdFilters, treeFooterStatusItems } from './naryadWorkspaceData.js'
 import PeriodTotalsPanel from './PeriodTotalsPanel.jsx'
+import TreeFoldButtons from './TreeFoldButtons.jsx'
 import TreeStatusBar from './TreeStatusBar.jsx'
 import useNaryadWorkspaceState from './useNaryadWorkspaceState.js'
 import WorkDetailsPanel from './WorkDetailsPanel.jsx'
@@ -99,6 +100,7 @@ export default function NaryadWorkspacePanel({
                 overflow: 'hidden',
               }}
             >
+              <TreeFoldButtons onExpandAll={tree.expandAll} onCollapseAll={tree.collapseAll} />
               <Box sx={{ flex: 1, minHeight: 0, minWidth: 0, overflow: 'hidden', ...naryadCompactTableSx }}>
                 <BaseTreeTable
                   url={urls.tree}
