@@ -2,6 +2,9 @@ package burnar.service;
 
 import org.junit.jupiter.api.Test;
 
+import java.math.BigDecimal;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -57,9 +60,27 @@ class NaryadOperTreeServiceTest {
         assertTrue(sql.contains("f.period_key = o.period"), sql);
         assertTrue(sql.contains("f.period_key = p.key"), sql);
         assertTrue(sql.contains("> sum(round("), sql);
-        assertTrue(sql.contains("vv.fact + vv.remont_f"), sql);
+        assertTrue(sql.contains("coalesce(vv.normativ, 0) + coalesce(vv.remont_n, 0) as summ_n"), sql);
+        assertTrue(sql.contains("coalesce(vv.fact, 0) + coalesce(vv.remont_f, 0) as summ_f"), sql);
+        assertTrue(sql.contains("coalesce(vv.normativ, 0) as normativ"), sql);
+        assertTrue(sql.contains("coalesce(vv.remont_n, 0) as remont_n"), sql);
+        assertTrue(sql.contains("coalesce(vv.fact, 0) as fact"), sql);
+        assertTrue(sql.contains("coalesce(vv.remont_f, 0) as remont_f"), sql);
+        assertTrue(sql.contains("coalesce(sum(round(n.norma / 60, 2)), 0) as normativ"), sql);
+        assertTrue(sql.contains("coalesce(sum(round(n.fact / 60, 2)), 0) as fact"), sql);
+        assertTrue(sql.contains(
+                "coalesce((select coalesce(f.val, 0) from burnar.znrepparsv f "
+                        + "where f.parcode = 2683 and f.period_key = p.key and f.repid = 1), 0) as remont_f"),
+                sql);
+        assertFalse(sql.contains("vv.fact + vv.remont_f"), sql);
         assertFalse(sql.contains("f.prnum"), sql);
         assertFalse(sql.contains("f.defnar"), sql);
+    }
+
+    @Test
+    void missingPeriodTotalHoursBecomeZero() {
+        assertEquals(0, BigDecimal.ZERO.compareTo(NaryadOperTreeService.hoursOrZero(null)));
+        assertEquals(0, new BigDecimal("1.25").compareTo(NaryadOperTreeService.hoursOrZero(new BigDecimal("1.25"))));
     }
 
     @Test

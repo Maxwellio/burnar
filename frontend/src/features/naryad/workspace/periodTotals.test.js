@@ -18,10 +18,10 @@ import {
 } from './periodTotals.js'
 
 describe('formatPeriodHours', () => {
-  it('leaves an empty value blank', () => {
-    assert.equal(formatPeriodHours(null), '')
-    assert.equal(formatPeriodHours(undefined), '')
-    assert.equal(formatPeriodHours(''), '')
+  it('shows a missing value as zero', () => {
+    assert.equal(formatPeriodHours(null), '0.00')
+    assert.equal(formatPeriodHours(undefined), '0.00')
+    assert.equal(formatPeriodHours(''), '0.00')
   })
 
   it('shows a real zero with two decimals', () => {
@@ -87,7 +87,7 @@ describe('periodTotalColumnDefs', () => {
     assert.ok(columns.every((column) => column.enableColumnFilter === false))
     assert.ok(columns.every((column) => column.maxSize === 4000))
     const factTotal = columns.find((column) => column.accessorKey === 'summF')
-    assert.equal(factTotal.cell({ getValue: () => null }), '')
+    assert.equal(factTotal.cell({ getValue: () => null }), '0.00')
     assert.equal(factTotal.cell({ getValue: () => 0 }), '0.00')
     const name = columns.find((column) => column.accessorKey === 'name')
     assert.equal(name.cell({ getValue: () => null }), '')
