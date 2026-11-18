@@ -1,10 +1,12 @@
 import Box from '@mui/material/Box'
+import { SPLITTER_THICKNESS } from '../../naryadPageLayout.js'
 
-/** Полоса между деревом и правой панелью, либо над блоком итогов. */
+/** Полоса между деревом и правой панелью, половинами наряда или над блоком итогов. */
 export default function PanelSplitter({
   ariaLabel,
   dragging,
   onPointerDown,
+  onDoubleClick,
   orientation = 'vertical',
 }) {
   const horizontal = orientation === 'horizontal'
@@ -14,9 +16,10 @@ export default function PanelSplitter({
       aria-orientation={horizontal ? 'horizontal' : 'vertical'}
       aria-label={ariaLabel}
       onPointerDown={onPointerDown}
+      onDoubleClick={onDoubleClick}
       sx={{
-        width: horizontal ? 'auto' : 6,
-        height: horizontal ? 6 : 'auto',
+        width: horizontal ? 'auto' : SPLITTER_THICKNESS,
+        height: horizontal ? SPLITTER_THICKNESS : 'auto',
         alignSelf: 'stretch',
         flexShrink: 0,
         cursor: horizontal ? 'row-resize' : 'col-resize',

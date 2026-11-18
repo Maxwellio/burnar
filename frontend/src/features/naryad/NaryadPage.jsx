@@ -13,6 +13,8 @@ import Tune from '@mui/icons-material/Tune'
 import VerticalSplit from '@mui/icons-material/VerticalSplit'
 import { fetchNaryadHeader } from '../../api/naryadyApi.js'
 import CatalogDialog from '../../pages/CatalogDialog.jsx'
+import PanelSplitter from './workspace/layout/PanelSplitter.jsx'
+import useNaryadSplit from './workspace/layout/useNaryadSplit.js'
 import NaryadWorkspacePanel from './workspace/NaryadWorkspacePanel.jsx'
 import { vipolneniePart } from './parts/vipolneniePart.js'
 import { zadaniePart } from './parts/zadaniePart.js'
@@ -96,20 +98,17 @@ const splitButtonSx = {
   },
 }
 
-function paneSx(visible, bothOpen, dividerSide) {
+function paneSx(visible, { primary, bothOpen, firstSize }) {
+  let flex = '1 1 0'
+  if (!bothOpen) flex = '1 1 100%'
+  else if (primary) flex = firstSize == null ? '1 1 50%' : `0 0 ${firstSize}px`
   return {
     display: visible ? 'flex' : 'none',
     flexDirection: 'column',
-    flex: bothOpen ? '1 1 50%' : '1 1 100%',
+    flex,
     minWidth: 0,
     minHeight: 0,
     overflow: 'hidden',
-    ...(dividerSide === 'right'
-      ? { borderRight: 1, borderColor: 'divider' }
-      : null),
-    ...(dividerSide === 'bottom'
-      ? { borderBottom: 1, borderColor: 'divider' }
-      : null),
   }
 }
 
@@ -118,8 +117,9 @@ function paneSx(visible, bothOpen, dividerSide) {
  * Action bar: включаемые вкладки (повторный клик по единственной переключает
  * на другую, если она есть), кнопка деления, подпись наряда,
  * заглушка параметров, немодальный каталог и выход на список.
- * Обе вкладки при включении делят область пополам: слева-направо или
- * сверху-вниз. Направление хранится в localStorage. Панели остаются
+ * Обе вкладки при включении делят область: слева-направо или сверху-вниз.
+ * Направление и доля первой половины хранятся в localStorage. Разделитель
+ * тянется; двойной щелчок возвращает половину. Панели остаются
  * смонтированными при скрытии, чтобы ширины колонок сохранялись.
  */
 export default function NaryadPage() {
@@ -234,6 +234,7 @@ export default function NaryadPage() {
   const showVip = openPanels.includes('vip')
   const bothOpen = showZad && showVip
   const horizontalSplit = bothOpen && splitOrientation === 'horizontal'
+  const split = useNaryadSplit(splitOrientation)
   const splitButtonTitle = bothOpen
     ? (splitOrientation === 'horizontal' ? 'Вертикальное деление' : 'Горизонтальное деление')
     : 'Доступно, когда открыты задание и выполнение'
@@ -351,6 +352,7 @@ export default function NaryadPage() {
       </Box>
 
       <Box
+        ref={split.containerRef}
         sx={{
           flex: 1,
           minHeight: 0,
@@ -361,7 +363,7 @@ export default function NaryadPage() {
         }}
       >
         {mountedPanels.zad ? (
-          <Box sx={paneSx(showZad, bothOpen, bothOpen ? (horizontalSplit ? 'bottom' : 'right') : null)}>
+          <Box sx={paneSx(showZad, { primary: true, bothOpen, firstSize: split.firstSize })}>
             <NaryadWorkspacePanel
               part={zadaniePart}
               naryadId={id}
@@ -378,8 +380,17 @@ export default function NaryadPage() {
             />
           </Box>
         ) : null}
+        {bothOpen ? (
+          <PanelSplitter
+            ariaLabel="Размер задания и выполнения"
+            orientation={horizontalSplit ? 'horizontal' : 'vertical'}
+            dragging={split.dragging}
+            onPointerDown={split.onPointerDown}
+            onDoubleClick={split.reset}
+          />
+        ) : null}
         {mountedPanels.vip ? (
-          <Box sx={paneSx(showVip, bothOpen, null)}>
+          <Box sx={paneSx(showVip, { primary: false, bothOpen, firstSize: split.firstSize })}>
             <NaryadWorkspacePanel
               part={vipolneniePart}
               naryadId={id}
