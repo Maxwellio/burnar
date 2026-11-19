@@ -38,6 +38,25 @@ export function fetchNaryadHeader(id) {
   return requestJson(`/naryady/${id}`)
 }
 
+/** Бригады для создания наряда: id = spr_workers.key, nm = путь подразделения. */
+export function fetchCreateBrigades() {
+  return requestAction('/naryady/create-brigades')
+}
+
+/** Новый наряд. В ответе { id }. Пустые имя и дата начала не передаются. */
+export function createNaryad(body) {
+  return requestAction('/naryady', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  })
+}
+
+/** Удаление одного наряда со списка. */
+export function deleteNaryadListItem(id) {
+  return requestAction(`/naryady/${id}`, { method: 'DELETE' })
+}
+
 /** Текст алгоритма выбранной операции (пустой, если тип не 80). */
 export function fetchNaryadAlgorithm(algorithmPath, nodeId) {
   return requestJson(`${algorithmPath}${buildQuery({ nodeId })}`)

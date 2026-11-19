@@ -14,10 +14,12 @@ import EditOutlinedIcon from '@mui/icons-material/EditOutlined'
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline'
 import { format, startOfMonth } from 'date-fns'
 import { AxiosProvider, BaseTable, DynamicDateList } from 'mainComponent'
-import { fetchNaryadyPeriods } from '../api/naryadyApi.js'
+import { deleteNaryadListItem, fetchNaryadyPeriods } from '../api/naryadyApi.js'
 import { fetchOrgUnits } from '../api/orgUnitsApi.js'
 import { useAuth } from '../context/AuthContext.jsx'
+import { useAlert, useConfirm } from '../context/ConfirmContext.jsx'
 import { isAdmin } from '../utils/roles.js'
+import CreateNaryadDialog from './CreateNaryadDialog.jsx'
 import { getNaryadColumns } from './naryadColumns.jsx'
 
 const buttonOutlinedSx = {
@@ -89,11 +91,40 @@ const pickPeriod = (dates, preferred) => {
  */
 export default function Home() {
   const navigate = useNavigate()
+  const confirm = useConfirm()
+  const showAlert = useAlert()
   const { user } = useAuth()
   const admin = isAdmin(user)
   const columns = useMemo(() => getNaryadColumns(admin), [admin])
   const [selectedId, setSelectedId] = useState(null)
+  const [createOpen, setCreateOpen] = useState(false)
+  const [listEpoch, setListEpoch] = useState(0)
+  const [deleting, setDeleting] = useState(false)
   const hasRow = selectedId != null
+
+  const handleCreated = (id) => {
+    setCreateOpen(false)
+    if (id != null) navigate(`/naryad/${id}`)
+  }
+
+  const handleDelete = async () => {
+    if (selectedId == null || deleting) return
+    const accepted = await confirm(
+      'Наряд будет удалён полностью. Вы уверены, что хотите продолжить?',
+    )
+    if (!accepted) return
+    setDeleting(true)
+    try {
+      await deleteNaryadListItem(selectedId)
+      setSelectedId(null)
+      setListEpoch((value) => value + 1)
+      await showAlert('Изменения успешно сохранены!')
+    } catch (error) {
+      await showAlert(error?.message || 'Не удалось удалить наряд')
+    } finally {
+      setDeleting(false)
+    }
+  }
 
   // BaseTable double-click передаёт id; кнопка — event, тогда берём selectedId.
   const handleOpen = (idArg) => {
@@ -352,6 +383,7 @@ export default function Home() {
             variant="contained"
             startIcon={<AddIcon />}
             disableElevation
+            onClick={() => setCreateOpen(true)}
             sx={{ textTransform: 'none', fontWeight: 600 }}
           >
             Добавить
@@ -368,7 +400,8 @@ export default function Home() {
           <Button
             variant="outlined"
             startIcon={<DeleteOutlineIcon />}
-            disabled={!hasRow}
+            disabled={!hasRow || deleting}
+            onClick={handleDelete}
             sx={buttonOutlinedSx}
           >
             Удалить
@@ -402,6 +435,7 @@ export default function Home() {
           {periodsReady ? (
             <AxiosProvider baseapi="/api">
               <BaseTable
+                key={listEpoch}
                 url="/naryady"
                 columns={columns}
                 filters={filters}
@@ -415,6 +449,11 @@ export default function Home() {
           ) : null}
         </Box>
       </Box>
+      <CreateNaryadDialog
+        open={createOpen}
+        onClose={() => setCreateOpen(false)}
+        onCreated={handleCreated}
+      />
     </Box>
   )
 }

@@ -1,17 +1,25 @@
 package burnar.controller;
 
 import burnar.dto.BrigadeDto;
+import burnar.dto.NaryadCreateRequest;
+import burnar.dto.NaryadCreatedDto;
 import burnar.dto.NaryadHeaderDto;
 import burnar.dto.NaryadListDto;
 import burnar.dto.NaryadListFilter;
 import burnar.dto.YearMonthsDto;
+import burnar.service.NaryadListCommandService;
 import burnar.service.NaryadListService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
@@ -21,16 +29,21 @@ import java.util.List;
  * Query page/size — Spring Data; колоночные фильтры — NaryadListFilter;
  * dateMode/period — боковая панель месяцев; orgUnitId — админская обрезка ACL;
  * /periods — дерево для DynamicDateList, /brigades — справочник для фильтра «Бригада»
- * (оба с тем же ACL).
+ * (оба с тем же ACL). POST создаёт наряд, DELETE /{id} удаляет один видимый наряд,
+ * /create-brigades — бригады окна создания.
  */
 @RestController
 @RequestMapping("/api/naryady")
 public class NaryadListController {
 
     private final NaryadListService naryadListService;
+    private final NaryadListCommandService naryadListCommandService;
 
-    public NaryadListController(NaryadListService naryadListService) {
+    public NaryadListController(
+            NaryadListService naryadListService,
+            NaryadListCommandService naryadListCommandService) {
         this.naryadListService = naryadListService;
+        this.naryadListCommandService = naryadListCommandService;
     }
 
     @GetMapping
@@ -78,6 +91,25 @@ public class NaryadListController {
     @GetMapping("/brigades")
     public List<BrigadeDto> brigades(@RequestParam(required = false) Integer org) {
         return naryadListService.findBrigades(org);
+    }
+
+    /** Бригады окна создания: spr_workers.key, подпись — путь. Админ видит весь справочник. */
+    @GetMapping("/create-brigades")
+    public List<BrigadeDto> createBrigades() {
+        return naryadListCommandService.findCreateBrigades();
+    }
+
+    /** Новый наряд бурения. В ответе код, по которому страница открывает карточку. */
+    @PostMapping
+    public NaryadCreatedDto create(@RequestBody NaryadCreateRequest request) {
+        return naryadListCommandService.create(request);
+    }
+
+    /** Удаление одного наряда. Закрытое задание и закрытое выполнение отвечают 409. */
+    @DeleteMapping("/{id:\\d+}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void delete(@PathVariable int id) {
+        naryadListCommandService.delete(id);
     }
 
     /** Дерево годов/месяцев для DynamicDateList; dateMode/orgUnitId как у списка. */
