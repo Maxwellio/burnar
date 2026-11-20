@@ -38,3 +38,15 @@ export function discreteCommitValue(currentCode, nextCode) {
   if (current === next) return { save: false }
   return { save: true, value: next == null ? null : Number(next) }
 }
+
+/**
+ * Подпись пункта списка. Админу в конец дописывается zn_dparam.key этой версии операции.
+ * Не-админ и пустой код остаются одним именем.
+ * @returns {{ name: string, code: string|null }}
+ */
+export function discreteValueCaption(name, code, isAdmin) {
+  const text = name == null ? '' : String(name)
+  const valueCode = codeText(code)
+  if (!isAdmin || valueCode == null) return { name: text, code: null }
+  return { name: text, code: valueCode }
+}

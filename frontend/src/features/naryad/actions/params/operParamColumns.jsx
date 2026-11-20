@@ -4,9 +4,11 @@ import Select from '@mui/material/Select'
 import TextField from '@mui/material/TextField'
 import { useEffect, useRef, useState } from 'react'
 import { saveNaryadOperParam } from '../../../../api/naryadyApi.js'
+import { useAuth } from '../../../../context/AuthContext.jsx'
+import { isAdmin } from '../../../../utils/roles.js'
 import { sanitizeSkvNumberInput } from '../../skv/skvRules.js'
 import { useNaryadWorkspace } from '../../workspace/NaryadWorkspaceContext.jsx'
-import { continuousCommitValue, discreteCommitValue } from './operParamRules.js'
+import { continuousCommitValue, discreteCommitValue, discreteValueCaption } from './operParamRules.js'
 
 const inputSx = {
   bgcolor: 'transparent',
@@ -22,6 +24,21 @@ const inputSx = {
 
 function wait(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms))
+}
+
+/** Админ: имя значения и приглушённый (zn_dparam.key), как people.id у мастера. */
+function DiscreteValueCaption({ name, code }) {
+  const { user } = useAuth()
+  const caption = discreteValueCaption(name, code, isAdmin(user))
+  if (caption.code == null) return caption.name
+  return (
+    <Box component="span">
+      {caption.name}
+      <Box component="span" sx={{ color: 'text.secondary' }}>
+        {` (${caption.code})`}
+      </Box>
+    </Box>
+  )
 }
 
 function CellEditor({ children }) {
@@ -170,7 +187,8 @@ function DiscreteParamEditor({ row }) {
         displayEmpty
         renderValue={(value) => {
           if (value === '') return '\u00a0'
-          return items.find((item) => String(item.id) === String(value))?.nm ?? row.val ?? ''
+          const item = items.find((entry) => String(entry.id) === String(value))
+          return <DiscreteValueCaption name={item?.nm ?? row.val ?? ''} code={item?.id ?? value} />
         }}
         inputProps={{ 'aria-label': `Значение: ${row.nm ?? ''}` }}
         sx={{
@@ -189,7 +207,9 @@ function DiscreteParamEditor({ row }) {
       >
         <MenuItem value="">{'\u00a0'}</MenuItem>
         {items.map((item) => (
-          <MenuItem key={String(item.id)} value={String(item.id)}>{item.nm}</MenuItem>
+          <MenuItem key={String(item.id)} value={String(item.id)}>
+            <DiscreteValueCaption name={item.nm} code={item.id} />
+          </MenuItem>
         ))}
       </Select>
     </CellEditor>
@@ -199,7 +219,12 @@ function DiscreteParamEditor({ row }) {
 /** ptype 1 — ввод, ptype 2 — список. Закрытая часть и блокировка выполнения оставляют текст. */
 export function ParamValueCell({ row }) {
   const original = row.original ?? {}
-  if (original.editable !== true) return original.val ?? ''
+  if (original.editable !== true) {
+    if (Number(original.ptype) === 2) {
+      return <DiscreteValueCaption name={original.val ?? ''} code={original.znachCode} />
+    }
+    return original.val ?? ''
+  }
   if (Number(original.ptype) === 2) return <DiscreteParamEditor row={original} />
   if (Number(original.ptype) === 1) return <ContinuousParamEditor row={original} />
   return original.val ?? ''
