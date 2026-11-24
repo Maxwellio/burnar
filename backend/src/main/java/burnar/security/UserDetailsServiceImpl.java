@@ -1,8 +1,7 @@
 package burnar.security;
 
 import burnar.config.BurnarProperties;
-import burnar.entity.UserEntity;
-import burnar.repository.UserRepository;
+
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
