@@ -1,0 +1,3 @@
+{
+  "install": "mkdir -p ~/tools/unclebob && cd ~/tools/unclebob && git clone --depth 1 https://github.com/unclebob/crapper.git && git clone --depth 1 https://github.com/unclebob/dryer.git && git clone --depth 1 https://github.com/unclebob/mutator.git && chmod +x crapper/crapper dryer/dryer mutator/mutator && echo 'export PATH=\"$HOME/tools/unclebob/crapper:$HOME/tools/unclebob/dryer:$HOME/tools/unclebob/mutator:$PATH\"' >> ~/.bashrc"
+}
