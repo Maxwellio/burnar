@@ -101,10 +101,10 @@ public class NaryadSkvParamsService {
     }
 
     /** Сохранённые значения, которых нет в поддереве своего параметра. */
-    static final String VALUES_BY_IDS_SQL =
+    public static final String VALUES_BY_IDS_SQL =
             "SELECT c.id, c.nm FROM public.common_spr c WHERE c.id IN (:ids)";
 
-    static final String VALUE_IN_SUBTREE_SQL =
+    public static final String VALUE_IN_SUBTREE_SQL =
             "WITH RECURSIVE tmp AS ("
                     + "  SELECT c.id FROM public.common_spr c WHERE c.parent_id = :parcode "
                     + "  UNION ALL "

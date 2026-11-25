@@ -3,10 +3,16 @@
  * Черновик таблицы — объект «ключ строки → правка» с исходными значениями,
  * чтобы возврат к ним снимал жирное выделение.
  */
-import { formatSkvNumber, parseSkvNumber } from '../skv/skvRules.js'
+import {
+  SKV_SAVED_MESSAGE,
+  SKV_UNSAVED_CLOSE_MESSAGE,
+  formatSkvNumber,
+  parseSkvNumber,
+  skvRowKey,
+} from '../skv/skvRules.js'
 
-export const GLOBAL_SAVED_MESSAGE = 'Изменения успешно сохранены!'
-export const GLOBAL_UNSAVED_CLOSE_MESSAGE = 'Изменения не сохранены. Закрыть?'
+export const GLOBAL_SAVED_MESSAGE = SKV_SAVED_MESSAGE
+export const GLOBAL_UNSAVED_CLOSE_MESSAGE = SKV_UNSAVED_CLOSE_MESSAGE
 export const SHIFR_MAX = 20
 export const NM_MAX = 50
 export const VALSTR_MAX = 150
@@ -20,9 +26,7 @@ export function globalRowEditable(closed, parcode) {
   return { reference: editable, value: editable }
 }
 
-export function globalRowKey(row) {
-  return `${row.parcode}:${row.prnum}`
-}
+const globalRowKey = skvRowKey
 
 function normalizeZnval(value) {
   if (value == null || value === '') return null

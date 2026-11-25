@@ -4,7 +4,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.sql.Timestamp;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -19,19 +18,15 @@ import java.util.Objects;
  */
 public final class NaryadGlobalParams {
 
-    public static final String CLOSED_MESSAGE = "Наряд закрыт от изменений";
     public static final String SHIFR_TOO_LONG = "Шифр объекта длиннее 20 символов";
     public static final String NM_TOO_LONG = "Наименование наряда длиннее 50 символов";
     public static final String VAL_OUT_OF_RANGE = "Числовое значение должно быть меньше 1000000 по модулю";
-    public static final String VALSTR_TOO_LONG = "Строковое значение длиннее 150 символов";
     public static final String LOCATION_READONLY = "Скважина, куст и месторождение меняются поиском скважины";
-    public static final String VALUE_NOT_IN_LIST = "Значение не входит в справочник параметра";
     public static final String PARAM_NOT_FOUND = "Параметр наряда не найден";
     public static final String CHECK_NOT_FOUND = "Пункт отчёта не найден";
 
     static final int SHIFR_MAX = 20;
     static final int NM_MAX = 50;
-    static final int VALSTR_MAX = 150;
     static final int VAL_SCALE = 3;
     static final BigDecimal VAL_LIMIT = new BigDecimal("1000000");
 
@@ -57,7 +52,7 @@ public final class NaryadGlobalParams {
     }
 
     public static boolean valueEditable(boolean closed, BigDecimal parcode) {
-        return !closed && !locationParam(parcode);
+        return referenceEditable(closed, parcode);
     }
 
     /** Закрыто задание или выполнение: {@code coalesce(closed, 0)} каждой части. */
@@ -73,22 +68,13 @@ public final class NaryadGlobalParams {
         return normalizeText(raw, NM_MAX, NM_TOO_LONG);
     }
 
-    public static String normalizeValstr(String value) {
-        if (value == null || value.isEmpty()) {
-            return null;
-        }
-        if (value.length() > VALSTR_MAX) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, VALSTR_TOO_LONG);
-        }
-        return value;
-    }
-
     /** Ноль после округления до трёх знаков пишется как пусто. */
+    @SuppressWarnings("deprecation") // константа BigDecimal, как у сквозных параметров
     public static BigDecimal normalizeVal(BigDecimal value) {
         if (value == null) {
             return null;
         }
-        BigDecimal scaled = value.setScale(VAL_SCALE, RoundingMode.HALF_UP);
+        BigDecimal scaled = value.setScale(VAL_SCALE, BigDecimal.ROUND_HALF_UP);
         if (scaled.signum() == 0) {
             return null;
         }
@@ -123,18 +109,6 @@ public final class NaryadGlobalParams {
         return canonical(left).equals(canonical(right));
     }
 
-    public static boolean sameValues(
-            BigDecimal currentZnval,
-            BigDecimal currentVal,
-            String currentValstr,
-            BigDecimal znval,
-            BigDecimal val,
-            String valstr) {
-        return sameNumber(currentZnval, znval)
-                && sameNumber(currentVal, val)
-                && Objects.equals(emptyToNull(currentValstr), valstr);
-    }
-
     public static String key(BigDecimal parcode, BigDecimal prnum) {
         if (parcode == null || prnum == null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, PARAM_NOT_FOUND);
@@ -160,10 +134,6 @@ public final class NaryadGlobalParams {
 
     private static boolean positive(Integer value) {
         return value != null && value != 0;
-    }
-
-    private static String emptyToNull(String value) {
-        return value == null || value.isEmpty() ? null : value;
     }
 
     private static boolean sameNumber(BigDecimal left, BigDecimal right) {

@@ -2,7 +2,6 @@ package burnar.naryad.global.service;
 
 import burnar.naryad.global.dto.NaryadGlobalCheckDto;
 import burnar.naryad.global.dto.NaryadGlobalFormDto;
-import burnar.naryad.global.dto.NaryadGlobalParamDto;
 import burnar.naryad.global.dto.NaryadGlobalSaveRequest;
 import burnar.naryad.global.dto.NaryadGlobalSaveResultDto;
 import burnar.naryad.list.dto.BrigadeDto;
@@ -11,6 +10,10 @@ import burnar.naryad.list.service.NaryadListCommandService;
 import burnar.naryad.list.service.NaryadListService;
 import burnar.naryad.shared.dto.NaryadSkvValueDto;
 import burnar.naryad.shared.service.NaryadProcedureMessages;
+import burnar.naryad.skv.dto.NaryadSkvParamDto;
+import burnar.naryad.skv.dto.NaryadSkvSaveRequest;
+import burnar.naryad.skv.service.NaryadSkvParams;
+import burnar.naryad.skv.service.NaryadSkvParamsService;
 
 import org.springframework.dao.DataAccessException;
 import org.springframework.http.HttpStatus;
@@ -92,17 +95,6 @@ public class NaryadGlobalParamsService {
                     + ") "
                     + "SELECT tmp.root AS parcode, tmp.id, tmp.nm FROM tmp ORDER BY tmp.root, tmp.ord2";
 
-    static final String VALUES_BY_IDS_SQL =
-            "SELECT c.id, c.nm FROM public.common_spr c WHERE c.id IN (:ids)";
-
-    static final String VALUE_IN_SUBTREE_SQL =
-            "WITH RECURSIVE tmp AS ("
-                    + "  SELECT c.id FROM public.common_spr c WHERE c.parent_id = :parcode "
-                    + "  UNION ALL "
-                    + "  SELECT c.id FROM public.common_spr c INNER JOIN tmp ON tmp.id = c.parent_id"
-                    + ") "
-                    + "SELECT EXISTS (SELECT 1 FROM tmp WHERE tmp.id = :znval)";
-
     static final String UPDATE_HEADER_SQL =
             "UPDATE burnar.defnar SET ownernar = :ownernar, shifr = :shifr, nm = :nm WHERE key = :id";
 
@@ -167,7 +159,7 @@ public class NaryadGlobalParamsService {
                 loadCatalog(REPORT_PARAMS_SQL, checks.get(REPORT_PARAM)));
     }
 
-    public List<NaryadGlobalParamDto> findParams(int naryadId) {
+    public List<NaryadSkvParamDto> findParams(int naryadId) {
         naryadListService.findHeader(naryadId);
         return withValueLists(naryadId, queryParams(naryadId));
     }
@@ -186,7 +178,7 @@ public class NaryadGlobalParamsService {
         boolean headerChanged = NaryadGlobalParams.headerChanged(
                 header.ownerNar, header.shifr, header.nm, request.getOwnerNar(), shifr, nm);
         if (headerChanged && closed) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, NaryadGlobalParams.CLOSED_MESSAGE);
+            throw new ResponseStatusException(HttpStatus.CONFLICT, NaryadSkvParams.CLOSED_MESSAGE);
         }
         if (headerChanged && !request.getOwnerNar().equals(header.ownerNar) && !brigadeAllowed(request.getOwnerNar())) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, NaryadListCommandRules.BRIGADE_FORBIDDEN);
@@ -225,39 +217,39 @@ public class NaryadGlobalParamsService {
     }
 
     private List<PendingUpdate> pendingUpdates(
-            int naryadId, boolean closed, List<NaryadGlobalSaveRequest.Param> changes) {
+            int naryadId, boolean closed, List<NaryadSkvSaveRequest.Param> changes) {
         if (changes == null || changes.isEmpty()) {
             return List.of();
         }
-        Map<String, NaryadGlobalParamDto> current = new LinkedHashMap<>();
-        for (NaryadGlobalParamDto row : queryParams(naryadId)) {
+        Map<String, NaryadSkvParamDto> current = new LinkedHashMap<>();
+        for (NaryadSkvParamDto row : queryParams(naryadId)) {
             current.put(NaryadGlobalParams.key(row.getParcode(), row.getPrnum()), row);
         }
         Map<String, PendingUpdate> updates = new LinkedHashMap<>();
-        for (NaryadGlobalSaveRequest.Param change : changes) {
+        for (NaryadSkvSaveRequest.Param change : changes) {
             if (change == null) {
                 continue;
             }
             String key = NaryadGlobalParams.key(change.getParcode(), change.getPrnum());
-            NaryadGlobalParamDto row = current.get(key);
+            NaryadSkvParamDto row = current.get(key);
             if (row == null) {
                 throw new ResponseStatusException(HttpStatus.NOT_FOUND, NaryadGlobalParams.PARAM_NOT_FOUND);
             }
             BigDecimal val = NaryadGlobalParams.normalizeVal(change.getVal());
-            String valstr = NaryadGlobalParams.normalizeValstr(change.getValstr());
+            String valstr = NaryadSkvParams.normalizeValstr(change.getValstr());
             BigDecimal znval = change.getZnval();
-            if (NaryadGlobalParams.sameValues(row.getZnval(), row.getVal(), row.getValstr(), znval, val, valstr)) {
+            if (NaryadSkvParams.sameValues(row.getZnval(), row.getVal(), row.getValstr(), znval, val, valstr)) {
                 updates.remove(key);
                 continue;
             }
             if (closed) {
-                throw new ResponseStatusException(HttpStatus.CONFLICT, NaryadGlobalParams.CLOSED_MESSAGE);
+                throw new ResponseStatusException(HttpStatus.CONFLICT, NaryadSkvParams.CLOSED_MESSAGE);
             }
             if (NaryadGlobalParams.locationParam(row.getParcode())) {
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST, NaryadGlobalParams.LOCATION_READONLY);
             }
             if (znval != null && !sameNumber(znval, row.getZnval()) && !valueInSubtree(row.getParcode(), znval)) {
-                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, NaryadGlobalParams.VALUE_NOT_IN_LIST);
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, NaryadSkvParams.VALUE_NOT_IN_LIST);
             }
             updates.put(key, new PendingUpdate(new MapSqlParameterSource()
                     .addValue("narkey", naryadId)
@@ -270,11 +262,11 @@ public class NaryadGlobalParamsService {
         return new ArrayList<>(updates.values());
     }
 
-    private List<NaryadGlobalParamDto> queryParams(int naryadId) {
+    private List<NaryadSkvParamDto> queryParams(int naryadId) {
         return jdbc.query(
                 PARAMS_SQL,
                 new MapSqlParameterSource("narkey", naryadId),
-                (rs, rowNum) -> new NaryadGlobalParamDto(
+                (rs, rowNum) -> new NaryadSkvParamDto(
                         rs.getBigDecimal("parcode"),
                         rs.getBigDecimal("prnum"),
                         rs.getString("nm"),
@@ -285,14 +277,14 @@ public class NaryadGlobalParamsService {
                         List.of()));
     }
 
-    private List<NaryadGlobalParamDto> withValueLists(int naryadId, List<NaryadGlobalParamDto> rows) {
+    private List<NaryadSkvParamDto> withValueLists(int naryadId, List<NaryadSkvParamDto> rows) {
         Map<String, List<NaryadSkvValueDto>> byCode = new LinkedHashMap<>();
         jdbc.query(VALUES_SQL, new MapSqlParameterSource("narkey", naryadId), rs -> {
             byCode.computeIfAbsent(codeKey(rs.getBigDecimal("parcode")), key -> new ArrayList<>())
                     .add(new NaryadSkvValueDto(rs.getBigDecimal("id"), rs.getString("nm")));
         });
         List<BigDecimal> missing = new ArrayList<>();
-        for (NaryadGlobalParamDto row : rows) {
+        for (NaryadSkvParamDto row : rows) {
             if (row.getZnval() == null || NaryadGlobalParams.locationParam(row.getParcode())) {
                 continue;
             }
@@ -301,8 +293,8 @@ public class NaryadGlobalParamsService {
             }
         }
         Map<String, NaryadSkvValueDto> extras = loadValuesById(missing);
-        List<NaryadGlobalParamDto> result = new ArrayList<>();
-        for (NaryadGlobalParamDto row : rows) {
+        List<NaryadSkvParamDto> result = new ArrayList<>();
+        for (NaryadSkvParamDto row : rows) {
             List<NaryadSkvValueDto> values = new ArrayList<>();
             if (!NaryadGlobalParams.locationParam(row.getParcode())) {
                 values.addAll(byCode.getOrDefault(codeKey(row.getParcode()), List.of()));
@@ -311,7 +303,7 @@ public class NaryadGlobalParamsService {
                     values.add(0, extra);
                 }
             }
-            result.add(new NaryadGlobalParamDto(
+            result.add(new NaryadSkvParamDto(
                     row.getParcode(),
                     row.getPrnum(),
                     row.getNm(),
@@ -330,7 +322,7 @@ public class NaryadGlobalParamsService {
         }
         Map<String, NaryadSkvValueDto> byId = new LinkedHashMap<>();
         jdbc.query(
-                VALUES_BY_IDS_SQL,
+                NaryadSkvParamsService.VALUES_BY_IDS_SQL,
                 new MapSqlParameterSource("ids", ids),
                 (rs, rowNum) -> {
                     NaryadSkvValueDto value = new NaryadSkvValueDto(rs.getBigDecimal("id"), rs.getString("nm"));
@@ -342,7 +334,7 @@ public class NaryadGlobalParamsService {
 
     private boolean valueInSubtree(BigDecimal parcode, BigDecimal znval) {
         Boolean found = jdbc.queryForObject(
-                VALUE_IN_SUBTREE_SQL,
+                NaryadSkvParamsService.VALUE_IN_SUBTREE_SQL,
                 new MapSqlParameterSource("parcode", parcode).addValue("znval", znval),
                 Boolean.class);
         return Boolean.TRUE.equals(found);

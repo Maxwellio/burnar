@@ -1,9 +1,9 @@
 package burnar.naryad.global.controller;
 
 import burnar.naryad.global.dto.NaryadGlobalFormDto;
-import burnar.naryad.global.dto.NaryadGlobalParamDto;
 import burnar.naryad.global.dto.NaryadGlobalSaveRequest;
 import burnar.naryad.global.dto.NaryadGlobalSaveResultDto;
+import burnar.naryad.skv.dto.NaryadSkvParamDto;
 import burnar.naryad.global.service.NaryadGlobalParamsService;
 
 import org.springframework.http.HttpStatus;
@@ -41,7 +41,7 @@ public class NaryadGlobalParamsController {
     }
 
     @GetMapping("/{id:\\d+}/global/params")
-    public List<NaryadGlobalParamDto> params(@PathVariable int id) {
+    public List<NaryadSkvParamDto> params(@PathVariable int id) {
         return service.findParams(id);
     }
 
