@@ -52,6 +52,7 @@ export const COLUMN_SIZING_KEYS = {
   vipolnenieIntervalsNar: 'naryad-column-sizing:vipolnenie-intervals-nar',
   skvZadanie: 'naryad-column-sizing:skv-zadanie',
   skvVipolnenie: 'naryad-column-sizing:skv-vipolnenie',
+  globalParams: 'naryad-column-sizing:global-params',
 }
 
 const TABLE_SIZING_PREFIX = 'table-column-sizing:'

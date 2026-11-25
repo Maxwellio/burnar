@@ -275,6 +275,20 @@ export function bindVipolneniePeriod(id, periodKey, nodeIds) {
   })
 }
 
+/** Шапка общих параметров, бригады и флажки отчёта. Таблица — отдельно, для BaseTable. */
+export function fetchNaryadGlobal(id) {
+  return requestAction(`/naryady/${id}/global`)
+}
+
+/** Шапка, изменённые строки znparams и, если флажки менялись, их новый состав. */
+export function saveNaryadGlobal(id, payload) {
+  return requestAction(`/naryady/${id}/global`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+}
+
 /** Дата начала работ и изменённые строки сквозных параметров: { dateChanged, paramsChanged }. */
 export function saveNaryadSkv(id, part, payload) {
   return requestAction(`/naryady/${id}/${part}/skv`, {
