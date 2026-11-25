@@ -4,6 +4,7 @@ import {
   applyGlobalEdit,
   buildGlobalSavePayload,
   canSaveGlobal,
+  globalCellValue,
   globalChangedFields,
   globalRowEditable,
   isGlobalDirty,
@@ -119,6 +120,13 @@ describe('global draft', () => {
 function selectReport(state, id) {
   return toggleReportParam(state.reportParamIds, id)
 }
+
+describe('cell display', () => {
+  it('uses an empty string for a null text value', () => {
+    assert.equal(globalCellValue({}, { ...row, valstr: null }, 'valstr'), '')
+    assert.equal(globalCellValue({}, { ...row, val: null }, 'val'), '')
+  })
+})
 
 describe('master names', () => {
   it('splits the getmasters string and keeps one name whole', () => {

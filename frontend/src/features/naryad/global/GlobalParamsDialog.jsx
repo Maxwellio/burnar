@@ -77,7 +77,7 @@ function MastersField({ masters }) {
       sx={fieldSx}
     >
       {/* В поле остаётся вся строка getmasters, пункты ниже только показывают имена. */}
-      <MenuItem value={value} sx={{ display: 'none' }}>{value || '\u00a0'}</MenuItem>
+      <MenuItem key="current" value={value} sx={{ display: 'none' }}>{value || '\u00a0'}</MenuItem>
       {names.map((name, index) => (
         <MenuItem key={`${name}-${index}`} value={`\u0000${index}`}>{name}</MenuItem>
       ))}
@@ -102,12 +102,12 @@ function CheckColumn({ title, items, selected, saved, disabled, onToggle }) {
         borderRadius: 1,
       }}
       >
-        {(items ?? []).map((item) => {
+        {(items ?? []).map((item, index) => {
           const checked = selectedSet.has(item.id)
           const bold = savedSet.has(item.id) !== checked
           return (
             <FormControlLabel
-              key={item.id}
+              key={`${item.id}-${index}`}
               disabled={disabled}
               sx={{
                 display: 'flex',
@@ -338,8 +338,8 @@ export default function GlobalParamsDialog({ naryadId, onClose, onNameSaved }) {
                 InputProps={{ sx: { fontWeight: ownerNar !== savedOwnerNar ? 700 : 400 } }}
                 sx={fieldSx}
               >
-                {(form.brigades ?? []).map((item) => (
-                  <MenuItem key={item.id} value={String(item.id)}>{item.nm}</MenuItem>
+                {(form.brigades ?? []).map((item, index) => (
+                  <MenuItem key={`${item.id}-${index}`} value={String(item.id)}>{item.nm}</MenuItem>
                 ))}
               </TextField>
               <ReadOnlyField label="Дата создания в системе" value={form.createdate} />
@@ -409,14 +409,8 @@ export default function GlobalParamsDialog({ naryadId, onClose, onNameSaved }) {
                       columns={globalParamColumns}
                       filters={[]}
                       setFilters={noopSetFilters}
-                      reRenderSignal={tableSignal}
-                      defaultColumn={{
-                        enableColumnFilter: false,
-                        size: 150,
-                        minSize: 40,
-                        maxSize: 4000,
-                      }}
-                      style={{ flex: 1, minWidth: 0, minHeight: 0, width: '100%' }}
+                    reRenderSignal={tableSignal}
+                    style={{ flex: 1, minWidth: 0, minHeight: 0, width: '100%' }}
                     />
                   </AxiosProvider>
                 </GlobalEditorProvider>

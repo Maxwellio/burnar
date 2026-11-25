@@ -21,6 +21,16 @@ function changedInputSx(changed) {
   }
 }
 
+function listedValues(options) {
+  const seen = new Set()
+  return options.filter((item) => {
+    const id = item?.id == null ? '' : String(item.id)
+    if (seen.has(id)) return false
+    seen.add(id)
+    return true
+  })
+}
+
 /** Клик по редактору не должен выделять строку таблицы (обработчик на tr). */
 function CellEditor({ children }) {
   return (
@@ -61,7 +71,7 @@ export function createValueParamColumns({
   function ZnvalCell({ row }) {
     const editor = useEditor()
     const original = row.original
-    const options = Array.isArray(original.values) ? original.values : []
+    const options = listedValues(Array.isArray(original.values) ? original.values : [])
     if (!cellEditable(editor, original)) return original.znnm ?? ''
     const value = cellValue(editor.draft, original, 'znval') ?? ''
     const known = options.some((item) => String(item.id) === String(value))
@@ -96,7 +106,7 @@ export function createValueParamColumns({
         >
           <MenuItem value="">{'\u00a0'}</MenuItem>
           {options.map((item) => (
-            <MenuItem key={item.id} value={String(item.id)}>{item.nm}</MenuItem>
+            <MenuItem key={String(item.id)} value={String(item.id)}>{item.nm}</MenuItem>
           ))}
         </Select>
       </CellEditor>
@@ -111,7 +121,7 @@ export function createValueParamColumns({
     return (
       <CellEditor>
         <TextField
-          value={value}
+          value={value ?? ''}
           onChange={(event) => editor.setCell(original, 'val', sanitizeSkvNumberInput(event.target.value))}
           variant="standard"
           size="small"
@@ -133,7 +143,7 @@ export function createValueParamColumns({
     return (
       <CellEditor>
         <TextField
-          value={value}
+          value={value ?? ''}
           onChange={(event) => editor.setCell(original, 'valstr', event.target.value)}
           variant="standard"
           size="small"
@@ -157,11 +167,12 @@ export function createValueParamColumns({
     )
   }
 
+  const sizing = { minSize: 40, maxSize: 4000, enableColumnFilter: false }
   return [
-    { id: `${idPrefix}-nm`, accessorKey: 'nm', header: 'Параметр', size: 220, cell: NmCell },
-    { id: `${idPrefix}-znval`, accessorKey: 'znnm', header: valueHeader, size: 220, cell: ZnvalCell },
-    { id: `${idPrefix}-val`, accessorKey: 'val', header: 'Числовое', size: 110, cell: ValCell },
-    { id: `${idPrefix}-valstr`, accessorKey: 'valstr', header: 'Строковое', size: 180, cell: ValstrCell },
+    { ...sizing, id: `${idPrefix}-nm`, accessorKey: 'nm', header: 'Параметр', size: 220, cell: NmCell },
+    { ...sizing, id: `${idPrefix}-znval`, accessorKey: 'znnm', header: valueHeader, size: 220, cell: ZnvalCell },
+    { ...sizing, id: `${idPrefix}-val`, accessorKey: 'val', header: 'Числовое', size: 110, cell: ValCell },
+    { ...sizing, id: `${idPrefix}-valstr`, accessorKey: 'valstr', header: 'Строковое', size: 180, cell: ValstrCell },
   ]
 }
 

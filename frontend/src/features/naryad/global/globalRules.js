@@ -60,7 +60,7 @@ function globalRowValues(row) {
   return {
     znval: normalizeZnval(row.znval),
     val: displayNumber(row.val),
-    valstr: normalizeValstr(row.valstr),
+    valstr: row.valstr ?? '',
   }
 }
 
