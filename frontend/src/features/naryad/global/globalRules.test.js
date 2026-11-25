@@ -7,6 +7,7 @@ import {
   globalChangedFields,
   globalRowEditable,
   isGlobalDirty,
+  masterNames,
   selectWellType,
   toggleReportParam,
 } from './globalRules.js'
@@ -118,3 +119,12 @@ describe('global draft', () => {
 function selectReport(state, id) {
   return toggleReportParam(state.reportParamIds, id)
 }
+
+describe('master names', () => {
+  it('splits the getmasters string and keeps one name whole', () => {
+    assert.deepEqual(masterNames('И.И.Иванов - П.П.Петров'), ['И.И.Иванов', 'П.П.Петров'])
+    assert.deepEqual(masterNames('И.И.Иванов'), ['И.И.Иванов'])
+    assert.deepEqual(masterNames(''), [])
+    assert.deepEqual(masterNames(null), [])
+  })
+})

@@ -34,6 +34,7 @@ import {
   globalTextBold,
   invalidGlobalNumbers,
   isGlobalDirty,
+  masterNames,
   selectWellType,
   toggleReportParam,
 } from './globalRules.js'
@@ -41,6 +42,7 @@ import {
 const noopSetFilters = () => {}
 
 const fieldSx = { minWidth: 0 }
+const DIALOG_WIDTH = 1080
 
 function checkedIds(items) {
   return (items ?? []).filter((item) => item.checked).map((item) => item.id)
@@ -60,6 +62,29 @@ function ReadOnlyField({ label, value }) {
   )
 }
 
+function MastersField({ masters }) {
+  const value = masters ?? ''
+  const names = masterNames(value)
+  return (
+    <TextField
+      select
+      label="Мастер(а)"
+      value={value}
+      onChange={() => {}}
+      size="small"
+      fullWidth
+      InputLabelProps={{ shrink: true }}
+      sx={fieldSx}
+    >
+      {/* В поле остаётся вся строка getmasters, пункты ниже только показывают имена. */}
+      <MenuItem value={value} sx={{ display: 'none' }}>{value || '\u00a0'}</MenuItem>
+      {names.map((name, index) => (
+        <MenuItem key={`${name}-${index}`} value={`\u0000${index}`}>{name}</MenuItem>
+      ))}
+    </TextField>
+  )
+}
+
 function CheckColumn({ title, items, selected, saved, disabled, onToggle }) {
   const savedSet = new Set(saved ?? [])
   const selectedSet = new Set(selected ?? [])
@@ -70,8 +95,7 @@ function CheckColumn({ title, items, selected, saved, disabled, onToggle }) {
       </Typography>
       <Box sx={{
         flex: 1,
-        minHeight: 96,
-        maxHeight: 140,
+        minHeight: 0,
         overflow: 'auto',
         border: '1px solid',
         borderColor: 'divider',
@@ -254,7 +278,7 @@ export default function GlobalParamsDialog({ naryadId, onClose, onNameSaved }) {
       maxWidth={false}
       PaperProps={{
         sx: {
-          width: 920,
+          width: DIALOG_WIDTH,
           maxWidth: 'calc(100vw - 32px)',
           height: '92vh',
           m: 2,
@@ -287,9 +311,14 @@ export default function GlobalParamsDialog({ naryadId, onClose, onNameSaved }) {
         ) : null}
         {form != null ? (
           <>
+            {closed ? (
+              <Alert severity="info" sx={{ flexShrink: 0, py: 0 }}>
+                Наряд закрыт от изменений. Шапка и таблица доступны только для просмотра.
+              </Alert>
+            ) : null}
             <Box sx={{
               display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
+              gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
               gap: 1.25,
               pt: 0.5,
               flexShrink: 0,
@@ -314,18 +343,7 @@ export default function GlobalParamsDialog({ naryadId, onClose, onNameSaved }) {
                 ))}
               </TextField>
               <ReadOnlyField label="Дата создания в системе" value={form.createdate} />
-              <TextField
-                select
-                label="Мастер(а)"
-                value={masters}
-                size="small"
-                fullWidth
-                disabled
-                InputLabelProps={{ shrink: true }}
-                sx={fieldSx}
-              >
-                <MenuItem value={masters}>{masters || '\u00a0'}</MenuItem>
-              </TextField>
+              <MastersField masters={masters} />
               <ReadOnlyField label="Автор наряда в системе" value={form.authorNm} />
               <TextField
                 label="Шифр объекта"
@@ -360,87 +378,89 @@ export default function GlobalParamsDialog({ naryadId, onClose, onNameSaved }) {
               </Button>
             </Box>
 
-            {closed ? (
-              <Alert severity="info" sx={{ flexShrink: 0, py: 0 }}>
-                Наряд закрыт от изменений. Шапка и таблица доступны только для просмотра.
-              </Alert>
-            ) : null}
             {badNumbers ? (
               <Alert severity="warning" sx={{ flexShrink: 0, py: 0 }}>
                 Числовое значение введено неверно
               </Alert>
             ) : null}
 
-            <Box sx={{
-              flex: 1,
-              minHeight: 160,
-              minWidth: 0,
-              width: '100%',
-              overflow: 'hidden',
-              display: 'flex',
-              flexDirection: 'column',
-              '& .overflow-y-auto': { overflowX: 'auto' },
-              '& td, & th': {
-                whiteSpace: 'normal !important',
-                textOverflow: 'clip !important',
-                overflowWrap: 'anywhere',
-              },
-            }}
-            >
-              <GlobalEditorProvider value={editor}>
-                <AxiosProvider baseapi="/api">
-                  <BaseTable
-                    url={paramsUrl}
-                    columns={globalParamColumns}
-                    filters={[]}
-                    setFilters={noopSetFilters}
-                    reRenderSignal={tableSignal}
-                    defaultColumn={{
-                      enableColumnFilter: false,
-                      size: 150,
-                      minSize: 40,
-                      maxSize: 4000,
-                    }}
-                    style={{ flex: 1, minWidth: 0, minHeight: 0, width: '100%' }}
-                  />
-                </AxiosProvider>
-              </GlobalEditorProvider>
-            </Box>
-
-            <Box
-              component="fieldset"
-              sx={{
-                flexShrink: 0,
-                m: 0,
-                px: 1.5,
-                pt: 0.5,
-                pb: 1,
-                border: '1px solid',
-                borderColor: 'divider',
-                borderRadius: 1,
+            {/* Таблица примерно на 40% короче, эта высота у блока отчёта. */}
+            <Box sx={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', gap: 1.25 }}>
+              <Box sx={{
+                flex: '3 1 0',
+                minHeight: 0,
                 minWidth: 0,
+                width: '100%',
+                overflow: 'hidden',
+                display: 'flex',
+                flexDirection: 'column',
+                '& .overflow-y-auto': { overflowX: 'auto' },
+                '& td, & th': {
+                  whiteSpace: 'normal !important',
+                  textOverflow: 'clip !important',
+                  overflowWrap: 'anywhere',
+                },
               }}
-            >
-              <Typography component="legend" variant="body2" sx={{ px: 0.5 }}>
-                Параметры для отчета &quot;Расчет приведенной проходки&quot;
-              </Typography>
-              <Box sx={{ display: 'flex', gap: 1.5, minWidth: 0 }}>
-                <CheckColumn
-                  title="Тип скважины"
-                  items={form.wellTypes}
-                  selected={wellTypeIds}
-                  saved={savedWellTypeIds}
-                  disabled={saving}
-                  onToggle={(id) => setWellTypeIds((ids) => selectWellType(ids, id))}
-                />
-                <CheckColumn
-                  title="Параметры"
-                  items={form.reportParams}
-                  selected={reportParamIds}
-                  saved={savedReportParamIds}
-                  disabled={saving}
-                  onToggle={(id) => setReportParamIds((ids) => toggleReportParam(ids, id))}
-                />
+              >
+                <GlobalEditorProvider value={editor}>
+                  <AxiosProvider baseapi="/api">
+                    <BaseTable
+                      url={paramsUrl}
+                      columns={globalParamColumns}
+                      filters={[]}
+                      setFilters={noopSetFilters}
+                      reRenderSignal={tableSignal}
+                      defaultColumn={{
+                        enableColumnFilter: false,
+                        size: 150,
+                        minSize: 40,
+                        maxSize: 4000,
+                      }}
+                      style={{ flex: 1, minWidth: 0, minHeight: 0, width: '100%' }}
+                    />
+                  </AxiosProvider>
+                </GlobalEditorProvider>
+              </Box>
+
+              <Box
+                component="fieldset"
+                sx={{
+                  flex: '4 1 0',
+                  minHeight: 0,
+                  m: 0,
+                  px: 1.5,
+                  pt: 0.5,
+                  pb: 1,
+                  border: '1px solid',
+                  borderColor: 'divider',
+                  borderRadius: 1,
+                  minWidth: 0,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  overflow: 'hidden',
+                }}
+              >
+                <Typography component="legend" variant="body2" sx={{ px: 0.5 }}>
+                  Параметры для отчета &quot;Расчет приведенной проходки&quot;
+                </Typography>
+                <Box sx={{ display: 'flex', gap: 1.5, flex: 1, minHeight: 0, minWidth: 0 }}>
+                  <CheckColumn
+                    title="Тип скважины"
+                    items={form.wellTypes}
+                    selected={wellTypeIds}
+                    saved={savedWellTypeIds}
+                    disabled={saving}
+                    onToggle={(id) => setWellTypeIds((ids) => selectWellType(ids, id))}
+                  />
+                  <CheckColumn
+                    title="Параметры"
+                    items={form.reportParams}
+                    selected={reportParamIds}
+                    saved={savedReportParamIds}
+                    disabled={saving}
+                    onToggle={(id) => setReportParamIds((ids) => toggleReportParam(ids, id))}
+                  />
+                </Box>
               </Box>
             </Box>
           </>
