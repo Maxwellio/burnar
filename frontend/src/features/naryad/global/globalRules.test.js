@@ -8,7 +8,6 @@ import {
   globalChangedFields,
   globalRowEditable,
   isGlobalDirty,
-  masterNames,
   selectWellType,
   toggleReportParam,
 } from './globalRules.js'
@@ -125,14 +124,5 @@ describe('cell display', () => {
   it('uses an empty string for a null text value', () => {
     assert.equal(globalCellValue({}, { ...row, valstr: null }, 'valstr'), '')
     assert.equal(globalCellValue({}, { ...row, val: null }, 'val'), '')
-  })
-})
-
-describe('master names', () => {
-  it('splits the getmasters string and keeps one name whole', () => {
-    assert.deepEqual(masterNames('И.И.Иванов - П.П.Петров'), ['И.И.Иванов', 'П.П.Петров'])
-    assert.deepEqual(masterNames('И.И.Иванов'), ['И.И.Иванов'])
-    assert.deepEqual(masterNames(''), [])
-    assert.deepEqual(masterNames(null), [])
   })
 })

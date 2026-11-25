@@ -43,6 +43,13 @@ describe('catalog insert stays wired on the naryad page', () => {
     assert.match(src, /available: hasVipolnenie/)
     assert.match(src, /onInserted=/)
   })
+
+  it('keys the catalog and the global params dialog differently', () => {
+    const src = readFileSync(new URL('../NaryadPage.jsx', import.meta.url), 'utf8')
+    assert.match(src, /key=\{`catalog-\$\{id\}`\}/)
+    assert.match(src, /key=\{`global-\$\{id\}`\}/)
+    assert.doesNotMatch(src, /key=\{id\}/)
+  })
 })
 
 describe('expand buttons sit second, after cross parameters', () => {

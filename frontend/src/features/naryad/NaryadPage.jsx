@@ -412,8 +412,9 @@ export default function NaryadPage() {
         ) : null}
       </Box>
 
+      {/* Каталог и общие параметры — соседи, у каждого свой ключ с id наряда. */}
       <CatalogDialog
-        key={id}
+        key={`catalog-${id}`}
         open={catalogOpen}
         onClose={() => setCatalogOpen(false)}
         naryadId={id}
@@ -437,7 +438,7 @@ export default function NaryadPage() {
 
       {globalOpen ? (
         <GlobalParamsDialog
-          key={id}
+          key={`global-${id}`}
           naryadId={id}
           onClose={() => setGlobalOpen(false)}
           onNameSaved={setNameNar}

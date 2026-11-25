@@ -18,12 +18,6 @@ export const NM_MAX = 50
 export const VALSTR_MAX = 150
 export const VAL_LIMIT = 1000000
 
-/** Имена из burnar.getmasters: строка склеена через « - ». */
-export function masterNames(masters) {
-  if (masters == null || masters === '') return []
-  return String(masters).split(' - ').map((name) => name.trim()).filter((name) => name !== '')
-}
-
 const LOCATION = new Set([5, 149, 470])
 
 /** Скважина, куст и месторождение, а при закрытии наряда — вся таблица. */

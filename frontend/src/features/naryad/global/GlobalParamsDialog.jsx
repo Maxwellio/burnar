@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Alert from '@mui/material/Alert'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
@@ -34,7 +34,6 @@ import {
   globalTextBold,
   invalidGlobalNumbers,
   isGlobalDirty,
-  masterNames,
   selectWellType,
   toggleReportParam,
 } from './globalRules.js'
@@ -62,26 +61,63 @@ function ReadOnlyField({ label, value }) {
   )
 }
 
+function fieldOverflows(input) {
+  if (input == null || input.clientWidth <= 0 || input.value === '') return false
+  const style = getComputedStyle(input)
+  const canvas = fieldOverflows.canvas || (fieldOverflows.canvas = document.createElement('canvas'))
+  const context = canvas.getContext('2d')
+  context.font = style.font
+  const textWidth = context.measureText(input.value).width
+  const available = input.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight)
+  return textWidth > available + 1
+}
+
 function MastersField({ masters }) {
   const value = masters ?? ''
-  const names = masterNames(value)
+  const inputRef = useRef(null)
+  const [overflow, setOverflow] = useState(false)
+
+  useEffect(() => {
+    const input = inputRef.current
+    if (input == null) return undefined
+    const measure = () => setOverflow(fieldOverflows(input))
+    measure()
+    const observer = new ResizeObserver(measure)
+    observer.observe(input)
+    return () => observer.disconnect()
+  }, [value])
+
   return (
-    <TextField
-      select
-      label="Мастер(а)"
-      value={value}
-      onChange={() => {}}
-      size="small"
-      fullWidth
-      InputLabelProps={{ shrink: true }}
-      sx={fieldSx}
+    <Tooltip
+      title={overflow ? value : ''}
+      placement="top"
+      disableHoverListener={!overflow}
+      disableFocusListener={!overflow}
+      disableTouchListener={!overflow}
+      slotProps={{ tooltip: { sx: { maxWidth: 480 } } }}
     >
-      {/* В поле остаётся вся строка getmasters, пункты ниже только показывают имена. */}
-      <MenuItem key="current" value={value} sx={{ display: 'none' }}>{value || '\u00a0'}</MenuItem>
-      {names.map((name, index) => (
-        <MenuItem key={`${name}-${index}`} value={`\u0000${index}`}>{name}</MenuItem>
-      ))}
-    </TextField>
+      <Box sx={{ position: 'relative', minWidth: 0 }}>
+        <TextField
+          label="Мастер(а)"
+          value={value}
+          size="small"
+          fullWidth
+          disabled
+          InputLabelProps={{ shrink: true }}
+          inputRef={inputRef}
+          sx={{
+            ...fieldSx,
+            '& .MuiInputBase-input': {
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+            },
+          }}
+        />
+        {/* Disabled-поле не принимает наведение, слой сверху открывает подсказку. */}
+        <Box aria-hidden sx={{ position: 'absolute', inset: 0 }} />
+      </Box>
+    </Tooltip>
   )
 }
 
