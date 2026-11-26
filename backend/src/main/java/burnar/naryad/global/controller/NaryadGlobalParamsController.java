@@ -3,17 +3,23 @@ package burnar.naryad.global.controller;
 import burnar.naryad.global.dto.NaryadGlobalFormDto;
 import burnar.naryad.global.dto.NaryadGlobalSaveRequest;
 import burnar.naryad.global.dto.NaryadGlobalSaveResultDto;
+import burnar.naryad.global.dto.WellRefreshRequest;
+import burnar.naryad.global.dto.WellSearchRowDto;
 import burnar.naryad.skv.dto.NaryadSkvParamDto;
 import burnar.naryad.global.service.NaryadGlobalParamsService;
+import burnar.naryad.global.service.WellSearchService;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -30,9 +36,12 @@ import java.util.Map;
 public class NaryadGlobalParamsController {
 
     private final NaryadGlobalParamsService service;
+    private final WellSearchService wellSearchService;
 
-    public NaryadGlobalParamsController(NaryadGlobalParamsService service) {
+    public NaryadGlobalParamsController(
+            NaryadGlobalParamsService service, WellSearchService wellSearchService) {
         this.service = service;
+        this.wellSearchService = wellSearchService;
     }
 
     @GetMapping("/{id:\\d+}/global")
@@ -43,6 +52,21 @@ public class NaryadGlobalParamsController {
     @GetMapping("/{id:\\d+}/global/params")
     public List<NaryadSkvParamDto> params(@PathVariable int id) {
         return service.findParams(id);
+    }
+
+    @GetMapping("/wells")
+    public List<WellSearchRowDto> wells(
+            @RequestParam(name = "skv", required = false) String skv,
+            @RequestParam(name = "mest", required = false) String mest,
+            @RequestParam(name = "kust", required = false) String kust,
+            @RequestParam(name = "tehmesto", required = false) String tehmesto) {
+        return wellSearchService.search(skv, mest, kust, tehmesto);
+    }
+
+    @PostMapping("/wells/refresh")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void refreshWells(@RequestBody(required = false) WellRefreshRequest request) {
+        wellSearchService.refresh(request == null ? null : request.getTehmesto());
     }
 
     @PutMapping("/{id:\\d+}/global")

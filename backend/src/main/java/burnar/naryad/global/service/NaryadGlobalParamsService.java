@@ -102,6 +102,26 @@ public class NaryadGlobalParamsService {
             "UPDATE burnar.znparams SET znval = :znval, val = :val, valstr = :valstr "
                     + "WHERE defnar = :narkey AND parcode = :parcode AND prnum = :prnum";
 
+    /**
+     * Код скважины — прямой потомок 149, куста — 470, месторождения — потомок 5
+     * или запись поддерева 3015, как в поиске.
+     */
+    static final String LOCATION_NAME_SQL =
+            "SELECT c.nm FROM public.common_spr c "
+                    + "WHERE c.id = :id AND ( "
+                    + "  (:parcode = 149 AND c.parent_id = 149) "
+                    + "  OR (:parcode = 470 AND c.parent_id = 470) "
+                    + "  OR (:parcode = 5 AND c.parent_id = 5) "
+                    + "  OR (:parcode = 5 AND EXISTS ( "
+                    + "    WITH RECURSIVE tmp AS ( "
+                    + "      SELECT id FROM public.common_spr WHERE id = 3015 "
+                    + "      UNION ALL "
+                    + "      SELECT child.id FROM public.common_spr child "
+                    + "      JOIN tmp ON tmp.id = child.parent_id "
+                    + "    ) SELECT 1 FROM tmp WHERE tmp.id = c.id "
+                    + "  )) "
+                    + ")";
+
     static final String WELL_TYPES_SQL =
             "SELECT id, sname FROM pr.pr_type_skv ORDER BY ord, id";
 
@@ -236,17 +256,18 @@ public class NaryadGlobalParamsService {
                 throw new ResponseStatusException(HttpStatus.NOT_FOUND, NaryadGlobalParams.PARAM_NOT_FOUND);
             }
             BigDecimal val = NaryadGlobalParams.normalizeVal(change.getVal());
-            String valstr = NaryadSkvParams.normalizeValstr(change.getValstr());
             BigDecimal znval = change.getZnval();
+            if (NaryadGlobalParams.locationParam(row.getParcode())) {
+                applyLocation(updates, key, naryadId, closed, row, znval, val, change.getValstr());
+                continue;
+            }
+            String valstr = NaryadSkvParams.normalizeValstr(change.getValstr());
             if (NaryadSkvParams.sameValues(row.getZnval(), row.getVal(), row.getValstr(), znval, val, valstr)) {
                 updates.remove(key);
                 continue;
             }
             if (closed) {
                 throw new ResponseStatusException(HttpStatus.CONFLICT, NaryadSkvParams.CLOSED_MESSAGE);
-            }
-            if (NaryadGlobalParams.locationParam(row.getParcode())) {
-                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, NaryadGlobalParams.LOCATION_READONLY);
             }
             if (znval != null && !sameNumber(znval, row.getZnval()) && !valueInSubtree(row.getParcode(), znval)) {
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST, NaryadSkvParams.VALUE_NOT_IN_LIST);
@@ -260,6 +281,54 @@ public class NaryadGlobalParamsService {
                     .addValue("valstr", valstr)));
         }
         return new ArrayList<>(updates.values());
+    }
+
+    private void applyLocation(
+            Map<String, PendingUpdate> updates,
+            String key,
+            int naryadId,
+            boolean closed,
+            NaryadSkvParamDto row,
+            BigDecimal znval,
+            BigDecimal val,
+            String requestedValstr) {
+        if (closed) {
+            String valstr = NaryadSkvParams.normalizeValstr(requestedValstr);
+            if (!NaryadSkvParams.sameValues(row.getZnval(), row.getVal(), row.getValstr(), znval, val, valstr)) {
+                throw new ResponseStatusException(HttpStatus.CONFLICT, NaryadSkvParams.CLOSED_MESSAGE);
+            }
+            updates.remove(key);
+            return;
+        }
+        NaryadGlobalParams.LocationUpdate update = NaryadGlobalParams.acceptLocation(
+                row.getZnval(),
+                row.getVal(),
+                row.getValstr(),
+                znval,
+                val,
+                locationName(row.getParcode(), znval));
+        if (update == null) {
+            updates.remove(key);
+            return;
+        }
+        updates.put(key, new PendingUpdate(new MapSqlParameterSource()
+                .addValue("narkey", naryadId)
+                .addValue("parcode", row.getParcode())
+                .addValue("prnum", row.getPrnum())
+                .addValue("znval", update.znval())
+                .addValue("val", update.val())
+                .addValue("valstr", update.valstr())));
+    }
+
+    private String locationName(BigDecimal parcode, BigDecimal znval) {
+        if (znval == null) {
+            return null;
+        }
+        List<String> names = jdbc.query(
+                LOCATION_NAME_SQL,
+                new MapSqlParameterSource("id", znval).addValue("parcode", parcode),
+                (rs, rowNum) -> rs.getString("nm"));
+        return names.isEmpty() ? null : names.get(0);
     }
 
     private List<NaryadSkvParamDto> queryParams(int naryadId) {

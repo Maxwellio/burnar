@@ -170,6 +170,55 @@ export function invalidGlobalNumbers(draft) {
   })
 }
 
+const LOCATION_SELECTION = [
+  [149, 'wellId', 'wellNm'],
+  [470, 'kustId', 'kustNm'],
+  [5, 'mestId', 'mestNm'],
+]
+
+/**
+ * Выбор в поиске скважины. Пишет скважину, куст и месторождение, если код
+ * отличается от сохранённого. Число и остальные параметры не меняются.
+ * Повторный выбор сохранённого кода снимает черновик этой строки.
+ */
+export function applyWellSelection(draft, rows, selection) {
+  const next = { ...(draft ?? {}) }
+  for (const [parcode, idKey, nameKey] of LOCATION_SELECTION) {
+    const row = (rows ?? []).find((item) => Number(item.parcode) === parcode)
+    if (!row) continue
+    const key = globalRowKey(row)
+    const original = draft?.[key]?.original ?? globalRowValues(row)
+    const id = selection?.[idKey]
+    const name = selection?.[nameKey] ?? ''
+    const values = {
+      ...original,
+      znval: id == null || id === '' ? null : String(id),
+      valstr: name,
+      znnm: name,
+    }
+    if (!changedFields({ original, values }).znval) {
+      delete next[key]
+      continue
+    }
+    next[key] = {
+      parcode: row.parcode,
+      prnum: row.prnum,
+      original,
+      values,
+    }
+  }
+  return next
+}
+
+/** Название в справочной ячейке: из черновика поиска или с сервера. */
+export function locationReferenceLabel(draft, row) {
+  const values = draft?.[globalRowKey(row)]?.values
+  if (values && Object.prototype.hasOwnProperty.call(values, 'znnm')) {
+    return values.znnm ?? ''
+  }
+  return row?.znnm ?? ''
+}
+
 export function canSaveGlobal(state) {
   const shifr = state.shifr == null ? '' : String(state.shifr).trim()
   const nm = state.nm == null ? '' : String(state.nm).trim()

@@ -52,6 +52,7 @@ export function createValueParamColumns({
   cellEditable,
   cellValue,
   changedFields,
+  readOnlyLabel,
   valstrMax = VALSTR_MAX_LENGTH,
 }) {
   function NmCell({ row }) {
@@ -71,11 +72,27 @@ export function createValueParamColumns({
   function ZnvalCell({ row }) {
     const editor = useEditor()
     const original = row.original
+    const changed = changedFields(editor.draft, original).znval
+    if (!cellEditable(editor, original)) {
+      const label = readOnlyLabel ? readOnlyLabel(editor, original) : (original.znnm ?? '')
+      return (
+        <Box
+          component="span"
+          sx={{
+            display: 'block',
+            fontWeight: changed ? 700 : 400,
+            whiteSpace: 'normal',
+            overflowWrap: 'anywhere',
+          }}
+        >
+          {label}
+        </Box>
+      )
+    }
     const options = listedValues(Array.isArray(original.values) ? original.values : [])
-    if (!cellEditable(editor, original)) return original.znnm ?? ''
     const value = cellValue(editor.draft, original, 'znval') ?? ''
     const known = options.some((item) => String(item.id) === String(value))
-    const bold = changedFields(editor.draft, original).znval
+    const bold = changed
     return (
       <CellEditor>
         <Select
@@ -138,8 +155,17 @@ export function createValueParamColumns({
     const editor = useEditor()
     const original = row.original
     const value = cellValue(editor.draft, original, 'valstr')
-    if (!cellEditable(editor, original)) return value
     const bold = changedFields(editor.draft, original).valstr
+    if (!cellEditable(editor, original)) {
+      return (
+        <Box
+          component="span"
+          sx={{ display: 'block', fontWeight: bold ? 700 : 400, whiteSpace: 'pre-wrap' }}
+        >
+          {value ?? ''}
+        </Box>
+      )
+    }
     return (
       <CellEditor>
         <TextField
