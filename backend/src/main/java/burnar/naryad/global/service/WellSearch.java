@@ -3,6 +3,8 @@ package burnar.naryad.global.service;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.math.BigDecimal;
+
 /**
  * Правила поиска скважины (Delphi {@code SkvFind}) без доступа к базе.
  * Скважина и куст ищутся с начала строки, месторождение — по вхождению.
@@ -67,6 +69,31 @@ public final class WellSearch {
                 searchableTehmesto(tehmesto) ? prefix(tehmesto) : null);
     }
 
+    /** Код текущей скважины из query. Пустое и нечисловое значение пометку не ставят. */
+    public static BigDecimal wellId(String raw) {
+        if (raw == null || raw.isBlank()) {
+            return null;
+        }
+        try {
+            return new BigDecimal(raw.trim());
+        } catch (NumberFormatException ex) {
+            return null;
+        }
+    }
+
+    /** Ключ строки для BaseTable: скважина, куст, месторождение и номер в выдаче. */
+    public static String rowKey(BigDecimal wellId, BigDecimal kustId, BigDecimal mestId, int index) {
+        return plain(wellId) + ":" + plain(kustId) + ":" + plain(mestId) + ":" + index;
+    }
+
+    /** «Выбрана», если код совпадает с текущей скважиной наряда, иначе номер с 1. */
+    public static String rowNumber(BigDecimal wellId, BigDecimal currentWellId, int index) {
+        if (wellId != null && currentWellId != null && wellId.compareTo(currentWellId) == 0) {
+            return "Выбрана";
+        }
+        return Integer.toString(index + 1);
+    }
+
     /** Длина как в Delphi: пробелы считаются, короче 9 символов процедура не вызывается. */
     public static String refreshTehmesto(String value) {
         if (value == null || value.length() < 9) {
@@ -107,6 +134,10 @@ public final class WellSearch {
 
     private static String prefix(String value) {
         return pattern(value, true);
+    }
+
+    private static String plain(BigDecimal value) {
+        return value == null ? "" : value.stripTrailingZeros().toPlainString();
     }
 
     /** Шаблоны LIKE. {@code null} — поле в запрос не входит. */

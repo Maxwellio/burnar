@@ -11,6 +11,7 @@ import java.math.BigDecimal;
 import java.sql.CallableStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.List;
 
 /** Поиск скважины и загрузка справочника по техместу. */
@@ -25,7 +26,11 @@ public class WellSearchService {
         this.autocommit = autocommit;
     }
 
-    public List<WellSearchRowDto> search(String skv, String mest, String kust, String tehmesto) {
+    public List<WellSearchRowDto> search(
+            String skv, String mest, String kust, String tehmesto, BigDecimal currentWellId, boolean ready) {
+        if (!ready) {
+            return List.of();
+        }
         WellSearch.Filters filters = WellSearch.filters(skv, mest, kust, tehmesto);
         MapSqlParameterSource params = new MapSqlParameterSource();
         if (filters.skvPrefix() != null) {
@@ -40,16 +45,38 @@ public class WellSearchService {
         if (filters.tehmestoPrefix() != null) {
             params.addValue("tehmesto", filters.tehmestoPrefix());
         }
-        return jdbc.query(WellSearch.searchSql(filters), params, (rs, rowNum) -> new WellSearchRowDto(
-                decimal(rs, "well_id"),
-                rs.getString("well_nm"),
-                rs.getString("well_label"),
-                decimal(rs, "kust_id"),
-                rs.getString("kust_nm"),
-                rs.getString("kust_label"),
-                decimal(rs, "mest_id"),
-                rs.getString("mest_nm"),
-                rs.getString("tehmesto")));
+        List<WellSearchRowDto> found = jdbc.query(
+                WellSearch.searchSql(filters),
+                params,
+                (rs, rowNum) -> new WellSearchRowDto(
+                        null,
+                        null,
+                        decimal(rs, "well_id"),
+                        rs.getString("well_nm"),
+                        rs.getString("well_label"),
+                        decimal(rs, "kust_id"),
+                        rs.getString("kust_nm"),
+                        rs.getString("kust_label"),
+                        decimal(rs, "mest_id"),
+                        rs.getString("mest_nm"),
+                        rs.getString("tehmesto")));
+        List<WellSearchRowDto> rows = new ArrayList<>(found.size());
+        for (int i = 0; i < found.size(); i++) {
+            WellSearchRowDto row = found.get(i);
+            rows.add(new WellSearchRowDto(
+                    WellSearch.rowKey(row.getWellId(), row.getKustId(), row.getMestId(), i),
+                    WellSearch.rowNumber(row.getWellId(), currentWellId, i),
+                    row.getWellId(),
+                    row.getWellNm(),
+                    row.getWellLabel(),
+                    row.getKustId(),
+                    row.getKustNm(),
+                    row.getKustLabel(),
+                    row.getMestId(),
+                    row.getMestNm(),
+                    row.getTehmesto()));
+        }
+        return rows;
     }
 
     /**

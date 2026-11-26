@@ -60,4 +60,24 @@ class WellSearchTest {
         assertTrue(!sql.contains(":tehmesto"));
         assertTrue(sql.contains("ORDER BY m.nm_msr, k.nm_kust, sk.nm_skv"));
     }
+
+    @Test
+    void rowNumberMarksTheCurrentWell() {
+        assertEquals("Выбрана", WellSearch.rowNumber(new BigDecimal("10"), new BigDecimal("10.0"), 1));
+        assertEquals("1", WellSearch.rowNumber(new BigDecimal("8"), new BigDecimal("10"), 0));
+        assertEquals("2", WellSearch.rowNumber(null, new BigDecimal("10"), 1));
+        assertEquals("1", WellSearch.rowNumber(new BigDecimal("10"), null, 0));
+    }
+
+    @Test
+    void rowKeyKeepsPlainIdsAndTheIndex() {
+        assertEquals(
+                "10:20:30:0",
+                WellSearch.rowKey(new BigDecimal("10.0"), new BigDecimal("20"), new BigDecimal("30"), 0));
+        assertEquals("10::30:1", WellSearch.rowKey(new BigDecimal("10"), null, new BigDecimal("30"), 1));
+        assertNull(WellSearch.wellId(null));
+        assertNull(WellSearch.wellId("  "));
+        assertNull(WellSearch.wellId("скв"));
+        assertEquals(new BigDecimal("10"), WellSearch.wellId(" 10 "));
+    }
 }

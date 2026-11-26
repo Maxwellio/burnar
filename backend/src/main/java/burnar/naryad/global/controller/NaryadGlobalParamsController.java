@@ -7,6 +7,7 @@ import burnar.naryad.global.dto.WellRefreshRequest;
 import burnar.naryad.global.dto.WellSearchRowDto;
 import burnar.naryad.skv.dto.NaryadSkvParamDto;
 import burnar.naryad.global.service.NaryadGlobalParamsService;
+import burnar.naryad.global.service.WellSearch;
 import burnar.naryad.global.service.WellSearchService;
 
 import org.springframework.http.HttpStatus;
@@ -59,8 +60,11 @@ public class NaryadGlobalParamsController {
             @RequestParam(name = "skv", required = false) String skv,
             @RequestParam(name = "mest", required = false) String mest,
             @RequestParam(name = "kust", required = false) String kust,
-            @RequestParam(name = "tehmesto", required = false) String tehmesto) {
-        return wellSearchService.search(skv, mest, kust, tehmesto);
+            @RequestParam(name = "tehmesto", required = false) String tehmesto,
+            @RequestParam(name = "current", required = false) String current,
+            @RequestParam(name = "ready", required = false) String ready) {
+        return wellSearchService.search(
+                skv, mest, kust, tehmesto, WellSearch.wellId(current), !"0".equals(ready));
     }
 
     @PostMapping("/wells/refresh")

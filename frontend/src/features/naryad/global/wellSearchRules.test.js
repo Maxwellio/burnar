@@ -4,8 +4,8 @@ import {
   CLOSED_SEARCH_HINT,
   REFRESH_CONFIRM_MESSAGE,
   TEHMESTO_TOO_SHORT_MESSAGE,
-  markChosen,
   refreshDoneMessage,
+  wellSearchFilters,
   searchSeed,
   shouldSearchOnOpen,
   stripKustPrefix,
@@ -63,13 +63,21 @@ describe('well search fields', () => {
     assert.match(CLOSED_SEARCH_HINT, /Поиск скважины недоступен/)
   })
 
-  it('marks the current well instead of its row number', () => {
-    const marked = markChosen([
-      { wellId: 8, wellLabel: 'a' },
-      { wellId: 10, wellLabel: 'b' },
-    ], 10)
-    assert.equal(marked[0].number, '1')
-    assert.equal(marked[1].number, 'Выбрана')
+  it('sends search fields as table filters and stays idle before the first search', () => {
+    assert.deepEqual(wellSearchFilters(null, 10), [{ id: 'ready', value: '0' }])
+    assert.deepEqual(
+      wellSearchFilters({ skv: '15', mest: '', kust: '3', tehmesto: '12345' }, 10),
+      [
+        { id: 'skv', value: '15' },
+        { id: 'kust', value: '3' },
+        { id: 'tehmesto', value: '12345' },
+        { id: 'current', value: '10' },
+      ],
+    )
+    assert.deepEqual(
+      wellSearchFilters({ skv: '15', mest: '', kust: '', tehmesto: '' }, null),
+      [{ id: 'skv', value: '15' }],
+    )
   })
 })
 

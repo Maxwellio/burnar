@@ -57,12 +57,26 @@ export function hasWellParam(rows) {
   return (rows ?? []).some((row) => Number(row.parcode) === 149)
 }
 
-/** Номер строки или «Выбрана», если код совпадает с текущей скважиной наряда. */
-export function markChosen(rows, wellId) {
-  return (rows ?? []).map((row, index) => ({
-    ...row,
-    number: sameId(row.wellId, wellId) ? 'Выбрана' : String(index + 1),
-  }))
+/** Стабильный адрес BaseTable: ширины колонок не зависят от текста поиска. */
+export const WELL_SEARCH_URL = '/naryady/wells'
+
+/**
+ * Фильтры BaseTable уходят query-параметрами.
+ * Пока поиск не запускали, `ready=0` — сервер отдаёт пустой список и шапка таблицы уже на месте.
+ */
+export function wellSearchFilters(criteria, currentWellId) {
+  if (criteria == null) return [{ id: 'ready', value: '0' }]
+  const filters = []
+  const put = (id, value) => {
+    if (value == null || value === '') return
+    filters.push({ id, value: String(value) })
+  }
+  put('skv', criteria.skv)
+  put('mest', criteria.mest)
+  put('kust', criteria.kust)
+  put('tehmesto', criteria.tehmesto)
+  put('current', currentWellId)
+  return filters
 }
 
 function stripFirst(name, token) {
@@ -83,9 +97,4 @@ function shown(rows, draft, parcode) {
     ? values.znval
     : row.znval
   return { name, id: id ?? null }
-}
-
-function sameId(left, right) {
-  if (left == null || left === '' || right == null || right === '') return false
-  return String(left) === String(right)
 }
