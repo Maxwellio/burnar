@@ -339,12 +339,6 @@ export default function SkvParamsDialog({
                     filters={[]}
                     setFilters={noopSetFilters}
                     reRenderSignal={tableSignal}
-                    defaultColumn={{
-                      enableColumnFilter: false,
-                      size: 150,
-                      minSize: 40,
-                      maxSize: 4000,
-                    }}
                     style={{ flex: 1, minWidth: 0, minHeight: 0, width: '100%' }}
                   />
                 </AxiosProvider>

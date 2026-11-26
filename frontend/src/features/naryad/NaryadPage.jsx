@@ -18,6 +18,7 @@ import useNaryadSplit from './workspace/layout/useNaryadSplit.js'
 import NaryadWorkspacePanel from './workspace/NaryadWorkspacePanel.jsx'
 import { vipolneniePart } from './parts/vipolneniePart.js'
 import { zadaniePart } from './parts/zadaniePart.js'
+import GlobalParamsDialog from './global/GlobalParamsDialog.jsx'
 import SkvParamsWindows from './skv/SkvParamsWindows.jsx'
 import useSkvWindows from './skv/useSkvWindows.js'
 import {
@@ -116,7 +117,7 @@ function paneSx(visible, { primary, bothOpen, firstSize }) {
  * Карточка наряда /naryad/:id.
  * Action bar: включаемые вкладки (повторный клик по единственной переключает
  * на другую, если она есть), кнопка деления, подпись наряда,
- * заглушка параметров, немодальный каталог и выход на список.
+ * окно общих параметров, немодальный каталог и выход на список.
  * Обе вкладки при включении делят область: слева-направо или сверху-вниз.
  * Направление и доля первой половины хранятся в localStorage. Разделитель
  * тянется; двойной щелчок возвращает половину. Панели остаются
@@ -136,6 +137,7 @@ export default function NaryadPage() {
   const [zadanieReloadSignal, setZadanieReloadSignal] = useState(0)
   const [vipolnenieReloadSignal, setVipolnenieReloadSignal] = useState(0)
   const [catalogOpen, setCatalogOpen] = useState(false)
+  const [globalOpen, setGlobalOpen] = useState(false)
   const [zadanieCatalogTarget, setZadanieCatalogTarget] = useState(null)
   const [vipolnenieCatalogTarget, setVipolnenieCatalogTarget] = useState(null)
   const skvWindows = useSkvWindows()
@@ -185,6 +187,7 @@ export default function NaryadPage() {
     setOpenPanels([])
     setMountedPanels({ zad: false, vip: false })
     setCatalogOpen(false)
+    setGlobalOpen(false)
     setZadanieCatalogTarget(null)
     setVipolnenieCatalogTarget(null)
     closeAllSkvWindows()
@@ -321,6 +324,7 @@ export default function NaryadPage() {
         <Tooltip title="Общие параметры наряда">
           <IconButton
             aria-label="Общие параметры наряда"
+            onClick={() => setGlobalOpen(true)}
             sx={stubIconSx}
           >
             <Tune />
@@ -408,8 +412,9 @@ export default function NaryadPage() {
         ) : null}
       </Box>
 
+      {/* Каталог и общие параметры — соседи, у каждого свой ключ с id наряда. */}
       <CatalogDialog
-        key={id}
+        key={`catalog-${id}`}
         open={catalogOpen}
         onClose={() => setCatalogOpen(false)}
         naryadId={id}
@@ -430,6 +435,15 @@ export default function NaryadPage() {
           }
         }}
       />
+
+      {globalOpen ? (
+        <GlobalParamsDialog
+          key={`global-${id}`}
+          naryadId={id}
+          onClose={() => setGlobalOpen(false)}
+          onNameSaved={setNameNar}
+        />
+      ) : null}
 
       <SkvParamsWindows
         naryadId={id}
