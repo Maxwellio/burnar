@@ -16,6 +16,7 @@ import {
   fetchVipolnenieBegoperdate,
   setVipolnenieBegoperdate,
 } from '../../../../api/naryadyApi.js'
+import DialogCloseButton, { DialogTitleText, dialogTitleWithCloseSx } from '../../../../components/DialogCloseButton.jsx'
 import DraggableDialog from '../../../../components/DraggableDialog'
 import ActionButton from '../../workspace/ActionButton.jsx'
 import { useNaryadWorkspace } from '../../workspace/NaryadWorkspaceContext.jsx'
@@ -55,7 +56,10 @@ function FactDateDialog({ open, value, pending, onClose, onConfirm }) {
 
   return (
     <DraggableDialog open={open} onClose={pending ? undefined : onClose} maxWidth="xs" fullWidth>
-      <DialogTitle>{FACT_DATE_DIALOG_TITLE}</DialogTitle>
+      <DialogTitle sx={dialogTitleWithCloseSx}>
+        <DialogTitleText>{FACT_DATE_DIALOG_TITLE}</DialogTitleText>
+        <DialogCloseButton onClick={onClose} disabled={pending} />
+      </DialogTitle>
       <DialogContent>
         <Stack spacing={1.5} sx={{ pt: 1 }}>
           <LocalizationProvider

@@ -215,6 +215,15 @@ export function fetchNaryadOcards(id, part, nodeId) {
   return requestAction(`/naryady/${id}/${part}/nodes/${nodeId}/ocards`)
 }
 
+/** Факт работы выполнения в часах. null очищает. В базе пишутся минуты. */
+export function saveVipolnenieFact(id, nodeId, fact) {
+  return requestAction(`/naryady/${id}/vipolnenie/nodes/${nodeId}/fact`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ fact }),
+  })
+}
+
 /** Значение параметра операции. value — число или код списка, null очищает. */
 export function saveNaryadOperParam(id, part, nodeId, parcode, value) {
   return requestAction(`/naryady/${id}/${part}/${nodeId}/params/${parcode}`, {

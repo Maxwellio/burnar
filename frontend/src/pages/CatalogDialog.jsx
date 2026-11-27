@@ -21,6 +21,7 @@ import { ru } from 'date-fns/locale'
 import { AxiosProvider, BaseTreeTable } from 'mainComponent'
 import { insertNaryadCatalog } from '../api/naryadyApi.js'
 import { fetchTematicRazdel } from '../api/tematicRazdelsApi.js'
+import DialogCloseButton, { DialogTitleText, dialogTitleWithCloseSx } from '../components/DialogCloseButton.jsx'
 import DraggableDialog from '../components/DraggableDialog'
 import { useAlert, useChoose } from '../context/ConfirmContext.jsx'
 import {
@@ -288,7 +289,10 @@ export default function CatalogDialog({
       fullWidth
       PaperProps={{ sx: { height: '80vh' } }}
     >
-      <DialogTitle>Каталог</DialogTitle>
+      <DialogTitle sx={dialogTitleWithCloseSx}>
+        <DialogTitleText>Каталог</DialogTitleText>
+        <DialogCloseButton onClick={onClose} />
+      </DialogTitle>
       <DialogContent
         dividers
         sx={{

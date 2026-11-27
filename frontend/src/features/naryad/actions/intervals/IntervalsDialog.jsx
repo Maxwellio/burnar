@@ -8,6 +8,7 @@ import Tab from '@mui/material/Tab'
 import Tabs from '@mui/material/Tabs'
 import Timeline from '@mui/icons-material/Timeline'
 import { AxiosProvider, BaseTable } from 'mainComponent'
+import DialogCloseButton, { DialogTitleText, dialogTitleWithCloseSx } from '../../../../components/DialogCloseButton.jsx'
 import DraggableDialog from '../../../../components/DraggableDialog'
 import { COLUMN_SIZING_KEYS, naryadCompactTableSx } from '../../naryadPageLayout.js'
 import ActionButton from '../../workspace/ActionButton.jsx'
@@ -101,7 +102,10 @@ function IntervalsDialog({ open, naryadId, onClose }) {
       fullWidth
       PaperProps={{ sx: { height: '70vh' } }}
     >
-      <DialogTitle>{INTERVALS_DIALOG_TITLE}</DialogTitle>
+      <DialogTitle sx={dialogTitleWithCloseSx}>
+        <DialogTitleText>{INTERVALS_DIALOG_TITLE}</DialogTitleText>
+        <DialogCloseButton onClick={onClose} />
+      </DialogTitle>
       <DialogContent
         sx={{
           display: 'flex',

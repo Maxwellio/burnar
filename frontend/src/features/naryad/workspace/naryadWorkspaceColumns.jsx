@@ -4,6 +4,7 @@ import Tooltip from '@mui/material/Tooltip'
 import Add from '@mui/icons-material/Add'
 import Remove from '@mui/icons-material/Remove'
 import { Bell, Calculator, FolderTree, Link2, SquareArrowOutUpRight, TriangleAlert } from 'lucide-react'
+import { FactCell } from '../actions/fact/FactCell.jsx'
 import { paramColumnDefs, paramRowNumber } from '../actions/params/paramColumns.js'
 import { ParamValueCell } from '../actions/params/operParamColumns.jsx'
 import { workFieldValue } from '../actions/calc/workPatches.js'
@@ -291,7 +292,7 @@ export const naryadZadanieColumns = [
 /** Как у задания, плюс «Факт» сразу после нормы времени и перед «Период». */
 export const naryadVipolnenieColumns = [
   ...makePlanTreeColumns('vip', { vipMarks: true }),
-  col('vip', 'fact', 'Факт', 70),
+  col('vip', 'fact', 'Факт', 70, { cell: FactCell }),
   // col('vip', 'tipbur', 'ЭКС', 80),
   col('vip', 'period_nm', 'Период', 180),
 ]

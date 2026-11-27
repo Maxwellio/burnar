@@ -7,6 +7,7 @@ import MenuItem from '@mui/material/MenuItem'
 import TextField from '@mui/material/TextField'
 import EventAvailable from '@mui/icons-material/EventAvailable'
 import { bindVipolneniePeriod, fetchVipolneniePeriods } from '../../../../api/naryadyApi.js'
+import DialogCloseButton, { DialogTitleText, dialogTitleWithCloseSx } from '../../../../components/DialogCloseButton.jsx'
 import DraggableDialog from '../../../../components/DraggableDialog'
 import ActionButton from '../../workspace/ActionButton.jsx'
 import { useNaryadWorkspace } from '../../workspace/NaryadWorkspaceContext.jsx'
@@ -24,7 +25,10 @@ function BindPeriodDialog({ open, periods, onClose, onConfirm, pending }) {
 
   return (
     <DraggableDialog open={open} onClose={pending ? undefined : onClose} maxWidth="sm" fullWidth>
-      <DialogTitle>Выберите период</DialogTitle>
+      <DialogTitle sx={dialogTitleWithCloseSx}>
+        <DialogTitleText>Выберите период</DialogTitleText>
+        <DialogCloseButton onClick={onClose} disabled={pending} />
+      </DialogTitle>
       <DialogContent>
         <TextField
           select

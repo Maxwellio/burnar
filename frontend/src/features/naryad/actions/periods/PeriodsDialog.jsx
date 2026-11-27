@@ -21,6 +21,7 @@ import {
   fetchVipolneniePeriods,
   updateVipolneniePeriod,
 } from '../../../../api/naryadyApi.js'
+import DialogCloseButton, { DialogTitleText, dialogTitleWithCloseSx } from '../../../../components/DialogCloseButton.jsx'
 import DraggableDialog from '../../../../components/DraggableDialog'
 import { useConfirm } from '../../../../context/ConfirmContext.jsx'
 import { COLUMN_SIZING_KEYS, naryadCompactTableSx } from '../../naryadPageLayout.js'
@@ -102,8 +103,11 @@ function PeriodEditDialog({ open, naryadId, period, onClose, onSaved }) {
 
   return (
     <DraggableDialog open={open} onClose={saving ? undefined : onClose} maxWidth="sm" fullWidth>
-      <DialogTitle>
-        {editing ? 'Редактирование существующего периода' : 'Добавление нового периода'}
+      <DialogTitle sx={dialogTitleWithCloseSx}>
+        <DialogTitleText>
+          {editing ? 'Редактирование существующего периода' : 'Добавление нового периода'}
+        </DialogTitleText>
+        <DialogCloseButton onClick={onClose} disabled={saving} />
       </DialogTitle>
       <DialogContent>
         <Stack spacing={2} sx={{ pt: 1 }}>
@@ -202,7 +206,10 @@ function PeriodsDialog({ open, naryadId, readOnly, onClose }) {
         fullWidth
         PaperProps={{ sx: { height: '30vh' } }}
       >
-        <DialogTitle>Настройка периодов выполнения работ</DialogTitle>
+        <DialogTitle sx={dialogTitleWithCloseSx}>
+          <DialogTitleText>Настройка периодов выполнения работ</DialogTitleText>
+          <DialogCloseButton onClick={onClose} />
+        </DialogTitle>
         <DialogContent
           sx={{
             display: 'flex',

@@ -35,7 +35,7 @@ import java.util.Map;
  * драйвер JDBC не всегда отдаёт их из CALL.
  *
  * Корреляция факта ({@code burnar.factkorr}) здесь не считается: ввод факта
- * в вебе ещё не сделан, скрипт Delphi выполняет у себя.
+ * такую строку не пишет, текстов правил в репозитории нет.
  */
 @Service
 public class NaryadOperCalcService {

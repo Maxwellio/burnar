@@ -8,6 +8,7 @@ import Link from '@mui/material/Link'
 import List from '@mui/material/List'
 import ListItem from '@mui/material/ListItem'
 import { fetchNaryadOcards } from '../../../../api/naryadyApi.js'
+import DialogCloseButton, { DialogTitleText, dialogTitleWithCloseSx } from '../../../../components/DialogCloseButton.jsx'
 import DraggableDialog from '../../../../components/DraggableDialog.jsx'
 import ActionButton from '../../workspace/ActionButton.jsx'
 import { detailNodeId } from '../../workspace/naryadWorkspaceData.js'
@@ -70,7 +71,10 @@ export default function ShowOperCardButton() {
         }}
       />
       <DraggableDialog open={files != null} onClose={() => setFiles(null)} maxWidth="xs" fullWidth>
-        <DialogTitle>{OPER_CARD_TITLE}</DialogTitle>
+        <DialogTitle sx={dialogTitleWithCloseSx}>
+          <DialogTitleText>{OPER_CARD_TITLE}</DialogTitleText>
+          <DialogCloseButton onClick={() => setFiles(null)} />
+        </DialogTitle>
         <DialogContent dividers>
           <List dense disablePadding>
             {(files ?? []).map((file) => (
