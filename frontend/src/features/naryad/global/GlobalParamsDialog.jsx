@@ -15,7 +15,7 @@ import Tooltip from '@mui/material/Tooltip'
 import Typography from '@mui/material/Typography'
 import Close from '@mui/icons-material/Close'
 import { AxiosProvider, BaseTable } from 'mainComponent'
-import { fetchNaryadGlobal, saveNaryadGlobal } from '../../../api/naryadyApi.js'
+import { fetchNaryadGlobal, fetchNaryadGlobalParams, saveNaryadGlobal } from '../../../api/naryadyApi.js'
 import DraggableDialog from '../../../components/DraggableDialog'
 import { useAlert, useConfirm } from '../../../context/ConfirmContext.jsx'
 import useColumnSizingPersistence from '../workspace/layout/useColumnSizingPersistence.js'
@@ -28,6 +28,7 @@ import {
   NM_MAX,
   SHIFR_MAX,
   applyGlobalEdit,
+  applyWellSelection,
   buildGlobalSavePayload,
   canSaveGlobal,
   globalRowEditable,
@@ -37,6 +38,8 @@ import {
   selectWellType,
   toggleReportParam,
 } from './globalRules.js'
+import WellSearchDialog from './WellSearchDialog.jsx'
+import { CLOSED_SEARCH_HINT, MISSING_WELL_PARAM, hasWellParam } from './wellSearchRules.js'
 
 const noopSetFilters = () => {}
 
@@ -169,7 +172,7 @@ function CheckColumn({ title, items, selected, saved, disabled, onToggle }) {
 
 /**
  * Модальное окно общих параметров наряда (Delphi GlobalVarUnit).
- * Сохранение, ОК и закрытие — одни на всё окно. Поиск скважины пока без действия.
+ * Сохранение, ОК и закрытие — одни на всё окно. Поиск скважины пишет черновик.
  */
 export default function GlobalParamsDialog({ naryadId, onClose, onNameSaved }) {
   const confirm = useConfirm()
@@ -187,6 +190,8 @@ export default function GlobalParamsDialog({ naryadId, onClose, onNameSaved }) {
   const [reportParamIds, setReportParamIds] = useState([])
   const [savedReportParamIds, setSavedReportParamIds] = useState([])
   const [draft, setDraft] = useState({})
+  const [params, setParams] = useState([])
+  const [wellSearchOpen, setWellSearchOpen] = useState(false)
   const [saving, setSaving] = useState(false)
   const [tableSignal, setTableSignal] = useState(0)
 
@@ -233,7 +238,12 @@ export default function GlobalParamsDialog({ naryadId, onClose, onNameSaved }) {
   const loadForm = useCallback(async () => {
     setLoadError('')
     try {
-      takeForm(await fetchNaryadGlobal(naryadId))
+      const [header, paramRows] = await Promise.all([
+        fetchNaryadGlobal(naryadId),
+        fetchNaryadGlobalParams(naryadId),
+      ])
+      takeForm(header)
+      setParams(paramRows ?? [])
       return true
     } catch (error) {
       setLoadError(error?.message || 'Не удалось загрузить общие параметры')
@@ -307,9 +317,14 @@ export default function GlobalParamsDialog({ naryadId, onClose, onNameSaved }) {
   const masters = form?.masters || ''
 
   return (
+    <>
     <DraggableDialog
       open
-      onClose={() => { void requestClose() }}
+      onClose={() => {
+        if (wellSearchOpen) return
+        void requestClose()
+      }}
+      disableEnforceFocus={wellSearchOpen}
       aria-labelledby="global-params-title"
       maxWidth={false}
       PaperProps={{
@@ -409,9 +424,30 @@ export default function GlobalParamsDialog({ naryadId, onClose, onNameSaved }) {
             </Box>
 
             <Box sx={{ flexShrink: 0 }}>
-              <Button type="button" variant="outlined" size="small">
-                Поиск скважины
-              </Button>
+              <Tooltip
+                title={closed ? CLOSED_SEARCH_HINT : ''}
+                disableHoverListener={!closed}
+                disableFocusListener={!closed}
+                disableTouchListener={!closed}
+              >
+                <span>
+                  <Button
+                    type="button"
+                    variant="outlined"
+                    size="small"
+                    disabled={form == null || closed || saving}
+                    onClick={() => {
+                      if (!hasWellParam(params)) {
+                        void showAlert(MISSING_WELL_PARAM)
+                        return
+                      }
+                      setWellSearchOpen(true)
+                    }}
+                  >
+                    Поиск скважины
+                  </Button>
+                </span>
+              </Tooltip>
             </Box>
 
             {badNumbers ? (
@@ -519,5 +555,17 @@ export default function GlobalParamsDialog({ naryadId, onClose, onNameSaved }) {
         </Button>
       </DialogActions>
     </DraggableDialog>
+    {wellSearchOpen ? (
+      <WellSearchDialog
+        rows={params}
+        draft={draft}
+        onClose={() => setWellSearchOpen(false)}
+        onSelect={(selection) => {
+          setDraft((prev) => applyWellSelection(prev, params, selection))
+          setWellSearchOpen(false)
+        }}
+      />
+    ) : null}
+    </>
   )
 }

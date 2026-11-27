@@ -1,6 +1,9 @@
 package burnar.naryad.global.service;
 
+import burnar.naryad.skv.service.NaryadSkvParams;
+
 import org.junit.jupiter.api.Test;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.math.BigDecimal;
 import java.sql.Timestamp;
@@ -81,5 +84,50 @@ class NaryadGlobalParamsTest {
         assertTrue(NaryadGlobalParams.sameIds(List.of(2, 1), List.of(1, 2)));
         assertFalse(NaryadGlobalParams.sameIds(List.of(1), List.of()));
         assertTrue(NaryadGlobalParams.sameIds(null, List.of()));
+    }
+
+    @Test
+    void wellSelectionKeepsTheNumberAndCopiesTheDictionaryName() {
+        NaryadGlobalParams.LocationUpdate update = NaryadGlobalParams.acceptLocation(
+                new BigDecimal("10"),
+                new BigDecimal("1.500"),
+                "СКВ.15",
+                new BigDecimal("11"),
+                new BigDecimal("1.5"),
+                "СКВ.16");
+        assertEquals(new BigDecimal("11"), update.znval());
+        assertEquals(new BigDecimal("1.500"), update.val());
+        assertEquals("СКВ.16", update.valstr());
+        assertEquals(150, NaryadGlobalParams.locationValstr("я".repeat(180)).length());
+    }
+
+    @Test
+    void sameWellIsNotWrittenAgain() {
+        assertNull(NaryadGlobalParams.acceptLocation(
+                new BigDecimal("10"),
+                null,
+                "СКВ.15",
+                new BigDecimal("10.0"),
+                BigDecimal.ZERO,
+                "СКВ.15"));
+    }
+
+    @Test
+    void wellSelectionRejectsADifferentNumberOrAnUnknownId() {
+        ResponseStatusException number = assertThrows(ResponseStatusException.class, () ->
+                NaryadGlobalParams.acceptLocation(
+                        new BigDecimal("10"), BigDecimal.ONE, "СКВ.15",
+                        new BigDecimal("11"), new BigDecimal("2"), "СКВ.16"));
+        assertEquals(NaryadGlobalParams.LOCATION_NUMBER_LOCKED, number.getReason());
+        ResponseStatusException missing = assertThrows(ResponseStatusException.class, () ->
+                NaryadGlobalParams.acceptLocation(
+                        new BigDecimal("10"), null, "СКВ.15",
+                        null, null, null));
+        assertEquals(NaryadGlobalParams.LOCATION_VALUE_REQUIRED, missing.getReason());
+        ResponseStatusException unknown = assertThrows(ResponseStatusException.class, () ->
+                NaryadGlobalParams.acceptLocation(
+                        new BigDecimal("10"), null, "СКВ.15",
+                        new BigDecimal("11"), null, null));
+        assertEquals(NaryadSkvParams.VALUE_NOT_IN_LIST, unknown.getReason());
     }
 }

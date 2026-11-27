@@ -280,6 +280,20 @@ export function fetchNaryadGlobal(id) {
   return requestAction(`/naryady/${id}/global`)
 }
 
+/** Строки znparams общих параметров, вместе со справочными названиями. */
+export function fetchNaryadGlobalParams(id) {
+  return requestAction(`/naryady/${id}/global/params`)
+}
+
+/** Загрузка кустов и скважин из ИС «Бурение»: CALL public.getkustwell. */
+export function refreshWellsByTehmesto(tehmesto) {
+  return requestAction('/naryady/wells/refresh', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ tehmesto }),
+  })
+}
+
 /** Шапка, изменённые строки znparams и, если флажки менялись, их новый состав. */
 export function saveNaryadGlobal(id, payload) {
   return requestAction(`/naryady/${id}/global`, {

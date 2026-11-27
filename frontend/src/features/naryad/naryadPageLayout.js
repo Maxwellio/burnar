@@ -53,6 +53,7 @@ export const COLUMN_SIZING_KEYS = {
   skvZadanie: 'naryad-column-sizing:skv-zadanie',
   skvVipolnenie: 'naryad-column-sizing:skv-vipolnenie',
   globalParams: 'naryad-column-sizing:global-params',
+  wellSearch: 'naryad-column-sizing:well-search',
 }
 
 const TABLE_SIZING_PREFIX = 'table-column-sizing:'
